@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Debug Import</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>body{font-family:monospace;padding:20px;} pre{background:#f0f0f0;padding:10px;overflow:auto;font-size:12px;}</style>
+</head><body>
+<h2>🔍 Debug Excel Import</h2>
+<input type="file" id="f" accept=".xlsx">
+<pre id="out">เลือกไฟล์เพื่อดูผล...</pre>
+<script>
+document.getElementById('f').onchange = function(e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const wb = XLSX.read(ev.target.result, {type:'array', cellDates:false});
+    let out = 'Sheets: ' + JSON.stringify(wb.SheetNames) + '\n\n';
+    for (const name of wb.SheetNames) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:null});
+      out += `=== Sheet: "${name}" (${rows.length} rows) ===\n`;
+      rows.slice(0,6).forEach((row,i) => {
+        out += `  row[${i}]: ${JSON.stringify(row)}\n`;
+      });
+      // Check each cell for วันที่
+      rows.forEach((row,ri) => {
+        if (row) row.forEach((cell,ci) => {
+          if (cell && String(cell).length < 20) {
+            const chars = [...String(cell)].map(c => c.charCodeAt(0).toString(16)).join(' ');
+            if (String(cell).includes('\u0e27') || String(cell).includes('date') || String(cell).includes('Date')) {
+              out += `  MATCH cell[${ri}][${ci}]="${cell}" hex:${chars}\n`;
+            }
+          }
+        });
+      });
+      out += '\n';
+    }
+    document.getElementById('out').textContent = out;
+  };
+  reader.readAsArrayBuffer(file);
+};
+</script>
+</body></html>

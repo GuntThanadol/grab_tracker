@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛵 Grab บัญชีรายวัน</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --green: #00b14f;
+    --green-light: #e6f7ee;
+    --green-dark: #007f38;
+    --red: #e53e3e;
+    --red-light: #fff5f5;
+    --yellow: #f6c90e;
+    --yellow-light: #fffbea;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-600: #4b5563;
+    --gray-800: #1f2937;
+    --white: #ffffff;
+    --radius: 10px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sarabun', 'Noto Sans Thai', system-ui, sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-800);
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  .nav {
+    background: var(--white);
+    border-bottom: 2px solid var(--green);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 700; color: var(--green-dark); }
+  .nav-brand span { font-size: 1.5rem; }
+  .nav-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; padding: 16px 20px 0; border-bottom: 1px solid var(--gray-200); background: var(--white); }
+  .tab-btn {
+    padding: 9px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: var(--gray-600);
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+    border-radius: 6px 6px 0 0;
+    font-family: inherit;
+    font-weight: 500;
+  }
+  .tab-btn:hover { color: var(--green); background: var(--green-light); }
+  .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green); font-weight: 700; }
+
+  /* MAIN */
+  .main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* STAT CARDS */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--green);
+  }
+  .stat-card.red { border-left-color: var(--red); }
+  .stat-card.yellow { border-left-color: var(--yellow); }
+  .stat-card.blue { border-left-color: #3b82f6; }
+  .stat-label { font-size: 0.78rem; color: var(--gray-400); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-value { font-size: 1.5rem; font-weight: 800; }
+  .stat-value.green { color: var(--green-dark); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.yellow { color: #b7870a; }
+  .stat-value.blue { color: #1d4ed8; }
+  .stat-sub { font-size: 0.78rem; color: var(--gray-400); margin-top: 2px; }
+
+  /* FORM */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--gray-800); display: flex; align-items: center; gap: 8px; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 0.82rem; font-weight: 600; color: var(--gray-600); }
+  .form-group input {
+    border: 1.5px solid var(--gray-200);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .form-group input:focus { border-color: var(--green); }
+  .form-group input.highlight { background: var(--green-light); }
+  .form-row-full { grid-column: 1 / -1; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 8px 18px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .btn-green { background: var(--green); color: var(--white); }
+  .btn-green:hover { background: var(--green-dark); }
+  .btn-outline { background: transparent; border: 1.5px solid var(--gray-200); color: var(--gray-600); }
+  .btn-outline:hover { border-color: var(--green); color: var(--green); }
+  .btn-red { background: var(--red); color: var(--white); }
+  .btn-red:hover { background: #c53030; }
+  .btn-sm { padding: 5px 12px; font-size: 0.82rem; }
+  .btn-yellow { background: var(--yellow); color: #7a5200; }
+  .btn-yellow:hover { background: #e0b800; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th {
+    background: var(--gray-50);
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gray-400);
+    border-bottom: 1.5px solid var(--gray-200);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    white-space: nowrap;
+  }
+  tr:hover td { background: var(--gray-50); }
+  .td-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .td-green { color: var(--green-dark); font-weight: 700; }
+  .td-red { color: var(--red); }
+  .td-gray { color: var(--gray-400); }
+  .td-date { font-weight: 600; }
+  .note-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; color: var(--gray-400); font-size: 0.82rem; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-green { background: var(--green-light); color: var(--green-dark); }
+  .badge-red { background: var(--red-light); color: var(--red); }
+  .badge-gray { background: var(--gray-100); color: var(--gray-400); }
+
+  /* MONTH SUMMARY */
+  .month-section { margin-bottom: 28px; }
+  .month-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--green-light);
+  }
+  .month-title { font-size: 1rem; font-weight: 700; color: var(--green-dark); }
+  .month-stats { display: flex; gap: 20px; font-size: 0.85rem; color: var(--gray-600); }
+  .month-stats strong { color: var(--gray-800); }
+
+  /* FILTER BAR */
+  .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .filter-bar input, .filter-bar select {
+    border: 1.5px solid var(--gray-200);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--green); }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 48px 20px; color: var(--gray-400); }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--gray-800); color: var(--white);
+    padding: 12px 20px; border-radius: 8px;
+    font-size: 0.9rem; font-weight: 500;
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.25s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.green { background: var(--green); }
+  #toast.red { background: var(--red); }
+
+  /* EDIT MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 24px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: var(--shadow-md);
+  }
+  .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  /* CHART BARS */
+  .chart-wrap { margin-top: 8px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 0.82rem; }
+  .bar-label { width: 80px; text-align: right; color: var(--gray-600); flex-shrink: 0; }
+  .bar-track { flex: 1; background: var(--gray-100); border-radius: 4px; height: 22px; position: relative; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: var(--green); transition: width 0.4s; display: flex; align-items: center; padding-left: 8px; }
+  .bar-fill.red { background: var(--red); }
+  .bar-val { font-size: 0.8rem; font-weight: 600; color: var(--gray-700); margin-left: 6px; }
+
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .section-title { font-size: 1.05rem; font-weight: 700; }
+
+
+  /* THAI DATE PICKER */
+  .tdp-wrap { position: relative; }
+  .tdp-input {
+    border: 1.5px solid var(--gray-200);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    cursor: pointer;
+    background: var(--white);
+    width: 100%;
+    text-align: left;
+    transition: border-color 0.15s;
+    outline: none;
+    color: var(--gray-800);
+  }
+  .tdp-input:focus, .tdp-input.open { border-color: var(--green); }
+  .tdp-input.placeholder { color: var(--gray-400); }
+  .tdp-pop {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 500;
+    background: var(--white);
+    border: 1.5px solid var(--gray-200);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    width: 280px;
+    user-select: none;
+  }
+  .tdp-pop.show { display: block; }
+  .tdp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .tdp-nav { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px 8px; border-radius: 5px; color: var(--gray-600); }
+  .tdp-nav:hover { background: var(--green-light); color: var(--green-dark); }
+  .tdp-title { font-weight: 700; font-size: 0.95rem; color: var(--gray-800); cursor: pointer; padding: 4px 8px; border-radius: 5px; }
+  .tdp-title:hover { background: var(--green-light); }
+  .tdp-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; padding: 8px; }
+  .tdp-dow { text-align: center; font-size: 0.72rem; font-weight: 700; color: var(--gray-400); padding: 4px 0; }
+  .tdp-day {
+    text-align: center; font-size: 0.88rem; padding: 6px 2px;
+    border-radius: 6px; cursor: pointer; transition: background 0.1s;
+  }
+  .tdp-day:hover { background: var(--green-light); color: var(--green-dark); }
+  .tdp-day.today { font-weight: 700; color: var(--green-dark); border: 1.5px solid var(--green); }
+  .tdp-day.selected { background: var(--green); color: var(--white) !important; font-weight: 700; }
+  .tdp-day.other { color: var(--gray-400); }
+  .tdp-day.empty { cursor: default; }
+  .tdp-sel-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; padding: 8px; }
+  .tdp-sel-item {
+    text-align: center; font-size: 0.82rem; padding: 7px 4px;
+    border-radius: 6px; cursor: pointer; transition: background 0.1s;
+  }
+  .tdp-sel-item:hover { background: var(--green-light); color: var(--green-dark); }
+  .tdp-sel-item.selected { background: var(--green); color: var(--white); font-weight: 700; }
+
+  /* PIN MODAL */
+  .pin-dots { display: flex; justify-content: center; gap: 10px; margin: 16px 0; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--gray-200); transition: background 0.15s; }
+  .pin-dot.filled { background: var(--green); }
+  .pin-dot.error { background: var(--red); }
+  .pin-pad { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .pin-btn {
+    padding: 14px; border: 1.5px solid var(--gray-200); border-radius: 8px;
+    background: var(--white); font-size: 1.1rem; font-weight: 700;
+    cursor: pointer; transition: all 0.1s; font-family: inherit;
+  }
+  .pin-btn:hover { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+  .pin-btn:active { transform: scale(0.95); }
+  .pin-btn.del { color: var(--red); }
+
+  @media (max-width: 600px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .nav-brand { font-size: 0.95rem; }
+    .tabs { overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-brand"><span>🛵</span> Grab บัญชีรายวัน</div>
+  <div class="nav-actions">
+    <label class="btn btn-outline btn-sm" style="cursor:pointer">
+      📥 Import Excel
+      <input type="file" accept=".xlsx,.xls" id="importFile" style="display:none">
+    </label>
+    <button class="btn btn-outline btn-sm" onclick="exportData()">📤 Export</button>
+    <button class="btn btn-red btn-sm" onclick="clearAllConfirm()">🗑️ ล้างข้อมูล</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('dashboard')">📊 ภาพรวม</button>
+  <button class="tab-btn" onclick="showTab('entry')">➕ กรอกข้อมูล</button>
+  <button class="tab-btn" onclick="showTab('history')">📋 รายวัน</button>
+  <button class="tab-btn" onclick="showTab('monthly')">📅 รายเดือน</button>
+</div>
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div class="card">
+      <div class="card-title">📈 กำไรสุทธิ 30 วันล่าสุด</div>
+      <div class="chart-wrap" id="barChart"></div>
+    </div>
+  </div>
+
+  <!-- ENTRY -->
+  <div class="page" id="page-entry">
+    <div class="card">
+      <div class="card-title">➕ เพิ่มข้อมูลรายวัน</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>📅 วันที่</label>
+          <div class="tdp-wrap">
+            <button type="button" class="tdp-input placeholder" id="f-date-btn" onclick="tdpOpen('f-date')">เลือกวันที่</button>
+            <div class="tdp-pop" id="f-date-pop"></div>
+            <input type="hidden" id="f-date" value="">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>💚 รายได้ Grab (บาท)</label>
+          <input type="number" id="f-grab" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>👋 Tip มือ (บาท)</label>
+          <input type="number" id="f-tip" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>⛽ ค่าน้ำมัน (บาท)</label>
+          <input type="number" id="f-oil" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>⛽ เติมน้ำมันจริง (บาท)</label>
+          <input type="number" id="f-oilReal" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>💳 เครดิต Grab (บาท)</label>
+          <input type="number" id="f-credit" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>🏦 ถอนเข้ากรุงศรี (บาท)</label>
+          <input type="number" id="f-withdraw" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group form-row-full">
+          <label>📝 หมายเหตุ</label>
+          <input type="text" id="f-note" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)">
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div style="margin-top:16px; padding:14px; background:var(--green-light); border-radius:8px; display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
+        <div style="font-size:0.85rem; color:var(--gray-600);">รายได้รวม: <strong id="prev-income" style="color:var(--green-dark)">—</strong></div>
+        <div style="font-size:0.85rem; color:var(--gray-600);">กำไรสุทธิ: <strong id="prev-profit" style="color:var(--green-dark)">—</strong></div>
+        <button class="btn btn-green" onclick="saveEntry()" style="margin-left:auto">💾 บันทึก</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💡 หมายเหตุ</div>
+      <ul style="font-size:0.88rem; color:var(--gray-600); line-height:1.9; padding-left:18px;">
+        <li>รายได้รวม = รายได้ Grab + Tip มือ</li>
+        <li>กำไรสุทธิ = รายได้รวม − ค่าน้ำมัน (ประมาณการ)</li>
+        <li>เครดิต Grab และถอนกรุงศรีไม่นับรวมในกำไร</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="page" id="page-history">
+    <div class="section-header">
+      <div class="section-title">📋 รายการทั้งหมด</div>
+    </div>
+    <div class="filter-bar">
+      <div class="tdp-wrap" style="display:inline-block">
+      <button type="button" class="tdp-input placeholder" id="filterMonth-btn" onclick="tdpOpenMonth('filterMonth')" style="min-width:130px">ทุกเดือน</button>
+      <div class="tdp-pop" id="filterMonth-pop"></div>
+      <input type="hidden" id="filterMonth" value="">
+    </div>
+      <select id="filterType" onchange="renderHistory()">
+        <option value="all">ทุกวัน</option>
+        <option value="work">วันทำงาน</option>
+        <option value="rest">วันหยุด</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="clearMonthFilter()">ล้าง</button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th class="td-num">รายได้ Grab</th>
+              <th class="td-num">Tip</th>
+              <th class="td-num">รายได้รวม</th>
+              <th class="td-num">ค่าน้ำมัน</th>
+              <th class="td-num">เติมน้ำมันจริง</th>
+              <th class="td-num">เครดิต Grab</th>
+              <th class="td-num">ถอนกรุงศรี</th>
+              <th class="td-num">กำไรสุทธิ</th>
+              <th>หมายเหตุ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONTHLY -->
+  <div class="page" id="page-monthly">
+    <div id="monthlyContent"></div>
+  </div>
+
+</div>
+
+<!-- Edit Modal -->
+
+
+<div class="modal-overlay" id="pinModal">
+  <div class="modal" style="max-width:320px;text-align:center;">
+    <div class="modal-title" id="pinTitle">🔐 ยืนยันการลบข้อมูล</div>
+    <p style="color:var(--gray-600);font-size:0.88rem;margin-bottom:4px;">กรอกรหัส 6 หลักเพื่อยืนยัน</p>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+      <div class="pin-dot" id="pd4"></div>
+      <div class="pin-dot" id="pd5"></div>
+    </div>
+    <div id="pinMsg" style="height:18px;font-size:0.8rem;color:var(--red);margin-bottom:10px;"></div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinKey('1')">1</button>
+      <button class="pin-btn" onclick="pinKey('2')">2</button>
+      <button class="pin-btn" onclick="pinKey('3')">3</button>
+      <button class="pin-btn" onclick="pinKey('4')">4</button>
+      <button class="pin-btn" onclick="pinKey('5')">5</button>
+      <button class="pin-btn" onclick="pinKey('6')">6</button>
+      <button class="pin-btn" onclick="pinKey('7')">7</button>
+      <button class="pin-btn" onclick="pinKey('8')">8</button>
+      <button class="pin-btn" onclick="pinKey('9')">9</button>
+      <button class="pin-btn" onclick="pinKey('0')" style="grid-column:2">0</button>
+      <button class="pin-btn del" onclick="pinKey('del')">⌫</button>
+    </div>
+    <button class="btn btn-outline" onclick="closePinModal()" style="margin-top:14px;width:100%">ยกเลิก</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="max-width:380px;text-align:center;">
+    <div class="modal-title">📥 Import ข้อมูลจาก Excel</div>
+    <p style="color:var(--gray-600);font-size:0.9rem;margin-bottom:20px;">
+      พบข้อมูล <strong id="importCount">0</strong> วัน<br>ต้องการ import แบบไหน?
+    </p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-green" onclick="doImport(true)" style="padding:12px;">
+        🔄 แทนที่ทั้งหมด<br><small style="font-weight:400;opacity:0.85">ล้างข้อมูลเก่าแล้ว import ใหม่ทั้งหมด</small>
+      </button>
+      <button class="btn btn-outline" onclick="doImport(false)" style="padding:12px;">
+        ➕ เพิ่มเฉพาะวันที่ยังไม่มี<br><small style="font-weight:400;opacity:0.85">ข้ามวันที่มีอยู่แล้ว</small>
+      </button>
+      <button class="btn btn-outline" onclick="document.getElementById('importModal').classList.remove('show')" style="color:var(--gray-400);">
+        ยกเลิก
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">✏️ แก้ไขข้อมูล</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>📅 วันที่</label>
+        <div class="tdp-wrap">
+          <button type="button" class="tdp-input placeholder" id="e-date-btn" onclick="tdpOpen('e-date')">เลือกวันที่</button>
+          <div class="tdp-pop" id="e-date-pop"></div>
+          <input type="hidden" id="e-date" value="">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>💚 รายได้ Grab</label>
+        <input type="number" id="e-grab" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>👋 Tip มือ</label>
+        <input type="number" id="e-tip" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>⛽ ค่าน้ำมัน</label>
+        <input type="number" id="e-oil" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>⛽ เติมน้ำมันจริง</label>
+        <input type="number" id="e-oilReal" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>💳 เครดิต Grab</label>
+        <input type="number" id="e-credit" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>🏦 ถอนกรุงศรี</label>
+        <input type="number" id="e-withdraw" step="0.01">
+      </div>
+      <div class="form-group form-row-full">
+        <label>📝 หมายเหตุ</label>
+        <input type="text" id="e-note">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-green" onclick="saveEdit()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'grab_tracker_v1';
+let editingId = null;
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function saveData(rows) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+}
+function getRows() { return loadData().sort((a,b) => a.date.localeCompare(b.date)); }
+
+function newId() { return Date.now() + Math.random().toString(36).slice(2,6); }
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n == null || n === '') return '—';
+  return Number(n).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('th-TH', {day:'2-digit', month:'short', year:'numeric'});
+}
+function isWorkDay(r) { return (r.grab || 0) > 0 || (r.tip || 0) > 0; }
+function profit(r) { return (r.grab||0) + (r.tip||0) - (r.oil||0); }
+function income(r) { return (r.grab||0) + (r.tip||0); }
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 2500);
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'history') renderHistory();
+  if (name === 'monthly') renderMonthly();
+}
+
+// ─── FORM PREVIEW ────────────────────────────────────────────────────────────
+['f-grab','f-tip','f-oil'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+function updatePreview() {
+  const g = parseFloat(document.getElementById('f-grab').value)||0;
+  const t = parseFloat(document.getElementById('f-tip').value)||0;
+  const o = parseFloat(document.getElementById('f-oil').value)||0;
+  document.getElementById('prev-income').textContent = fmt(g+t) + ' บาท';
+  document.getElementById('prev-profit').textContent = fmt(g+t-o) + ' บาท';
+}
+
+// ─── SAVE ENTRY ──────────────────────────────────────────────────────────────
+function saveEntry() {
+  const date = document.getElementById('f-date').value;
+  if (!date) { showToast('กรุณาเลือกวันที่','red'); return; }
+  const rows = loadData();
+  if (rows.find(r => r.date === date)) {
+    if (!confirm('มีข้อมูลของวันนี้แล้ว ต้องการแทนที่?')) return;
+    const idx = rows.findIndex(r => r.date === date);
+    rows.splice(idx, 1);
+  }
+  const row = {
+    id: newId(), date,
+    grab: parseFloat(document.getElementById('f-grab').value)||0,
+    tip: parseFloat(document.getElementById('f-tip').value)||0,
+    oil: parseFloat(document.getElementById('f-oil').value)||0,
+    oilReal: parseFloat(document.getElementById('f-oilReal').value)||0,
+    credit: parseFloat(document.getElementById('f-credit').value)||0,
+    withdraw: parseFloat(document.getElementById('f-withdraw').value)||0,
+    note: document.getElementById('f-note').value.trim(),
+  };
+  rows.push(row);
+  saveData(rows);
+  // clear form, set tomorrow as next date
+  const dt = new Date(date + 'T00:00:00');
+  dt.setDate(dt.getDate()+1);
+  const next = dt.toISOString().slice(0,10);
+  ['f-grab','f-tip','f-oil','f-oilReal','f-credit','f-withdraw','f-note'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  tdpSetValue('f-date', next);
+  updatePreview();
+  showToast('✅ บันทึกแล้ว', 'green');
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const rows = getRows();
+  const workRows = rows.filter(isWorkDay);
+  const totalIncome = rows.reduce((s,r) => s + income(r), 0);
+  const totalTip = rows.reduce((s,r) => s + (r.tip||0), 0);
+  const totalOil = rows.reduce((s,r) => s + (r.oil||0), 0);
+  const totalOilReal = rows.reduce((s,r) => s + (r.oilReal||0), 0);
+  const totalCredit = rows.reduce((s,r) => s + (r.credit||0), 0);
+  const totalWithdraw = rows.reduce((s,r) => s + (r.withdraw||0), 0);
+  const totalProfit = rows.reduce((s,r) => s + profit(r), 0);
+  const avgProfit = workRows.length ? totalProfit / workRows.length : 0;
+  const avgIncome = workRows.length ? totalIncome / workRows.length : 0;
+
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">💚 รายได้ Grab รวม</div>
+      <div class="stat-value green">${fmt(rows.reduce((s,r)=>s+(r.grab||0),0))}</div>
+      <div class="stat-sub">บาท</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">👋 Tip มือรวม</div>
+      <div class="stat-value green">${fmt(totalTip)}</div>
+      <div class="stat-sub">บาท</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">💰 รายได้รวมทั้งสิ้น</div>
+      <div class="stat-value green">${fmt(totalIncome)}</div>
+      <div class="stat-sub">บาท</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">⛽ ค่าน้ำมัน (ประมาณ)</div>
+      <div class="stat-value red">${fmt(totalOil)}</div>
+      <div class="stat-sub">บาท | เติมจริง ${fmt(totalOilReal)} บาท</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">💳 เครดิต Grab รวม</div>
+      <div class="stat-value yellow">${fmt(totalCredit)}</div>
+      <div class="stat-sub">บาท</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">🏦 ถอนเข้ากรุงศรี</div>
+      <div class="stat-value blue">${fmt(totalWithdraw)}</div>
+      <div class="stat-sub">บาท</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">💵 กำไรสุทธิรวม</div>
+      <div class="stat-value green">${fmt(totalProfit)}</div>
+      <div class="stat-sub">บาท</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">📅 วันทำงาน</div>
+      <div class="stat-value green">${workRows.length}</div>
+      <div class="stat-sub">วัน (จาก ${rows.length} วัน)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">📈 รายได้เฉลี่ย/วัน</div>
+      <div class="stat-value green">${fmt(avgIncome)}</div>
+      <div class="stat-sub">บาท/วันทำงาน</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">📈 กำไรเฉลี่ย/วัน</div>
+      <div class="stat-value green">${fmt(avgProfit)}</div>
+      <div class="stat-sub">บาท/วันทำงาน</div>
+    </div>
+  `;
+
+  // Bar chart: last 30 days with data
+  const recent = rows.filter(isWorkDay).slice(-30);
+  const maxP = Math.max(...recent.map(r => profit(r)), 1);
+  const barHtml = recent.length === 0
+    ? '<div class="empty"><div class="empty-icon">📊</div><div>ยังไม่มีข้อมูล</div></div>'
+    : recent.map(r => {
+        const p = profit(r);
+        const pct = Math.max((p / maxP) * 100, 2);
+        return `<div class="bar-row">
+          <div class="bar-label">${(()=>{const [y,m,d]=r.date.split('-').map(Number);return d+' '+TH_MONTHS_S[m-1];})()}</div>
+          <div class="bar-track">
+            <div class="bar-fill ${p<0?'red':''}" style="width:${pct}%"></div>
+          </div>
+          <div class="bar-val">${fmt(p)}</div>
+        </div>`;
+      }).join('');
+  document.getElementById('barChart').innerHTML = barHtml;
+}
+
+// ─── HISTORY ─────────────────────────────────────────────────────────────────
+function renderHistory() {
+  let rows = getRows();
+  const monthFilter = document.getElementById('filterMonth').value;
+  const typeFilter = document.getElementById('filterType').value;
+  if (monthFilter) rows = rows.filter(r => r.date.startsWith(monthFilter));
+  if (typeFilter === 'work') rows = rows.filter(isWorkDay);
+  if (typeFilter === 'rest') rows = rows.filter(r => !isWorkDay(r));
+
+  const tbody = document.getElementById('historyBody');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" class="empty"><div class="empty-icon">📋</div><div>ไม่มีข้อมูล</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.reverse().map(r => {
+    const p = profit(r);
+    return `<tr>
+      <td class="td-date">${fmtDate(r.date)}</td>
+      <td class="td-num">${r.grab ? fmt(r.grab) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.tip ? fmt(r.tip) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num td-green">${fmt(income(r))}</td>
+      <td class="td-num td-red">${r.oil ? fmt(r.oil) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.oilReal ? fmt(r.oilReal) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.credit ? fmt(r.credit) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.withdraw ? fmt(r.withdraw) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num"><strong class="${p>=0?'td-green':'td-red'}">${fmt(p)}</strong></td>
+      <td class="note-cell" title="${r.note||''}">${r.note||''}</td>
+      <td style="display:flex;gap:4px;padding:8px">
+        <button class="btn btn-outline btn-sm" onclick="openEdit('${r.id}')">✏️</button>
+        <button class="btn btn-red btn-sm" onclick="deleteRow('${r.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── MONTHLY ─────────────────────────────────────────────────────────────────
+function renderMonthly() {
+  const rows = getRows();
+  const byMonth = {};
+  rows.forEach(r => {
+    const m = r.date.slice(0,7);
+    if (!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(r);
+  });
+
+  const months = Object.keys(byMonth).sort().reverse();
+  if (months.length === 0) {
+    document.getElementById('monthlyContent').innerHTML = `<div class="empty"><div class="empty-icon">📅</div><div>ยังไม่มีข้อมูล</div></div>`;
+    return;
+  }
+
+  const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+  document.getElementById('monthlyContent').innerHTML = months.map(m => {
+    const mrs = byMonth[m];
+    const workDays = mrs.filter(isWorkDay).length;
+    const totIncome = mrs.reduce((s,r)=>s+income(r),0);
+    const totOil = mrs.reduce((s,r)=>s+(r.oil||0),0);
+    const totOilReal = mrs.reduce((s,r)=>s+(r.oilReal||0),0);
+    const totCredit = mrs.reduce((s,r)=>s+(r.credit||0),0);
+    const totWithdraw = mrs.reduce((s,r)=>s+(r.withdraw||0),0);
+    const totProfit = mrs.reduce((s,r)=>s+profit(r),0);
+    const [yr, mo] = m.split('-');
+    const monthName = `${thMonths[parseInt(mo)-1]} ${parseInt(yr)+543}`;
+
+    return `<div class="month-section">
+      <div class="month-header">
+        <div class="month-title">📅 ${monthName}</div>
+        <div class="month-stats">
+          <span>ทำงาน <strong>${workDays} วัน</strong></span>
+          <span>รายได้รวม <strong>${fmt(totIncome)} ฿</strong></span>
+          <span>กำไรสุทธิ <strong style="color:var(--green-dark)">${fmt(totProfit)} ฿</strong></span>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table style="font-size:0.85rem">
+          <thead>
+            <tr>
+              <th>วันที่</th><th class="td-num">รายได้ Grab</th><th class="td-num">Tip</th>
+              <th class="td-num">รายได้รวม</th><th class="td-num">ค่าน้ำมัน</th>
+              <th class="td-num">เติมน้ำมันจริง</th><th class="td-num">เครดิต Grab</th>
+              <th class="td-num">ถอนกรุงศรี</th><th class="td-num">กำไรสุทธิ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${mrs.map(r => `<tr>
+              <td>${fmtDate(r.date)}</td>
+              <td class="td-num">${r.grab?fmt(r.grab):'<span class="td-gray">—</span>'}</td>
+              <td class="td-num">${r.tip?fmt(r.tip):'<span class="td-gray">—</span>'}</td>
+              <td class="td-num td-green">${fmt(income(r))}</td>
+              <td class="td-num td-red">${r.oil?fmt(r.oil):'<span class="td-gray">—</span>'}</td>
+              <td class="td-num">${r.oilReal?fmt(r.oilReal):'<span class="td-gray">—</span>'}</td>
+              <td class="td-num">${r.credit?fmt(r.credit):'<span class="td-gray">—</span>'}</td>
+              <td class="td-num">${r.withdraw?fmt(r.withdraw):'<span class="td-gray">—</span>'}</td>
+              <td class="td-num"><strong class="${profit(r)>=0?'td-green':'td-red'}">${fmt(profit(r))}</strong></td>
+            </tr>`).join('')}
+            <tr style="background:var(--green-light);font-weight:700;">
+              <td>รวม ${monthName}</td>
+              <td class="td-num">${fmt(mrs.reduce((s,r)=>s+(r.grab||0),0))}</td>
+              <td class="td-num">${fmt(mrs.reduce((s,r)=>s+(r.tip||0),0))}</td>
+              <td class="td-num td-green">${fmt(totIncome)}</td>
+              <td class="td-num td-red">${fmt(totOil)}</td>
+              <td class="td-num">${fmt(totOilReal)}</td>
+              <td class="td-num">${fmt(totCredit)}</td>
+              <td class="td-num">${fmt(totWithdraw)}</td>
+              <td class="td-num td-green">${fmt(totProfit)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── EDIT / DELETE ───────────────────────────────────────────────────────────
+function openEdit(id) {
+  const rows = loadData();
+  const r = rows.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  tdpSetValue('e-date', r.date);
+  document.getElementById('e-grab').value = r.grab||'';
+  document.getElementById('e-tip').value = r.tip||'';
+  document.getElementById('e-oil').value = r.oil||'';
+  document.getElementById('e-oilReal').value = r.oilReal||'';
+  document.getElementById('e-credit').value = r.credit||'';
+  document.getElementById('e-withdraw').value = r.withdraw||'';
+  document.getElementById('e-note').value = r.note||'';
+  document.getElementById('editModal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('editModal').classList.remove('show');
+  editingId = null;
+}
+function saveEdit() {
+  const rows = loadData();
+  const idx = rows.findIndex(r => r.id === editingId);
+  if (idx < 0) return;
+  rows[idx] = {
+    ...rows[idx],
+    date: document.getElementById('e-date').value,
+    grab: parseFloat(document.getElementById('e-grab').value)||0,
+    tip: parseFloat(document.getElementById('e-tip').value)||0,
+    oil: parseFloat(document.getElementById('e-oil').value)||0,
+    oilReal: parseFloat(document.getElementById('e-oilReal').value)||0,
+    credit: parseFloat(document.getElementById('e-credit').value)||0,
+    withdraw: parseFloat(document.getElementById('e-withdraw').value)||0,
+    note: document.getElementById('e-note').value.trim(),
+  };
+  saveData(rows);
+  closeModal();
+  renderHistory();
+  showToast('✅ แก้ไขแล้ว', 'green');
+}
+function deleteRow(id) {
+  pinAction = { type: 'deleteRow', id };
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pinMsg').textContent = '';
+  document.getElementById('pinTitle').textContent = '🗑️ ยืนยันการลบรายการ';
+  document.getElementById('pinModal').classList.add('show');
+}
+
+// ─── IMPORT EXCEL ────────────────────────────────────────────────────────────
+function excelSerialToDateStr(serial) {
+  // Excel serial: days since 1899-12-30 (with Lotus bug)
+  const utc = (serial - 25569) * 86400000;
+  const d = new Date(utc);
+  // Use UTC to avoid timezone shift
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth()+1).padStart(2,'0');
+  const dd = String(d.getUTCDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+
+function parseDateVal(dateVal) {
+  if (!dateVal) return null;
+  if (dateVal instanceof Date) {
+    const y = dateVal.getFullYear();
+    const m = String(dateVal.getMonth()+1).padStart(2,'0');
+    const d = String(dateVal.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  if (typeof dateVal === 'number' && dateVal > 1000) {
+    return excelSerialToDateStr(dateVal);
+  }
+  if (typeof dateVal === 'string') {
+    const m = dateVal.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  return null;
+}
+
+// ─── IMPORT EXCEL ────────────────────────────────────────────────────────────
+let pendingImportData = null;
+
+document.getElementById('importFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'array', cellDates:false});
+      // ใช้ sheet แรกที่มีข้อมูลวันที่ (serial > 40000) ใน column A
+      let raw = null;
+      for (const name of wb.SheetNames) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:null});
+        if (rows.some(r => r && typeof r[0] === 'number' && r[0] > 40000)) {
+          raw = rows; break;
+        }
+      }
+      if (!raw) { showToast('ไม่พบข้อมูลวันที่ในไฟล์', 'red'); return; }
+
+      // หาแถวแรกที่ col[0] เป็น serial date (> 40000)
+      const firstDataRow = raw.findIndex(r => r && typeof r[0] === 'number' && r[0] > 40000);
+      if (firstDataRow < 0) { showToast('ไม่พบข้อมูล', 'red'); return; }
+
+      // โครงสร้าง Excel: A=วันที่, B=Grab, C=Tip, D=รายได้รวม(skip), E=น้ำมัน, F=เติมน้ำมันจริง, G=เครดิต, H=ถอน, I=กำไร(skip)
+      // col index:        0       1      2      3                    4         5                   6           7        8
+      const parsed = [];
+      for (let i = firstDataRow; i < raw.length; i++) {
+        const row = raw[i];
+        if (!row) continue;
+        const dateStr = parseDateVal(row[0]);
+        if (!dateStr) continue;
+        parsed.push({
+          id: newId(), date: dateStr,
+          grab:     parseFloat(row[1]) || 0,
+          tip:      parseFloat(row[2]) || 0,
+          oil:      parseFloat(row[4]) || 0,
+          oilReal:  parseFloat(row[5]) || 0,
+          credit:   parseFloat(row[6]) || 0,
+          withdraw: parseFloat(row[7]) || 0,
+          note: '',
+        });
+      }
+      if (parsed.length === 0) { showToast('ไม่พบข้อมูล', 'red'); return; }
+      pendingImportData = parsed;
+      document.getElementById('importCount').textContent = parsed.length;
+      document.getElementById('importModal').classList.add('show');
+    } catch(err) {
+      showToast('เกิดข้อผิดพลาด: ' + err.message, 'red');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function doImport(replaceAll) {
+  document.getElementById('importModal').classList.remove('show');
+  if (!pendingImportData) return;
+  const base = replaceAll ? [] : loadData();
+  const existDates = new Set(base.map(r => r.date));
+  let added = 0, skipped = 0;
+  for (const row of pendingImportData) {
+    if (existDates.has(row.date)) { skipped++; continue; }
+    base.push(row);
+    existDates.add(row.date);
+    added++;
+  }
+  saveData(base);
+  pendingImportData = null;
+  renderDashboard();
+  showToast(replaceAll ? `Import สำเร็จ: ${added} วัน` : `Import สำเร็จ: ${added} วัน (ข้าม ${skipped} ซ้ำ)`, 'green');
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+function exportData() {
+  const rows = getRows();
+  const ws_data = [
+    ['วันที่','รายได้ Grab (บาท)','Tip มือ (บาท)','รายได้รวม (บาท)','ค่าน้ำมัน (บาท)','เติมน้ำมันจริง (บาท)','เครดิต Grab (บาท)','ถอนเข้ากรุงศรี (บาท)','กำไรสุทธิ (บาท)','หมายเหตุ'],
+    ...rows.map(r => [r.date, r.grab||0, r.tip||0, income(r), r.oil||0, r.oilReal||0, r.credit||0, r.withdraw||0, profit(r), r.note||''])
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws_data), 'บัญชีรายวัน');
+  XLSX.writeFile(wb, `Grab_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('📤 Export สำเร็จ', 'green');
+}
+
+
+// ─── THAI DATE PICKER ────────────────────────────────────────────────────────
+const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MONTHS_S = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_DOWS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const TDP = {}; // fieldId -> { year, month, mode:'day'|'month'|'year' }
+
+function tdpOpen(fieldId) {
+  // close others
+  document.querySelectorAll('.tdp-pop.show').forEach(p => { if (p.id !== fieldId+'-pop') p.classList.remove('show'); });
+  const pop = document.getElementById(fieldId+'-pop');
+  if (pop.classList.contains('show')) { pop.classList.remove('show'); return; }
+  const val = document.getElementById(fieldId).value;
+  const now = new Date();
+  let y = now.getFullYear(), m = now.getMonth();
+  if (val) { const d = new Date(val+'T00:00:00'); y=d.getFullYear(); m=d.getMonth(); }
+  TDP[fieldId] = { year:y, month:m, mode:'day' };
+  tdpRender(fieldId);
+  pop.classList.add('show');
+  document.getElementById(fieldId+'-btn').classList.add('open');
+  // close on outside click - use mousedown to avoid re-render timing issue
+  setTimeout(() => {
+    function outside(e) {
+      const btn = document.getElementById(fieldId+'-btn');
+      const popEl = document.getElementById(fieldId+'-pop');
+      if (btn && !btn.contains(e.target) && popEl && !popEl.contains(e.target)) {
+        popEl.classList.remove('show');
+        btn.classList.remove('open');
+        document.removeEventListener('mousedown', outside);
+      }
+    }
+    document.addEventListener('mousedown', outside);
+  }, 0);
+}
+
+function tdpRender(fieldId) {
+  const state = TDP[fieldId];
+  const pop = document.getElementById(fieldId+'-pop');
+  const selectedVal = document.getElementById(fieldId).value;
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  if (state.mode === 'day') {
+    const firstDay = new Date(state.year, state.month, 1).getDay();
+    const daysInMonth = new Date(state.year, state.month+1, 0).getDate();
+    let cells = '';
+    for (let i=0; i<firstDay; i++) cells += '<div class="tdp-day empty"></div>';
+    for (let d=1; d<=daysInMonth; d++) {
+      const ds = `${state.year}-${String(state.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const cls = [
+        'tdp-day',
+        ds===selectedVal?'selected':'',
+        ds===todayStr&&ds!==selectedVal?'today':''
+      ].join(' ');
+      cells += `<div class="${cls}" onclick="tdpSelect('${fieldId}','${ds}')">${d}</div>`;
+    }
+    pop.innerHTML = `
+      <div class="tdp-head">
+        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="tdpNav('${fieldId}',-1)">◀</button>
+        <span class="tdp-title" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].mode='month';tdpRender('${fieldId}')">${TH_MONTHS[state.month]} ${state.year+543}</span>
+        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="tdpNav('${fieldId}',1)">▶</button>
+      </div>
+      <div class="tdp-grid">
+        ${TH_DOWS.map(d=>`<div class="tdp-dow">${d}</div>`).join('')}
+        ${cells}
+      </div>`;
+  } else if (state.mode === 'month') {
+    const items = TH_MONTHS_S.map((m,i) => `<div class="tdp-sel-item${i===state.month?' selected':''}" onclick="TDP['${fieldId}'].month=${i};TDP['${fieldId}'].mode='day';tdpRender('${fieldId}')">${m}</div>`).join('');
+    pop.innerHTML = `
+      <div class="tdp-head">
+        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year--;tdpRender('${fieldId}')">◀</button>
+        <span class="tdp-title" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].mode='year';tdpRender('${fieldId}')">${state.year+543}</span>
+        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year++;tdpRender('${fieldId}')">▶</button>
+      </div>
+      <div class="tdp-sel-grid">${items}</div>`;
+  } else {
+    // year picker: show 12 years around current
+    const base = state.year - 5;
+    const items = Array.from({length:12},(_,i)=>base+i).map(y=>`<div class="tdp-sel-item${y===state.year?' selected':''}" onclick="TDP['${fieldId}'].year=${y};TDP['${fieldId}'].mode='month';tdpRender('${fieldId}')">${y+543}</div>`).join('');
+    pop.innerHTML = `
+      <div class="tdp-head">
+        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year-=12;tdpRender('${fieldId}')">◀</button>
+        <span class="tdp-title">เลือกปี</span>
+        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year+=12;tdpRender('${fieldId}')">▶</button>
+      </div>
+      <div class="tdp-sel-grid">${items}</div>`;
+  }
+}
+
+function tdpNav(fieldId, dir) {
+  const s = TDP[fieldId];
+  s.month += dir;
+  if (s.month > 11) { s.month=0; s.year++; }
+  if (s.month < 0) { s.month=11; s.year--; }
+  tdpRender(fieldId);
+}
+
+function tdpSelect(fieldId, dateStr) {
+  document.getElementById(fieldId).value = dateStr;
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const btn = document.getElementById(fieldId+'-btn');
+  btn.textContent = `${d} ${TH_MONTHS[m-1]} ${y+543}`;
+  btn.classList.remove('placeholder','open');
+  document.getElementById(fieldId+'-pop').classList.remove('show');
+  if (fieldId === 'f-date') updatePreview();
+}
+
+function tdpSetValue(fieldId, dateStr) {
+  if (!dateStr) return;
+  document.getElementById(fieldId).value = dateStr;
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const btn = document.getElementById(fieldId+'-btn');
+  btn.textContent = `${d} ${TH_MONTHS[m-1]} ${y+543}`;
+  btn.classList.remove('placeholder');
+}
+
+
+// ─── THAI MONTH PICKER (for filter) ─────────────────────────────────────────
+function tdpOpenMonth(fieldId) {
+  document.querySelectorAll('.tdp-pop.show').forEach(p => p.classList.remove('show'));
+  const pop = document.getElementById(fieldId+'-pop');
+  pop.onmousedown = e => e.stopPropagation(); // prevent outside-click from firing
+  const val = document.getElementById(fieldId).value; // "YYYY-MM"
+  const now = new Date();
+  let y = now.getFullYear(), m = now.getMonth();
+  if (val) { const [vy,vm] = val.split('-'); y=parseInt(vy); m=parseInt(vm)-1; }
+  TDP[fieldId] = { year:y, month:m, mode:'monthYear' };
+  tdpRenderMonth(fieldId);
+  pop.classList.add('show');
+  setTimeout(() => {
+    function outside(e) {
+      const btn = document.getElementById(fieldId+'-btn');
+      const popEl = document.getElementById(fieldId+'-pop');
+      if (btn && !btn.contains(e.target) && popEl && !popEl.contains(e.target)) {
+        popEl.classList.remove('show');
+        btn.classList.remove('open');
+        document.removeEventListener('mousedown', outside);
+      }
+    }
+    document.addEventListener('mousedown', outside);
+  }, 0);
+}
+
+function tdpRenderMonth(fieldId) {
+  const state = TDP[fieldId];
+  const pop = document.getElementById(fieldId+'-pop');
+  const selVal = document.getElementById(fieldId).value;
+  const items = TH_MONTHS_S.map((mn,i) => {
+    const v = `${state.year}-${String(i+1).padStart(2,'0')}`;
+    return `<div class="tdp-sel-item${v===selVal?' selected':''}" onclick="tdpSelectMonth('${fieldId}','${v}',${i})">${mn}</div>`;
+  }).join('');
+  pop.innerHTML = `
+    <div class="tdp-head">
+      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year--;tdpRenderMonth('${fieldId}')">◀</button>
+      <span class="tdp-title">${state.year+543}</span>
+      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year++;tdpRenderMonth('${fieldId}')">▶</button>
+    </div>
+    <div class="tdp-sel-grid">${items}</div>`;
+}
+
+function tdpSelectMonth(fieldId, val, monthIdx) {
+  document.getElementById(fieldId).value = val;
+  const [y] = val.split('-');
+  const btn = document.getElementById(fieldId+'-btn');
+  btn.textContent = `${TH_MONTHS_S[monthIdx]} ${parseInt(y)+543}`;
+  btn.classList.remove('placeholder','open');
+  document.getElementById(fieldId+'-pop').classList.remove('show');
+  renderHistory();
+}
+
+function clearMonthFilter() {
+  document.getElementById('filterMonth').value = '';
+  const btn = document.getElementById('filterMonth-btn');
+  btn.textContent = 'ทุกเดือน';
+  btn.classList.add('placeholder');
+  document.getElementById('filterType').value = 'all';
+  renderHistory();
+}
+
+// ─── PIN MODAL ────────────────────────────────────────────────────────────────
+const PIN_CORRECT = '120946';
+let pinBuffer = '';
+let pinAction = null; // { type: 'clearAll' | 'deleteRow', id? }
+
+function clearAllConfirm() {
+  pinAction = { type: 'clearAll' };
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pinMsg').textContent = '';
+  document.getElementById('pinTitle').textContent = '🗑️ ยืนยันการล้างข้อมูลทั้งหมด';
+  document.getElementById('pinModal').classList.add('show');
+}
+
+function closePinModal() {
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pinMsg').textContent = '';
+  document.getElementById('pinModal').classList.remove('show');
+}
+
+function pinKey(k) {
+  if (k === 'del') {
+    pinBuffer = pinBuffer.slice(0,-1);
+    updatePinDots();
+    document.getElementById('pinMsg').textContent = '';
+    return;
+  }
+  if (pinBuffer.length >= 6) return;
+  pinBuffer += k;
+  updatePinDots();
+  if (pinBuffer.length === 6) {
+    if (pinBuffer === PIN_CORRECT) {
+      closePinModal();
+      if (pinAction?.type === 'clearAll') {
+        localStorage.removeItem(STORAGE_KEY);
+        renderDashboard();
+        renderHistory();
+        showToast('🗑️ ล้างข้อมูลแล้ว');
+      } else if (pinAction?.type === 'deleteRow') {
+        const rows = loadData().filter(r => r.id !== pinAction.id);
+        saveData(rows);
+        renderHistory();
+        showToast('🗑️ ลบแล้ว');
+      }
+      pinAction = null;
+    } else {
+      document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
+      document.getElementById('pinMsg').textContent = '❌ รหัสไม่ถูกต้อง';
+      setTimeout(() => {
+        pinBuffer = '';
+        updatePinDots();
+        document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
+        document.getElementById('pinMsg').textContent = '';
+      }, 1000);
+    }
+  }
+}
+
+function updatePinDots() {
+  for (let i=0; i<6; i++) {
+    const dot = document.getElementById('pd'+i);
+    dot.classList.toggle('filled', i < pinBuffer.length);
+    dot.classList.remove('error');
+  }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+tdpSetValue('f-date', new Date().toISOString().slice(0,10));
+renderDashboard();
+</script>
+</body>
+</html>
