@@ -1304,22 +1304,45 @@ document.getElementById('importFile').addEventListener('change', function(e) {
   reader.onload = function(ev) {
     try {
       const wb = XLSX.read(ev.target.result, {type:'array', cellDates:false});
-      // ใช้ sheet แรกที่มีข้อมูลวันที่ (serial > 40000) ใน column A
+
+      // รองรับ 2 รูปแบบ:
+      // 1. ไฟล์ Grab เดิม: วันที่เป็น serial number (>40000) ใน col A, header อยู่แถวก่อน
+      // 2. ไฟล์ Export จากแอปนี้: วันที่เป็น string "YYYY-MM-DD" ใน col A, header แถวแรก
+
+      function isDateSerial(v) { return typeof v === 'number' && v > 40000; }
+      function isDateString(v) { return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v); }
+      function isDateCell(v) { return isDateSerial(v) || isDateString(v); }
+
       let raw = null;
       for (const name of wb.SheetNames) {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:null});
-        if (rows.some(r => r && typeof r[0] === 'number' && r[0] > 40000)) {
-          raw = rows; break;
-        }
+        if (rows.some(r => r && isDateCell(r[0]))) { raw = rows; break; }
       }
       if (!raw) { showToast('ไม่พบข้อมูลวันที่ในไฟล์', 'red'); return; }
 
-      // หาแถวแรกที่ col[0] เป็น serial date (> 40000)
-      const firstDataRow = raw.findIndex(r => r && typeof r[0] === 'number' && r[0] > 40000);
+      // หาแถวแรกที่ col[0] เป็นวันที่ (serial หรือ string)
+      const firstDataRow = raw.findIndex(r => r && isDateCell(r[0]));
       if (firstDataRow < 0) { showToast('ไม่พบข้อมูล', 'red'); return; }
 
-      // โครงสร้าง Excel: A=วันที่, B=Grab, C=Tip, D=รายได้รวม(skip), E=น้ำมัน, F=เติมน้ำมันจริง, G=เครดิต, H=ถอน, I=กำไร(skip)
-      // col index:        0       1      2      3                    4         5                   6           7        8
+      // ตรวจ header แถวก่อนหน้า เพื่อ map คอลัมน์ให้ถูก (รองรับไฟล์ต่างโครงสร้าง)
+      const headerRow = firstDataRow > 0 ? raw[firstDataRow - 1] : null;
+      const headers = (headerRow || []).map(h => h ? String(h) : '');
+      function colOf(keywords) {
+        for (const kw of keywords) {
+          const idx = headers.findIndex(h => h.includes(kw));
+          if (idx >= 0) return idx;
+        }
+        return -1;
+      }
+      // ถ้าหา header ได้ ใช้ header; ถ้าไม่ได้ใช้ตำแหน่งมาตรฐาน
+      const cGrab     = colOf(['Grab']) >= 0 ? colOf(['Grab']) : 1;
+      const cTip      = colOf(['Tip','tip']) >= 0 ? colOf(['Tip','tip']) : 2;
+      const cOil      = colOf(['ค่าน้ำมัน']) >= 0 ? colOf(['ค่าน้ำมัน']) : 4;
+      const cOilReal  = colOf(['เติมน้ำมันจริง']) >= 0 ? colOf(['เติมน้ำมันจริง']) : 5;
+      const cCredit   = colOf(['เครดิต']) >= 0 ? colOf(['เครดิต']) : 6;
+      const cWithdraw = colOf(['ถอน']) >= 0 ? colOf(['ถอน']) : 7;
+      const cNote     = colOf(['หมายเหตุ','note']) >= 0 ? colOf(['หมายเหตุ','note']) : 9;
+
       const parsed = [];
       for (let i = firstDataRow; i < raw.length; i++) {
         const row = raw[i];
@@ -1328,13 +1351,13 @@ document.getElementById('importFile').addEventListener('change', function(e) {
         if (!dateStr) continue;
         parsed.push({
           id: newId(), date: dateStr,
-          grab:     parseFloat(row[1]) || 0,
-          tip:      parseFloat(row[2]) || 0,
-          oil:      parseFloat(row[4]) || 0,
-          oilReal:  parseFloat(row[5]) || 0,
-          credit:   parseFloat(row[6]) || 0,
-          withdraw: parseFloat(row[7]) || 0,
-          note: '',
+          grab:     parseFloat(row[cGrab])     || 0,
+          tip:      parseFloat(row[cTip])      || 0,
+          oil:      parseFloat(row[cOil])      || 0,
+          oilReal:  parseFloat(row[cOilReal])  || 0,
+          credit:   parseFloat(row[cCredit])   || 0,
+          withdraw: parseFloat(row[cWithdraw]) || 0,
+          note:     cNote >= 0 && row[cNote] ? String(row[cNote]).trim() : '',
         });
       }
       if (parsed.length === 0) { showToast('ไม่พบข้อมูล', 'red'); return; }
