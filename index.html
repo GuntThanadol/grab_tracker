@@ -670,8 +670,17 @@ function newId() { return Date.now() + Math.random().toString(36).slice(2,6); }
 
 // ── GOOGLE SHEETS API ────────────────────────────────────────────────────────
 async function apiCall(action, body = {}) {
-  const params = new URLSearchParams({ action, data: JSON.stringify(body) });
-  const res = await fetch(`${API_URL}?${params}`, { redirect: 'follow' });
+  if (action === 'getAll') {
+    // GET for simple queries
+    const res = await fetch(`${API_URL}?action=getAll`, { redirect: 'follow' });
+    return res.json();
+  }
+  // POST for write operations (data อาจใหญ่เกิน URL limit)
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    body: JSON.stringify({ action, ...body }),
+  });
   return res.json();
 }
 
@@ -689,7 +698,15 @@ async function syncFromSheets() {
         credit: Number(r.credit)||0, withdraw: Number(r.withdraw)||0,
         note: String(r.note||''),
       }));
-      saveLocal(rows);
+      // ป้องกัน overwrite ข้อมูล local ที่มีอยู่ด้วย Sheets ที่ว่าง
+      const localRows = loadData();
+      if (rows.length > 0 || localRows.length === 0) {
+        saveLocal(rows);
+      } else if (rows.length === 0 && localRows.length > 0) {
+        // Sheets ว่างแต่ local มีข้อมูล → upload ขึ้น Sheets แทน
+        setSyncStatus('syncing');
+        await apiCall('saveAll', { rows: localRows });
+      }
       setSyncStatus('ok');
     } else { setSyncStatus('error'); }
   } catch(e) { setSyncStatus('error'); }
