@@ -364,12 +364,14 @@
 
 <div class="nav">
   <div class="nav-brand"><span>🛵</span> Grab บัญชีรายวัน</div>
+  <div style="font-size:0.8rem;font-weight:600;" id="syncStatus">☁️ Synced</div>
   <div class="nav-actions">
     <label class="btn btn-outline btn-sm" style="cursor:pointer">
       📥 Import Excel
       <input type="file" accept=".xlsx,.xls" id="importFile" style="display:none">
     </label>
     <button class="btn btn-outline btn-sm" onclick="exportData()">📤 Export</button>
+    <button class="btn btn-outline btn-sm" onclick="manualSync()">🔄 Sync</button>
     <button class="btn btn-red btn-sm" onclick="clearAllConfirm()">🗑️ ล้างข้อมูล</button>
   </div>
 </div>
@@ -708,17 +710,16 @@ function updatePreview() {
 }
 
 // ─── SAVE ENTRY ──────────────────────────────────────────────────────────────
-function saveEntry() {
+async function saveEntry() {
   const date = document.getElementById('f-date').value;
   if (!date) { showToast('กรุณาเลือกวันที่','red'); return; }
   const rows = loadData();
-  if (rows.find(r => r.date === date)) {
+  let existRow = rows.find(r => r.date === date);
+  if (existRow) {
     if (!confirm('มีข้อมูลของวันนี้แล้ว ต้องการแทนที่?')) return;
-    const idx = rows.findIndex(r => r.date === date);
-    rows.splice(idx, 1);
   }
   const row = {
-    id: newId(), date,
+    id: existRow ? existRow.id : newId(), date,
     grab: parseFloat(document.getElementById('f-grab').value)||0,
     tip: parseFloat(document.getElementById('f-tip').value)||0,
     oil: parseFloat(document.getElementById('f-oil').value)||0,
@@ -727,9 +728,8 @@ function saveEntry() {
     withdraw: parseFloat(document.getElementById('f-withdraw').value)||0,
     note: document.getElementById('f-note').value.trim(),
   };
-  rows.push(row);
-  saveData(rows);
-  // clear form, set tomorrow as next date
+  showToast('💾 กำลังบันทึก...', '');
+  await saveRow(row);
   const dt = new Date(date + 'T00:00:00');
   dt.setDate(dt.getDate()+1);
   const next = dt.toISOString().slice(0,10);
@@ -738,6 +738,7 @@ function saveEntry() {
   });
   tdpSetValue('f-date', next);
   updatePreview();
+  renderDashboard();
   showToast('✅ บันทึกแล้ว', 'green');
 }
 
@@ -1234,11 +1235,11 @@ function closeModal() {
   document.getElementById('editModal').classList.remove('show');
   editingId = null;
 }
-function saveEdit() {
+async function saveEdit() {
   const rows = loadData();
   const idx = rows.findIndex(r => r.id === editingId);
   if (idx < 0) return;
-  rows[idx] = {
+  const row = {
     ...rows[idx],
     date: document.getElementById('e-date').value,
     grab: parseFloat(document.getElementById('e-grab').value)||0,
@@ -1249,8 +1250,9 @@ function saveEdit() {
     withdraw: parseFloat(document.getElementById('e-withdraw').value)||0,
     note: document.getElementById('e-note').value.trim(),
   };
-  saveData(rows);
   closeModal();
+  showToast('💾 กำลังบันทึก...', '');
+  await saveRow(row);
   renderHistory();
   showToast('✅ แก้ไขแล้ว', 'green');
 }
@@ -1372,7 +1374,7 @@ document.getElementById('importFile').addEventListener('change', function(e) {
   reader.readAsArrayBuffer(file);
 });
 
-function doImport(replaceAll) {
+async function doImport(replaceAll) {
   document.getElementById('importModal').classList.remove('show');
   if (!pendingImportData) return;
   const base = replaceAll ? [] : loadData();
@@ -1384,10 +1386,11 @@ function doImport(replaceAll) {
     existDates.add(row.date);
     added++;
   }
-  saveData(base);
   pendingImportData = null;
+  showToast(`⏳ กำลัง sync ${base.length} วันไปยัง Sheets...`, '');
+  await saveAllRemote(base);
   renderDashboard();
-  showToast(replaceAll ? `Import สำเร็จ: ${added} วัน` : `Import สำเร็จ: ${added} วัน (ข้าม ${skipped} ซ้ำ)`, 'green');
+  showToast(replaceAll ? `✅ Import สำเร็จ: ${added} วัน` : `✅ Import สำเร็จ: ${added} วัน (ข้าม ${skipped} ซ้ำ)`, 'green');
 }
 
 // ─── EXPORT ──────────────────────────────────────────────────────────────────
@@ -1616,15 +1619,19 @@ function pinKey(k) {
     if (pinBuffer === PIN_CORRECT) {
       closePinModal();
       if (pinAction?.type === 'clearAll') {
-        localStorage.removeItem(STORAGE_KEY);
-        renderDashboard();
-        renderHistory();
-        showToast('🗑️ ล้างข้อมูลแล้ว');
+        showToast('🗑️ กำลังล้างข้อมูล...', '');
+        saveAllRemote([]).then(() => {
+          localStorage.removeItem(STORAGE_KEY);
+          renderDashboard();
+          renderHistory();
+          showToast('🗑️ ล้างข้อมูลแล้ว');
+        });
       } else if (pinAction?.type === 'deleteRow') {
-        const rows = loadData().filter(r => r.id !== pinAction.id);
-        saveData(rows);
-        renderHistory();
-        showToast('🗑️ ลบแล้ว');
+        showToast('🗑️ กำลังลบ...', '');
+        deleteRowRemote(pinAction.id).then(() => {
+          renderHistory();
+          showToast('🗑️ ลบแล้ว');
+        });
       }
       pinAction = null;
     } else {
@@ -1648,9 +1655,22 @@ function updatePinDots() {
   }
 }
 
+// ─── MANUAL SYNC ────────────────────────────────────────────────────────────
+async function manualSync() {
+  showToast('🔄 กำลัง sync...', '');
+  await syncFromSheets();
+  renderDashboard();
+  renderHistory();
+  showToast('✅ Sync สำเร็จ', 'green');
+}
+
 // ─── INIT ────────────────────────────────────────────────────────────────────
 tdpSetValue('f-date', new Date().toISOString().slice(0,10));
-renderDashboard();
+renderDashboard(); // render จาก cache ก่อน
+syncFromSheets().then(() => {
+  renderDashboard();
+  renderHistory();
+});
 </script>
 </body>
 </html>
