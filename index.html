@@ -652,18 +652,84 @@
 <script>
 // ─── DATA ───────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'grab_tracker_v1';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxJs_MWuY6IjX5tMyx10Tk20d0iz6x2nozHr9MmZYNvPAGKUrGp4EfJdOEmRqrpNCM6/exec';
 let editingId = null;
+let isSyncing = false;
 
+// ── LOCAL CACHE ──────────────────────────────────────────────────────────────
 function loadData() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch { return []; }
 }
-function saveData(rows) {
+function saveLocal(rows) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
 }
+function saveData(rows) { saveLocal(rows); } // backward compat
 function getRows() { return loadData().sort((a,b) => a.date.localeCompare(b.date)); }
-
 function newId() { return Date.now() + Math.random().toString(36).slice(2,6); }
+
+// ── GOOGLE SHEETS API ────────────────────────────────────────────────────────
+async function apiCall(action, body = {}) {
+  const params = new URLSearchParams({ action, data: JSON.stringify(body) });
+  const res = await fetch(`${API_URL}?${params}`, { redirect: 'follow' });
+  return res.json();
+}
+
+async function syncFromSheets() {
+  if (isSyncing) return;
+  isSyncing = true;
+  setSyncStatus('syncing');
+  try {
+    const data = await apiCall('getAll');
+    if (data.ok) {
+      const rows = data.rows.map(r => ({
+        id: String(r.id), date: String(r.date),
+        grab: Number(r.grab)||0, tip: Number(r.tip)||0,
+        oil: Number(r.oil)||0, oilReal: Number(r.oilReal)||0,
+        credit: Number(r.credit)||0, withdraw: Number(r.withdraw)||0,
+        note: String(r.note||''),
+      }));
+      saveLocal(rows);
+      setSyncStatus('ok');
+    } else { setSyncStatus('error'); }
+  } catch(e) { setSyncStatus('error'); }
+  finally { isSyncing = false; }
+}
+
+async function saveRow(row) {
+  saveLocal(loadData().filter(r => r.id !== row.id).concat(row));
+  setSyncStatus('syncing');
+  try {
+    const res = await apiCall('save', { row });
+    setSyncStatus(res.ok ? 'ok' : 'error');
+  } catch { setSyncStatus('error'); }
+}
+
+async function deleteRowRemote(id) {
+  saveLocal(loadData().filter(r => r.id !== id));
+  setSyncStatus('syncing');
+  try {
+    const res = await apiCall('delete', { id });
+    setSyncStatus(res.ok ? 'ok' : 'error');
+  } catch { setSyncStatus('error'); }
+}
+
+async function saveAllRemote(rows) {
+  saveLocal(rows);
+  setSyncStatus('syncing');
+  try {
+    const res = await apiCall('saveAll', { rows });
+    setSyncStatus(res.ok ? 'ok' : 'error');
+  } catch { setSyncStatus('error'); }
+}
+
+function setSyncStatus(status) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  if (status === 'syncing') { el.textContent = '🔄 กำลัง sync...'; el.style.color = 'var(--gray-400)'; }
+  else if (status === 'ok')  { el.textContent = '☁️ Synced';        el.style.color = 'var(--green)'; }
+  else                        { el.textContent = '⚠️ Offline';       el.style.color = '#f59e0b'; }
+}
 
 // ─── UTILS ───────────────────────────────────────────────────────────────────
 function fmt(n) {
