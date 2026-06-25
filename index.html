@@ -691,13 +691,23 @@ async function syncFromSheets() {
   try {
     const data = await apiCall('getAll');
     if (data.ok) {
-      const rows = data.rows.map(r => ({
-        id: String(r.id), date: String(r.date),
-        grab: Number(r.grab)||0, tip: Number(r.tip)||0,
-        oil: Number(r.oil)||0, oilReal: Number(r.oilReal)||0,
-        credit: Number(r.credit)||0, withdraw: Number(r.withdraw)||0,
-        note: String(r.note||''),
-      }));
+      const rows = data.rows.map(r => {
+        // Google Sheets แปลง date เป็น ISO datetime → ดึงแค่ YYYY-MM-DD
+        let dateStr = String(r.date);
+        if (dateStr.includes('T')) {
+          // "2026-04-20T17:00:00.000Z" → บวก 7 ชั่วโมงก่อนตัด เพราะ Sheets เก็บเป็น UTC
+          const d = new Date(dateStr);
+          d.setHours(d.getHours() + 7);
+          dateStr = d.toISOString().slice(0, 10);
+        }
+        return {
+          id: String(r.id), date: dateStr,
+          grab: Number(r.grab)||0, tip: Number(r.tip)||0,
+          oil: Number(r.oil)||0, oilReal: Number(r.oilReal)||0,
+          credit: Number(r.credit)||0, withdraw: Number(r.withdraw)||0,
+          note: String(r.note||''),
+        };
+      });
       // ป้องกัน overwrite ข้อมูล local ที่มีอยู่ด้วย Sheets ที่ว่าง
       const localRows = loadData();
       if (rows.length > 0 || localRows.length === 0) {
