@@ -669,17 +669,18 @@ function getRows() { return loadData().sort((a,b) => a.date.localeCompare(b.date
 function newId() { return Date.now() + Math.random().toString(36).slice(2,6); }
 
 // ── GOOGLE SHEETS API ────────────────────────────────────────────────────────
+const API_KEY = 'guntgrabsecret'; // ต้องตรงกับใน Apps Script
+
 async function apiCall(action, body = {}) {
   if (action === 'getAll') {
-    // GET for simple queries
     const res = await fetch(`${API_URL}?action=getAll`, { redirect: 'follow' });
     return res.json();
   }
-  // POST for write operations (data อาจใหญ่เกิน URL limit)
+  // POST + key สำหรับ write operations
   const res = await fetch(API_URL, {
     method: 'POST',
     redirect: 'follow',
-    body: JSON.stringify({ action, ...body }),
+    body: JSON.stringify({ action, key: API_KEY, ...body }),
   });
   return res.json();
 }
