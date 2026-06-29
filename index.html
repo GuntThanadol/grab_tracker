@@ -10,6 +10,7 @@
     --green: #00b14f;
     --green-light: #e6f7ee;
     --green-dark: #007f38;
+    --green-glow: rgba(0,177,79,0.18);
     --red: #e53e3e;
     --red-light: #fff5f5;
     --yellow: #f6c90e;
@@ -21,9 +22,12 @@
     --gray-600: #4b5563;
     --gray-800: #1f2937;
     --white: #ffffff;
-    --radius: 10px;
-    --shadow: 0 1px 4px rgba(0,0,0,0.08);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+    --radius: 12px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.03);
+    --shadow-md: 0 4px 20px rgba(0,0,0,0.10);
+    --shadow-hover: 0 8px 30px rgba(0,177,79,0.15), 0 2px 8px rgba(0,0,0,0.08);
+    --transition: 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    --transition-fast: 0.15s ease;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,9 +37,10 @@
     background: var(--gray-50);
     color: var(--gray-800);
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
-  /* NAV */
+  /* ── NAV ── */
   .nav {
     background: var(--white);
     border-bottom: 2px solid var(--green);
@@ -47,341 +52,557 @@
     top: 0;
     z-index: 100;
     box-shadow: var(--shadow);
+    gap: 10px;
   }
-  .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 700; color: var(--green-dark); }
-  .nav-brand span { font-size: 1.5rem; }
+  .nav-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 1.1rem; font-weight: 800;
+    color: var(--green-dark);
+    letter-spacing: -0.01em;
+  }
+  .nav-brand .logo-icon {
+    font-size: 1.6rem;
+    animation: motorbike 3s ease-in-out infinite;
+    display: inline-block;
+  }
+  @keyframes motorbike {
+    0%,100% { transform: translateX(0) rotate(0deg); }
+    25% { transform: translateX(3px) rotate(2deg); }
+    75% { transform: translateX(-2px) rotate(-1deg); }
+  }
   .nav-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  #syncStatus {
+    font-size: 0.78rem; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--green-light); color: var(--green-dark);
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+  #syncStatus.syncing { background: #fff7e6; color: #b45309; }
+  #syncStatus.error { background: #fff5f5; color: var(--red); }
 
-  /* TABS */
-  .tabs { display: flex; gap: 4px; padding: 16px 20px 0; border-bottom: 1px solid var(--gray-200); background: var(--white); }
+  /* ── TABS ── */
+  .tabs {
+    display: flex; gap: 2px;
+    padding: 14px 20px 0;
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    overflow-x: auto;
+  }
   .tab-btn {
-    padding: 9px 20px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-size: 0.95rem;
+    padding: 10px 22px;
+    border: none; background: none;
+    cursor: pointer; font-size: 0.93rem;
     color: var(--gray-600);
     border-bottom: 3px solid transparent;
-    transition: all 0.15s;
-    border-radius: 6px 6px 0 0;
-    font-family: inherit;
-    font-weight: 500;
+    transition: all 0.2s;
+    border-radius: 8px 8px 0 0;
+    font-family: inherit; font-weight: 600;
+    white-space: nowrap;
+    position: relative; overflow: hidden;
+  }
+  .tab-btn::after {
+    content: ''; position: absolute;
+    inset: 0; background: var(--green);
+    opacity: 0; transition: opacity 0.2s;
+    border-radius: 8px 8px 0 0;
   }
   .tab-btn:hover { color: var(--green); background: var(--green-light); }
-  .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green); font-weight: 700; }
+  .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green); font-weight: 800; background: var(--green-light); }
 
-  /* MAIN */
-  .main { max-width: 1100px; margin: 0 auto; padding: 20px; }
-  .page { display: none; }
+  /* ── MAIN ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 22px 20px; }
+  .page { display: none; animation: pageIn 0.3s ease; }
   .page.active { display: block; }
+  @keyframes pageIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
-  /* STAT CARDS */
-  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  /* ── STAT CARDS ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
   .stat-card {
     background: var(--white);
     border-radius: var(--radius);
-    padding: 16px 18px;
+    padding: 18px 20px;
     box-shadow: var(--shadow);
     border-left: 4px solid var(--green);
+    cursor: default;
+    transition: box-shadow var(--transition), transform var(--transition);
+    position: relative;
+    overflow: hidden;
   }
+  .stat-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--green-glow) 0%, transparent 60%);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .stat-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-3px); }
+  .stat-card:hover::before { opacity: 1; }
   .stat-card.red { border-left-color: var(--red); }
+  .stat-card.red::before { background: linear-gradient(135deg, rgba(229,62,62,0.08) 0%, transparent 60%); }
   .stat-card.yellow { border-left-color: var(--yellow); }
+  .stat-card.yellow::before { background: linear-gradient(135deg, rgba(246,201,14,0.12) 0%, transparent 60%); }
   .stat-card.blue { border-left-color: #3b82f6; }
-  .stat-label { font-size: 0.78rem; color: var(--gray-400); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .stat-value { font-size: 1.5rem; font-weight: 800; }
+  .stat-card.blue::before { background: linear-gradient(135deg, rgba(59,130,246,0.08) 0%, transparent 60%); }
+  .stat-label { font-size: 0.75rem; color: var(--gray-400); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+  .stat-value { font-size: 1.6rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; }
   .stat-value.green { color: var(--green-dark); }
   .stat-value.red { color: var(--red); }
   .stat-value.yellow { color: #b7870a; }
   .stat-value.blue { color: #1d4ed8; }
-  .stat-sub { font-size: 0.78rem; color: var(--gray-400); margin-top: 2px; }
+  .stat-sub { font-size: 0.75rem; color: var(--gray-400); margin-top: 4px; }
 
-  /* FORM */
+  /* ── CARD ── */
   .card {
     background: var(--white);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 22px;
+    margin-bottom: 18px;
+    transition: box-shadow 0.2s;
   }
-  .card-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--gray-800); display: flex; align-items: center; gap: 8px; }
-  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
-  .form-group label { font-size: 0.82rem; font-weight: 600; color: var(--gray-600); }
+  .card-title {
+    font-size: 0.97rem; font-weight: 800;
+    margin-bottom: 18px; color: var(--gray-800);
+    display: flex; align-items: center; gap: 8px;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 0.8rem; font-weight: 700; color: var(--gray-600); letter-spacing: 0.02em; }
   .form-group input {
     border: 1.5px solid var(--gray-200);
-    border-radius: 7px;
-    padding: 8px 12px;
+    border-radius: 8px;
+    padding: 9px 13px;
     font-size: 0.95rem;
     font-family: inherit;
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
     outline: none;
+    background: var(--white);
   }
-  .form-group input:focus { border-color: var(--green); }
-  .form-group input.highlight { background: var(--green-light); }
+  .form-group input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px var(--green-glow);
+    transform: translateY(-1px);
+  }
   .form-row-full { grid-column: 1 / -1; }
 
-  /* BUTTONS */
+  /* ── BUTTONS ── */
   .btn {
-    padding: 8px 18px;
-    border-radius: 7px;
-    border: none;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-family: inherit;
-    font-weight: 600;
-    transition: all 0.15s;
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none; cursor: pointer;
+    font-size: 0.9rem; font-family: inherit;
+    font-weight: 700; transition: all 0.15s;
+    position: relative; overflow: hidden;
+    display: inline-flex; align-items: center; gap: 5px;
+    user-select: none;
+  }
+  /* Ripple */
+  .btn .ripple {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,255,255,0.35);
+    transform: scale(0); animation: ripple 0.55s linear;
+    pointer-events: none;
+  }
+  @keyframes ripple {
+    to { transform: scale(4); opacity: 0; }
   }
   .btn-green { background: var(--green); color: var(--white); }
-  .btn-green:hover { background: var(--green-dark); }
+  .btn-green:hover { background: var(--green-dark); box-shadow: 0 4px 12px rgba(0,177,79,0.35); transform: translateY(-1px); }
+  .btn-green:active { transform: scale(0.97); }
   .btn-outline { background: transparent; border: 1.5px solid var(--gray-200); color: var(--gray-600); }
-  .btn-outline:hover { border-color: var(--green); color: var(--green); }
+  .btn-outline:hover { border-color: var(--green); color: var(--green); background: var(--green-light); }
   .btn-red { background: var(--red); color: var(--white); }
-  .btn-red:hover { background: #c53030; }
-  .btn-sm { padding: 5px 12px; font-size: 0.82rem; }
+  .btn-red:hover { background: #c53030; box-shadow: 0 4px 12px rgba(229,62,62,0.3); transform: translateY(-1px); }
+  .btn-sm { padding: 6px 13px; font-size: 0.82rem; }
   .btn-yellow { background: var(--yellow); color: #7a5200; }
   .btn-yellow:hover { background: #e0b800; }
 
-  /* TABLE */
+  /* ── TABLE ── */
   .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
   th {
-    background: var(--gray-50);
-    padding: 10px 12px;
-    text-align: left;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--gray-400);
-    border-bottom: 1.5px solid var(--gray-200);
-    white-space: nowrap;
+    background: var(--gray-50); padding: 10px 13px;
+    text-align: left; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--gray-400); border-bottom: 1.5px solid var(--gray-200);
+    white-space: nowrap; font-weight: 800;
   }
   td {
-    padding: 10px 12px;
+    padding: 11px 13px;
     border-bottom: 1px solid var(--gray-100);
-    white-space: nowrap;
+    white-space: nowrap; transition: background 0.1s;
   }
-  tr:hover td { background: var(--gray-50); }
-  .td-num { text-align: right; font-variant-numeric: tabular-nums; }
-  .td-green { color: var(--green-dark); font-weight: 700; }
+  tr:hover td { background: #f0fdf6; }
+  .td-num { text-align: right; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .td-green { color: var(--green-dark); font-weight: 800; }
   .td-red { color: var(--red); }
   .td-gray { color: var(--gray-400); }
-  .td-date { font-weight: 600; }
-  .note-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; color: var(--gray-400); font-size: 0.82rem; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .td-date { font-weight: 700; }
+  .note-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; color: var(--gray-400); font-size: 0.8rem; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.73rem; font-weight: 700; }
   .badge-green { background: var(--green-light); color: var(--green-dark); }
   .badge-red { background: var(--red-light); color: var(--red); }
   .badge-gray { background: var(--gray-100); color: var(--gray-400); }
 
-  /* MONTH SUMMARY */
+  /* staggered row animation */
+  .row-anim { animation: rowIn 0.3s ease both; }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── MONTH SECTION ── */
   .month-section { margin-bottom: 28px; }
   .month-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px; padding-bottom: 8px;
+    margin-bottom: 12px; padding-bottom: 10px;
     border-bottom: 2px solid var(--green-light);
+    flex-wrap: wrap; gap: 8px;
   }
-  .month-title { font-size: 1rem; font-weight: 700; color: var(--green-dark); }
-  .month-stats { display: flex; gap: 20px; font-size: 0.85rem; color: var(--gray-600); }
+  .month-title { font-size: 1.02rem; font-weight: 800; color: var(--green-dark); }
+  .month-stats { display: flex; gap: 20px; font-size: 0.83rem; color: var(--gray-600); flex-wrap: wrap; }
   .month-stats strong { color: var(--gray-800); }
 
-  /* FILTER BAR */
+  /* ── FILTER BAR ── */
   .filter-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
   .filter-bar input, .filter-bar select {
-    border: 1.5px solid var(--gray-200);
-    border-radius: 7px;
-    padding: 7px 12px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.15s;
+    border: 1.5px solid var(--gray-200); border-radius: 8px;
+    padding: 7px 12px; font-size: 0.88rem;
+    font-family: inherit; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    background: var(--white);
   }
-  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--green); }
+  .filter-bar input:focus, .filter-bar select:focus {
+    border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow);
+  }
 
-  /* EMPTY STATE */
-  .empty { text-align: center; padding: 48px 20px; color: var(--gray-400); }
-  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 56px 20px; color: var(--gray-400); }
+  .empty-icon { font-size: 3.5rem; margin-bottom: 14px; opacity: 0.5; animation: float 2s ease-in-out infinite; }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+  }
+  .empty p { font-size: 0.9rem; }
 
-  /* TOAST */
+  /* ── SKELETON ── */
+  .skeleton {
+    background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-200) 50%, var(--gray-100) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }
+
+  /* ── TOAST ── */
   #toast {
     position: fixed; bottom: 24px; right: 24px;
     background: var(--gray-800); color: var(--white);
-    padding: 12px 20px; border-radius: 8px;
-    font-size: 0.9rem; font-weight: 500;
-    opacity: 0; transform: translateY(10px);
-    transition: all 0.25s;
-    z-index: 999;
-    pointer-events: none;
+    padding: 13px 22px; border-radius: 12px;
+    font-size: 0.88rem; font-weight: 700;
+    opacity: 0; transform: translateY(16px) scale(0.95);
+    transition: all 0.28s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 999; pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    display: flex; align-items: center; gap: 8px;
+    max-width: 300px;
   }
-  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.show { opacity: 1; transform: translateY(0) scale(1); }
   #toast.green { background: var(--green); }
   #toast.red { background: var(--red); }
+  #toast.yellow { background: #b45309; }
 
-  /* EDIT MODAL */
+  /* ── MODALS ── */
   .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.35);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0); z-index: 200;
+    align-items: center; justify-content: center;
+    transition: background 0.25s;
+    backdrop-filter: blur(0px);
   }
-  .modal-overlay.show { display: flex; }
+  .modal-overlay.show {
+    display: flex;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(3px);
+  }
   .modal {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 24px;
-    width: 90%;
-    max-width: 500px;
-    box-shadow: var(--shadow-md);
+    background: var(--white); border-radius: 16px;
+    padding: 26px; width: 90%; max-width: 500px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+    animation: modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
   }
-  .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
-  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.88) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 18px; letter-spacing: -0.01em; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 
-  /* CHART BARS */
-  .chart-wrap { margin-top: 8px; }
-  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 0.82rem; }
+  /* ── PREVIEW BOX ── */
+  .preview-box {
+    margin-top: 18px; padding: 16px 18px;
+    background: var(--green-light); border-radius: 10px;
+    display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+    transition: all 0.2s;
+    border: 1.5px solid transparent;
+  }
+  .preview-box.active-entry { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+  .preview-item { font-size: 0.85rem; color: var(--gray-600); }
+  .preview-item strong { font-size: 1.05rem; font-weight: 900; color: var(--green-dark); transition: all 0.3s; }
+  .preview-item strong.updated { color: var(--green); animation: popNum 0.3s var(--transition); }
+  @keyframes popNum { 0% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+  /* ── CHART BARS ── */
+  .chart-wrap { margin-top: 4px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 0.82rem; }
   .bar-label { width: 80px; text-align: right; color: var(--gray-600); flex-shrink: 0; }
-  .bar-track { flex: 1; background: var(--gray-100); border-radius: 4px; height: 22px; position: relative; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; background: var(--green); transition: width 0.4s; display: flex; align-items: center; padding-left: 8px; }
-  .bar-fill.red { background: var(--red); }
-  .bar-val { font-size: 0.8rem; font-weight: 600; color: var(--gray-700); margin-left: 6px; }
+  .bar-track { flex: 1; background: var(--gray-100); border-radius: 6px; height: 24px; position: relative; overflow: hidden; cursor: pointer; }
+  .bar-track:hover .bar-fill { filter: brightness(1.1); }
+  .bar-fill {
+    height: 100%; border-radius: 6px; background: var(--green);
+    display: flex; align-items: center; padding-left: 10px;
+    transition: width 0.6s cubic-bezier(0.34,1.2,0.64,1);
+    width: 0 !important; /* start at 0, JS will set */
+  }
+  .bar-fill.red { background: linear-gradient(90deg,#e53e3e,#c53030); }
+  .bar-fill.good { background: linear-gradient(90deg,var(--green),var(--green-dark)); }
+  .bar-val { font-size: 0.8rem; font-weight: 700; color: var(--gray-700); width: 80px; text-align: right; flex-shrink: 0; }
 
+  /* ── SECTION HEADER ── */
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-  .section-title { font-size: 1.05rem; font-weight: 700; }
+  .section-title { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
 
-
-  /* THAI DATE PICKER */
+  /* ── THAI DATE PICKER ── */
   .tdp-wrap { position: relative; }
   .tdp-input {
-    border: 1.5px solid var(--gray-200);
-    border-radius: 7px;
-    padding: 8px 12px;
-    font-size: 0.95rem;
-    font-family: inherit;
-    cursor: pointer;
-    background: var(--white);
-    width: 100%;
-    text-align: left;
-    transition: border-color 0.15s;
-    outline: none;
-    color: var(--gray-800);
+    border: 1.5px solid var(--gray-200); border-radius: 8px;
+    padding: 9px 13px; font-size: 0.95rem;
+    font-family: inherit; cursor: pointer; background: var(--white);
+    width: 100%; text-align: left; transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none; color: var(--gray-800); font-weight: 600;
   }
-  .tdp-input:focus, .tdp-input.open { border-color: var(--green); }
-  .tdp-input.placeholder { color: var(--gray-400); }
+  .tdp-input:hover { border-color: var(--green); }
+  .tdp-input:focus, .tdp-input.open { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+  .tdp-input.placeholder { color: var(--gray-400); font-weight: 400; }
   .tdp-pop {
-    display: none;
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    z-index: 500;
-    background: var(--white);
-    border: 1.5px solid var(--gray-200);
-    border-radius: 10px;
-    box-shadow: var(--shadow-md);
-    width: 280px;
-    user-select: none;
+    display: none; position: absolute; top: calc(100% + 6px); left: 0;
+    z-index: 500; background: var(--white);
+    border: 1.5px solid var(--gray-200); border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.14); width: 280px;
+    animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
   }
   .tdp-pop.show { display: block; }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
   .tdp-head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--gray-100);
+    padding: 10px 12px; border-bottom: 1px solid var(--gray-100);
   }
-  .tdp-nav { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px 8px; border-radius: 5px; color: var(--gray-600); }
+  .tdp-nav {
+    background: none; border: none; cursor: pointer; font-size: 1rem;
+    padding: 5px 9px; border-radius: 6px; color: var(--gray-600);
+    transition: all 0.15s;
+  }
   .tdp-nav:hover { background: var(--green-light); color: var(--green-dark); }
-  .tdp-title { font-weight: 700; font-size: 0.95rem; color: var(--gray-800); cursor: pointer; padding: 4px 8px; border-radius: 5px; }
-  .tdp-title:hover { background: var(--green-light); }
-  .tdp-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; padding: 8px; }
-  .tdp-dow { text-align: center; font-size: 0.72rem; font-weight: 700; color: var(--gray-400); padding: 4px 0; }
-  .tdp-day {
-    text-align: center; font-size: 0.88rem; padding: 6px 2px;
-    border-radius: 6px; cursor: pointer; transition: background 0.1s;
+  .tdp-title {
+    font-weight: 800; font-size: 0.93rem; color: var(--gray-800);
+    cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.15s;
   }
-  .tdp-day:hover { background: var(--green-light); color: var(--green-dark); }
-  .tdp-day.today { font-weight: 700; color: var(--green-dark); border: 1.5px solid var(--green); }
-  .tdp-day.selected { background: var(--green); color: var(--white) !important; font-weight: 700; }
+  .tdp-title:hover { background: var(--green-light); color: var(--green-dark); }
+  .tdp-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; padding: 10px; }
+  .tdp-dow { text-align: center; font-size: 0.7rem; font-weight: 800; color: var(--gray-400); padding: 4px 0; }
+  .tdp-day {
+    text-align: center; font-size: 0.86rem; padding: 7px 2px;
+    border-radius: 7px; cursor: pointer; transition: all 0.15s; font-weight: 500;
+  }
+  .tdp-day:hover { background: var(--green-light); color: var(--green-dark); transform: scale(1.1); }
+  .tdp-day.today { font-weight: 800; color: var(--green-dark); border: 2px solid var(--green); }
+  .tdp-day.selected { background: var(--green); color: var(--white) !important; font-weight: 800; box-shadow: 0 2px 8px rgba(0,177,79,0.35); }
   .tdp-day.other { color: var(--gray-400); }
   .tdp-day.empty { cursor: default; }
-  .tdp-sel-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; padding: 8px; }
+  .tdp-sel-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; padding: 10px; }
   .tdp-sel-item {
-    text-align: center; font-size: 0.82rem; padding: 7px 4px;
-    border-radius: 6px; cursor: pointer; transition: background 0.1s;
+    text-align: center; font-size: 0.82rem; padding: 8px 4px;
+    border-radius: 7px; cursor: pointer; transition: all 0.15s; font-weight: 600;
   }
-  .tdp-sel-item:hover { background: var(--green-light); color: var(--green-dark); }
-  .tdp-sel-item.selected { background: var(--green); color: var(--white); font-weight: 700; }
+  .tdp-sel-item:hover { background: var(--green-light); color: var(--green-dark); transform: scale(1.05); }
+  .tdp-sel-item.selected { background: var(--green); color: var(--white); font-weight: 800; }
 
-  /* PIN MODAL */
-  .pin-dots { display: flex; justify-content: center; gap: 10px; margin: 16px 0; }
-  .pin-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--gray-200); transition: background 0.15s; }
-  .pin-dot.filled { background: var(--green); }
-  .pin-dot.error { background: var(--red); }
-  .pin-pad { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
-  .pin-btn {
-    padding: 14px; border: 1.5px solid var(--gray-200); border-radius: 8px;
-    background: var(--white); font-size: 1.1rem; font-weight: 700;
-    cursor: pointer; transition: all 0.1s; font-family: inherit;
+  /* ── PIN MODAL ── */
+  .pin-dots { display: flex; justify-content: center; gap: 12px; margin: 18px 0; }
+  .pin-dot {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--gray-200); transition: all 0.2s var(--transition);
+    border: 2px solid transparent;
   }
-  .pin-btn:hover { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
-  .pin-btn:active { transform: scale(0.95); }
+  .pin-dot.filled { background: var(--green); transform: scale(1.2); border-color: var(--green-dark); }
+  .pin-dot.error { background: var(--red); animation: shake 0.5s ease; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-4px) rotate(-5deg); }
+    75% { transform: translateX(4px) rotate(5deg); }
+  }
+  .pin-pad { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .pin-btn {
+    padding: 16px; border: 1.5px solid var(--gray-200); border-radius: 10px;
+    background: var(--white); font-size: 1.15rem; font-weight: 800;
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+    position: relative; overflow: hidden;
+  }
+  .pin-btn:hover { background: var(--green-light); border-color: var(--green); color: var(--green-dark); transform: scale(1.04); }
+  .pin-btn:active { transform: scale(0.94); background: var(--green); color: var(--white); }
   .pin-btn.del { color: var(--red); }
 
+  /* ── GOAL PROGRESS ── */
+  .goal-bar-wrap { background: var(--gray-100); border-radius: 20px; height: 20px; overflow: hidden; margin: 10px 0 6px; position: relative; }
+  .goal-bar-fill {
+    height: 100%; border-radius: 20px;
+    background: linear-gradient(90deg, var(--green), #00d45f);
+    transition: width 0.8s cubic-bezier(0.34,1.2,0.64,1);
+    position: relative; overflow: hidden;
+  }
+  .goal-bar-fill::after {
+    content: '';
+    position: absolute; top: 0; left: -60%;
+    width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    animation: barSheen 2s ease-in-out infinite;
+  }
+  @keyframes barSheen {
+    from { left: -60%; }
+    to   { left: 110%; }
+  }
+  .goal-bar-fill.over { background: linear-gradient(90deg,var(--yellow),#ffd600); }
+  .goal-input-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .goal-input-row input {
+    border: 1.5px solid var(--gray-200); border-radius: 8px;
+    padding: 7px 11px; font-size: 0.9rem; font-family: inherit;
+    outline: none; width: 150px; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .goal-input-row input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+
+  /* ── WEEK COMPARE ── */
+  .week-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .week-col {
+    padding: 14px 16px; border-radius: 10px;
+    background: var(--gray-50); border: 1.5px solid var(--gray-100);
+    transition: all 0.2s;
+  }
+  .week-col:hover { border-color: var(--green); background: var(--green-light); }
+  .week-col-title { font-size: 0.72rem; color: var(--gray-400); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 800; }
+  .week-col-val { font-size: 1.35rem; font-weight: 900; letter-spacing: -0.02em; }
+  .week-diff {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.8rem; font-weight: 800;
+    padding: 4px 12px; border-radius: 20px; margin-top: 10px;
+  }
+  .week-diff.up { background: var(--green-light); color: var(--green-dark); }
+  .week-diff.down { background: var(--red-light); color: var(--red); }
+  .week-diff.flat { background: var(--gray-100); color: var(--gray-400); }
+
+  /* ── DOW CHART ── */
+  .dow-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; }
+  .dow-col { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: default; }
+  .dow-bar-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 90px; }
+  .dow-bar {
+    width: 75%; border-radius: 5px 5px 0 0;
+    background: linear-gradient(180deg,var(--green-dark),var(--green));
+    transition: height 0.6s cubic-bezier(0.34,1.2,0.64,1), filter 0.15s;
+    min-height: 3px;
+  }
+  .dow-bar:hover { filter: brightness(1.15); }
+  .dow-bar.best { background: linear-gradient(180deg,#d4a000,var(--yellow)); }
+  .dow-col:hover .dow-bar { transform: scaleX(1.08); }
+  .dow-label { font-size: 0.78rem; font-weight: 800; color: var(--gray-600); }
+  .dow-val { font-size: 0.7rem; color: var(--gray-400); font-weight: 500; }
+
+  /* ── INTERACTIVE TOOLTIP ── */
+  .chart-tooltip {
+    position: absolute; background: var(--gray-800); color: var(--white);
+    padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    pointer-events: none; opacity: 0; transition: opacity 0.15s;
+    white-space: nowrap; z-index: 50;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .chart-tooltip.show { opacity: 1; }
+  .chart-tooltip::after {
+    content: ''; position: absolute; bottom: -5px; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent; border-bottom: none;
+    border-top-color: var(--gray-800);
+  }
+
+  /* ── IMPORT MODAL ── */
+  .import-option {
+    padding: 14px 16px; border: 1.5px solid var(--gray-200);
+    border-radius: 10px; cursor: pointer; text-align: left;
+    transition: all 0.2s; background: var(--white);
+    display: block; width: 100%; font-family: inherit;
+  }
+  .import-option:hover { border-color: var(--green); background: var(--green-light); transform: translateY(-2px); box-shadow: 0 4px 12px var(--green-glow); }
+  .import-option .opt-title { font-weight: 800; font-size: 0.95rem; color: var(--gray-800); }
+  .import-option .opt-desc { font-size: 0.8rem; color: var(--gray-400); margin-top: 3px; }
+
+  /* ── RESPONSIVE ── */
   @media (max-width: 600px) {
     .two-col-grid { grid-template-columns: 1fr !important; }
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .form-grid { grid-template-columns: 1fr 1fr; }
     .nav-brand { font-size: 0.95rem; }
     .tabs { overflow-x: auto; }
+    .main { padding: 16px 14px; }
   }
 
-  /* GOAL PROGRESS */
-  .goal-bar-wrap { background: var(--gray-100); border-radius: 20px; height: 18px; overflow: hidden; margin: 8px 0 4px; }
-  .goal-bar-fill { height: 100%; border-radius: 20px; background: var(--green); transition: width 0.5s; position: relative; }
-  .goal-bar-fill.over { background: #f6c90e; }
-  .goal-input-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
-  .goal-input-row input { border: 1.5px solid var(--gray-200); border-radius: 7px; padding: 6px 10px; font-size: 0.9rem; font-family: inherit; outline: none; width: 150px; }
-  .goal-input-row input:focus { border-color: var(--green); }
+  /* ── SCROLL TO TOP BTN ── */
+  #scrollTop {
+    position: fixed; bottom: 80px; right: 24px;
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--green); color: var(--white);
+    border: none; cursor: pointer; font-size: 1rem;
+    box-shadow: 0 4px 16px rgba(0,177,79,0.35);
+    opacity: 0; transform: scale(0.7);
+    transition: all 0.25s var(--transition);
+    z-index: 90; display: flex; align-items: center; justify-content: center;
+  }
+  #scrollTop.show { opacity: 1; transform: scale(1); }
+  #scrollTop:hover { background: var(--green-dark); transform: scale(1.1); }
 
-  /* WEEK COMPARE */
-  .week-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .week-col { padding: 12px 14px; border-radius: 8px; background: var(--gray-50); }
-  .week-col-title { font-size: 0.78rem; color: var(--gray-400); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .week-col-val { font-size: 1.3rem; font-weight: 800; }
-  .week-diff { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-top: 8px; }
-  .week-diff.up { background: var(--green-light); color: var(--green-dark); }
-  .week-diff.down { background: var(--red-light); color: var(--red); }
-  .week-diff.flat { background: var(--gray-100); color: var(--gray-400); }
-
-  /* DOW CHART */
-  .dow-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; }
-  .dow-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .dow-bar-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 80px; }
-  .dow-bar { width: 70%; border-radius: 4px 4px 0 0; background: var(--green); transition: height 0.4s; min-height: 3px; }
-  .dow-bar.best { background: #f6c90e; }
-  .dow-label { font-size: 0.78rem; font-weight: 700; color: var(--gray-600); }
-  .dow-val { font-size: 0.72rem; color: var(--gray-400); }
+  /* number counter */
+  .count-up { display: inline-block; transition: all 0.05s; }
 </style>
 </head>
 <body>
 
 <div class="nav">
-  <div class="nav-brand"><span>🛵</span> Grab บัญชีรายวัน</div>
-  <div style="font-size:0.8rem;font-weight:600;" id="syncStatus">☁️ Synced</div>
+  <div class="nav-brand"><span class="logo-icon">🛵</span> Grab บัญชีรายวัน</div>
+  <div id="syncStatus">☁️ Synced</div>
   <div class="nav-actions">
     <label class="btn btn-outline btn-sm" style="cursor:pointer">
-      📥 Import Excel
+      📥 Import
       <input type="file" accept=".xlsx,.xls" id="importFile" style="display:none">
     </label>
-    <button class="btn btn-outline btn-sm" onclick="exportData()">📤 Export</button>
-    <button class="btn btn-outline btn-sm" onclick="manualSync()">🔄 Sync</button>
-    <button class="btn btn-outline btn-sm" id="lockBtn" onclick="toggleLock()" title="ปลดล็อคการแก้ไข">🔒 ปลดล็อค</button>
-    <button class="btn btn-red btn-sm" onclick="clearAllConfirm()">🗑️ ล้างข้อมูล</button>
+    <button class="btn btn-outline btn-sm" onclick="addRipple(event);exportData()">📤 Export</button>
+    <button class="btn btn-outline btn-sm" onclick="addRipple(event);manualSync()">🔄 Sync</button>
+    <button class="btn btn-outline btn-sm" id="lockBtn" onclick="addRipple(event);toggleLock()" title="ปลดล็อคการแก้ไข">🔒 ปลดล็อค</button>
+    <button class="btn btn-red btn-sm" onclick="addRipple(event);clearAllConfirm()">🗑️ ล้างข้อมูล</button>
   </div>
 </div>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="showTab('dashboard')">📊 ภาพรวม</button>
-  <button class="tab-btn" onclick="showTab('entry')">➕ กรอกข้อมูล</button>
-  <button class="tab-btn" onclick="showTab('history')">📋 รายวัน</button>
-  <button class="tab-btn" onclick="showTab('monthly')">📅 รายเดือน</button>
+  <button class="tab-btn active" onclick="showTab('dashboard',this)">📊 ภาพรวม</button>
+  <button class="tab-btn" onclick="showTab('entry',this)">➕ กรอกข้อมูล</button>
+  <button class="tab-btn" onclick="showTab('history',this)">📋 รายวัน</button>
+  <button class="tab-btn" onclick="showTab('monthly',this)">📅 รายเดือน</button>
 </div>
 
 <div class="main">
@@ -390,31 +611,23 @@
   <div class="page active" id="page-dashboard">
     <div class="stat-grid" id="statGrid"></div>
 
-
-    <!-- ROW 2: Goal + Week Compare -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;" class="two-col-grid">
-
-      <!-- Goal Card -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;" class="two-col-grid">
       <div class="card" style="margin-bottom:0">
         <div class="card-title">🎯 เป้าหมายรายเดือน</div>
         <div id="goalContent"></div>
         <div class="goal-input-row">
-          <span style="font-size:0.85rem;color:var(--gray-600)">ตั้งเป้า:</span>
+          <span style="font-size:0.83rem;color:var(--gray-600)">ตั้งเป้า:</span>
           <input type="number" id="goalInput" placeholder="เช่น 15000" step="100">
-          <button class="btn btn-green btn-sm" onclick="saveGoal()">บันทึก</button>
+          <button class="btn btn-green btn-sm" onclick="addRipple(event);saveGoal()">บันทึก</button>
         </div>
       </div>
-
-      <!-- Week Compare Card -->
       <div class="card" style="margin-bottom:0">
         <div class="card-title">📊 สัปดาห์นี้ vs สัปดาห์ที่แล้ว</div>
         <div id="weekCompare"></div>
       </div>
-
     </div>
 
-    <!-- ROW 3: Day of Week -->
-    <div class="card" style="margin-bottom:20px">
+    <div class="card" style="margin-bottom:18px">
       <div class="card-title">📅 รายได้เฉลี่ยแต่ละวันในสัปดาห์</div>
       <div id="dowChart"></div>
     </div>
@@ -427,13 +640,13 @@
     <div class="card">
       <div class="card-title" style="justify-content:space-between;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
         <span>📉 Trend รายได้ 3 เดือนล่าสุด</span>
-        <div style="display:flex;gap:14px;font-size:0.78rem;font-weight:400;color:var(--gray-600);">
+        <div style="display:flex;gap:14px;font-size:0.78rem;font-weight:600;color:var(--gray-600);">
           <span><span style="display:inline-block;width:10px;height:3px;background:var(--green);border-radius:2px;vertical-align:middle;margin-right:4px"></span>รายได้รวม</span>
           <span><span style="display:inline-block;width:10px;height:3px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px"></span>กำไรสุทธิ</span>
-          <span><span style="display:inline-block;width:10px;height:3px;background:var(--red);border-radius:2px;stroke-dasharray:4;vertical-align:middle;margin-right:4px"></span>ค่าน้ำมัน</span>
+          <span><span style="display:inline-block;width:10px;height:3px;background:var(--red);border-radius:2px;vertical-align:middle;margin-right:4px"></span>ค่าน้ำมัน</span>
         </div>
       </div>
-      <div id="trendChart" style="width:100%;overflow-x:auto;"></div>
+      <div id="trendChart" style="width:100%;overflow-x:auto;position:relative;"></div>
     </div>
   </div>
 
@@ -479,18 +692,15 @@
           <input type="text" id="f-note" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)">
         </div>
       </div>
-
-      <!-- Preview -->
-      <div style="margin-top:16px; padding:14px; background:var(--green-light); border-radius:8px; display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
-        <div style="font-size:0.85rem; color:var(--gray-600);">รายได้รวม: <strong id="prev-income" style="color:var(--green-dark)">—</strong></div>
-        <div style="font-size:0.85rem; color:var(--gray-600);">กำไรสุทธิ: <strong id="prev-profit" style="color:var(--green-dark)">—</strong></div>
-        <button class="btn btn-green" onclick="requireAuth(saveEntry)" style="margin-left:auto">💾 บันทึก</button>
+      <div class="preview-box" id="previewBox">
+        <div class="preview-item">รายได้รวม: <strong id="prev-income">—</strong></div>
+        <div class="preview-item">กำไรสุทธิ: <strong id="prev-profit">—</strong></div>
+        <button class="btn btn-green" onclick="addRipple(event);requireAuth(saveEntry)" style="margin-left:auto">💾 บันทึก</button>
       </div>
     </div>
-
     <div class="card">
       <div class="card-title">💡 หมายเหตุ</div>
-      <ul style="font-size:0.88rem; color:var(--gray-600); line-height:1.9; padding-left:18px;">
+      <ul style="font-size:0.88rem; color:var(--gray-600); line-height:2; padding-left:20px;">
         <li>รายได้รวม = รายได้ Grab + Tip มือ</li>
         <li>กำไรสุทธิ = รายได้รวม − ค่าน้ำมัน (ประมาณการ)</li>
         <li>เครดิต Grab และถอนกรุงศรีไม่นับรวมในกำไร</li>
@@ -505,16 +715,16 @@
     </div>
     <div class="filter-bar">
       <div class="tdp-wrap" style="display:inline-block">
-      <button type="button" class="tdp-input placeholder" id="filterMonth-btn" onclick="tdpOpenMonth('filterMonth')" style="min-width:130px">ทุกเดือน</button>
-      <div class="tdp-pop" id="filterMonth-pop"></div>
-      <input type="hidden" id="filterMonth" value="">
-    </div>
+        <button type="button" class="tdp-input placeholder" id="filterMonth-btn" onclick="tdpOpenMonth('filterMonth')" style="min-width:130px">ทุกเดือน</button>
+        <div class="tdp-pop" id="filterMonth-pop"></div>
+        <input type="hidden" id="filterMonth" value="">
+      </div>
       <select id="filterType" onchange="renderHistory()">
         <option value="all">ทุกวัน</option>
         <option value="work">วันทำงาน</option>
         <option value="rest">วันหยุด</option>
       </select>
-      <button class="btn btn-outline btn-sm" onclick="clearMonthFilter()">ล้าง</button>
+      <button class="btn btn-outline btn-sm" onclick="addRipple(event);clearMonthFilter()">ล้าง</button>
     </div>
     <div class="card" style="padding:0; overflow:hidden;">
       <div class="table-wrap">
@@ -547,13 +757,11 @@
 
 </div>
 
-<!-- Edit Modal -->
-
-
+<!-- PIN MODAL -->
 <div class="modal-overlay" id="pinModal">
   <div class="modal" style="max-width:320px;text-align:center;">
     <div class="modal-title" id="pinTitle">🔐 ยืนยันการลบข้อมูล</div>
-    <p style="color:var(--gray-600);font-size:0.88rem;margin-bottom:4px;">กรอกรหัส 6 หลักเพื่อยืนยัน</p>
+    <p style="color:var(--gray-600);font-size:0.86rem;margin-bottom:4px;">กรอกรหัส 6 หลักเพื่อยืนยัน</p>
     <div class="pin-dots" id="pinDots">
       <div class="pin-dot" id="pd0"></div>
       <div class="pin-dot" id="pd1"></div>
@@ -562,7 +770,7 @@
       <div class="pin-dot" id="pd4"></div>
       <div class="pin-dot" id="pd5"></div>
     </div>
-    <div id="pinMsg" style="height:18px;font-size:0.8rem;color:var(--red);margin-bottom:10px;"></div>
+    <div id="pinMsg" style="height:18px;font-size:0.8rem;color:var(--red);margin-bottom:10px;font-weight:700;"></div>
     <div class="pin-pad">
       <button class="pin-btn" onclick="pinKey('1')">1</button>
       <button class="pin-btn" onclick="pinKey('2')">2</button>
@@ -580,26 +788,30 @@
   </div>
 </div>
 
+<!-- IMPORT MODAL -->
 <div class="modal-overlay" id="importModal">
-  <div class="modal" style="max-width:380px;text-align:center;">
+  <div class="modal" style="max-width:380px;">
     <div class="modal-title">📥 Import ข้อมูลจาก Excel</div>
-    <p style="color:var(--gray-600);font-size:0.9rem;margin-bottom:20px;">
-      พบข้อมูล <strong id="importCount">0</strong> วัน<br>ต้องการ import แบบไหน?
+    <p style="color:var(--gray-600);font-size:0.88rem;margin-bottom:18px;text-align:center;">
+      พบข้อมูล <strong style="font-size:1.2rem;color:var(--green-dark)" id="importCount">0</strong> วัน<br>ต้องการ import แบบไหน?
     </p>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button class="btn btn-green" onclick="requireAuth(()=>doImport(true))" style="padding:12px;">
-        🔄 แทนที่ทั้งหมด<br><small style="font-weight:400;opacity:0.85">ล้างข้อมูลเก่าแล้ว import ใหม่ทั้งหมด</small>
+      <button class="import-option" onclick="requireAuth(()=>doImport(true))">
+        <div class="opt-title">🔄 แทนที่ทั้งหมด</div>
+        <div class="opt-desc">ล้างข้อมูลเก่าแล้ว import ใหม่ทั้งหมด</div>
       </button>
-      <button class="btn btn-outline" onclick="requireAuth(()=>doImport(false))" style="padding:12px;">
-        ➕ เพิ่มเฉพาะวันที่ยังไม่มี<br><small style="font-weight:400;opacity:0.85">ข้ามวันที่มีอยู่แล้ว</small>
+      <button class="import-option" onclick="requireAuth(()=>doImport(false))">
+        <div class="opt-title">➕ เพิ่มเฉพาะวันที่ยังไม่มี</div>
+        <div class="opt-desc">ข้ามวันที่มีอยู่แล้ว ไม่เขียนทับ</div>
       </button>
-      <button class="btn btn-outline" onclick="document.getElementById('importModal').classList.remove('show')" style="color:var(--gray-400);">
+      <button class="btn btn-outline" onclick="document.getElementById('importModal').classList.remove('show')" style="color:var(--gray-400);margin-top:4px;">
         ยกเลิก
       </button>
     </div>
   </div>
 </div>
 
+<!-- EDIT MODAL -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <div class="modal-title">✏️ แก้ไขข้อมูล</div>
@@ -612,43 +824,23 @@
           <input type="hidden" id="e-date" value="">
         </div>
       </div>
-      <div class="form-group">
-        <label>💚 รายได้ Grab</label>
-        <input type="number" id="e-grab" step="0.01">
-      </div>
-      <div class="form-group">
-        <label>👋 Tip มือ</label>
-        <input type="number" id="e-tip" step="0.01">
-      </div>
-      <div class="form-group">
-        <label>⛽ ค่าน้ำมัน</label>
-        <input type="number" id="e-oil" step="0.01">
-      </div>
-      <div class="form-group">
-        <label>⛽ เติมน้ำมันจริง</label>
-        <input type="number" id="e-oilReal" step="0.01">
-      </div>
-      <div class="form-group">
-        <label>💳 เครดิต Grab</label>
-        <input type="number" id="e-credit" step="0.01">
-      </div>
-      <div class="form-group">
-        <label>🏦 ถอนกรุงศรี</label>
-        <input type="number" id="e-withdraw" step="0.01">
-      </div>
-      <div class="form-group form-row-full">
-        <label>📝 หมายเหตุ</label>
-        <input type="text" id="e-note">
-      </div>
+      <div class="form-group"><label>💚 รายได้ Grab</label><input type="number" id="e-grab" step="0.01"></div>
+      <div class="form-group"><label>👋 Tip มือ</label><input type="number" id="e-tip" step="0.01"></div>
+      <div class="form-group"><label>⛽ ค่าน้ำมัน</label><input type="number" id="e-oil" step="0.01"></div>
+      <div class="form-group"><label>⛽ เติมน้ำมันจริง</label><input type="number" id="e-oilReal" step="0.01"></div>
+      <div class="form-group"><label>💳 เครดิต Grab</label><input type="number" id="e-credit" step="0.01"></div>
+      <div class="form-group"><label>🏦 ถอนกรุงศรี</label><input type="number" id="e-withdraw" step="0.01"></div>
+      <div class="form-group form-row-full"><label>📝 หมายเหตุ</label><input type="text" id="e-note"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
-      <button class="btn btn-green" onclick="requireAuth(saveEdit)">💾 บันทึก</button>
+      <button class="btn btn-green" onclick="addRipple(event);requireAuth(saveEdit)">💾 บันทึก</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
+<button id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="กลับขึ้นบน">↑</button>
 
 <script>
 // ─── DATA ───────────────────────────────────────────────────────────────────
@@ -657,68 +849,54 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxJs_MWuY6IjX5tMyx10Tk2
 let editingId = null;
 let isSyncing = false;
 
-// ── LOCAL CACHE ──────────────────────────────────────────────────────────────
-function loadData() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
-}
-function saveLocal(rows) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
-}
-function saveData(rows) { saveLocal(rows); } // backward compat
+function loadData()  { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
+function saveLocal(rows) { localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); }
+function saveData(rows) { saveLocal(rows); }
 function getRows() { return loadData().sort((a,b) => a.date.localeCompare(b.date)); }
-function newId() { return Date.now() + Math.random().toString(36).slice(2,6); }
+function newId()  { return Date.now() + Math.random().toString(36).slice(2,6); }
+
+// ── RIPPLE EFFECT ────────────────────────────────────────────────────────────
+function addRipple(e) {
+  const btn = e.currentTarget;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+  btn.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+// ── SCROLL TO TOP ────────────────────────────────────────────────────────────
+window.addEventListener('scroll', () => {
+  document.getElementById('scrollTop').classList.toggle('show', window.scrollY > 300);
+});
 
 // ── GOOGLE SHEETS API ────────────────────────────────────────────────────────
-const API_KEY = 'guntgrabsecret'; // ต้องตรงกับใน Apps Script
-
+const API_KEY = 'guntgrabsecret';
 async function apiCall(action, body = {}) {
   if (action === 'getAll') {
-    const res = await fetch(`${API_URL}?action=getAll`, { redirect: 'follow' });
+    const res = await fetch(`${API_URL}?action=getAll`, { redirect:'follow' });
     return res.json();
   }
-  // POST + key สำหรับ write operations
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    body: JSON.stringify({ action, key: API_KEY, ...body }),
-  });
+  const res = await fetch(API_URL, { method:'POST', redirect:'follow', body: JSON.stringify({ action, key:API_KEY, ...body }) });
   return res.json();
 }
 
 async function syncFromSheets() {
   if (isSyncing) return;
-  isSyncing = true;
-  setSyncStatus('syncing');
+  isSyncing = true; setSyncStatus('syncing');
   try {
     const data = await apiCall('getAll');
     if (data.ok) {
       const rows = data.rows.map(r => {
-        // Google Sheets แปลง date เป็น ISO datetime → ดึงแค่ YYYY-MM-DD
         let dateStr = String(r.date);
-        if (dateStr.includes('T')) {
-          // "2026-04-20T17:00:00.000Z" → บวก 7 ชั่วโมงก่อนตัด เพราะ Sheets เก็บเป็น UTC
-          const d = new Date(dateStr);
-          d.setHours(d.getHours() + 7);
-          dateStr = d.toISOString().slice(0, 10);
-        }
-        return {
-          id: String(r.id), date: dateStr,
-          grab: Number(r.grab)||0, tip: Number(r.tip)||0,
-          oil: Number(r.oil)||0, oilReal: Number(r.oilReal)||0,
-          credit: Number(r.credit)||0, withdraw: Number(r.withdraw)||0,
-          note: String(r.note||''),
-        };
+        if (dateStr.includes('T')) { const d = new Date(dateStr); d.setHours(d.getHours()+7); dateStr = d.toISOString().slice(0,10); }
+        return { id:String(r.id), date:dateStr, grab:Number(r.grab)||0, tip:Number(r.tip)||0, oil:Number(r.oil)||0, oilReal:Number(r.oilReal)||0, credit:Number(r.credit)||0, withdraw:Number(r.withdraw)||0, note:String(r.note||'') };
       });
-      // ป้องกัน overwrite ข้อมูล local ที่มีอยู่ด้วย Sheets ที่ว่าง
       const localRows = loadData();
-      if (rows.length > 0 || localRows.length === 0) {
-        saveLocal(rows);
-      } else if (rows.length === 0 && localRows.length > 0) {
-        // Sheets ว่างแต่ local มีข้อมูล → upload ขึ้น Sheets แทน
-        setSyncStatus('syncing');
-        await apiCall('saveAll', { rows: localRows });
-      }
+      if (rows.length > 0 || localRows.length === 0) { saveLocal(rows); }
+      else if (rows.length === 0 && localRows.length > 0) { await apiCall('saveAll', { rows: localRows }); }
       setSyncStatus('ok');
     } else { setSyncStatus('error'); }
   } catch(e) { setSyncStatus('error'); }
@@ -728,80 +906,96 @@ async function syncFromSheets() {
 async function saveRow(row) {
   saveLocal(loadData().filter(r => r.id !== row.id).concat(row));
   setSyncStatus('syncing');
-  try {
-    const res = await apiCall('save', { row });
-    setSyncStatus(res.ok ? 'ok' : 'error');
-  } catch { setSyncStatus('error'); }
+  try { const res = await apiCall('save', { row }); setSyncStatus(res.ok ? 'ok' : 'error'); }
+  catch { setSyncStatus('error'); }
 }
-
 async function deleteRowRemote(id) {
   saveLocal(loadData().filter(r => r.id !== id));
   setSyncStatus('syncing');
-  try {
-    const res = await apiCall('delete', { id });
-    setSyncStatus(res.ok ? 'ok' : 'error');
-  } catch { setSyncStatus('error'); }
+  try { const res = await apiCall('delete', { id }); setSyncStatus(res.ok ? 'ok' : 'error'); }
+  catch { setSyncStatus('error'); }
 }
-
 async function saveAllRemote(rows) {
-  saveLocal(rows);
-  setSyncStatus('syncing');
-  try {
-    const res = await apiCall('saveAll', { rows });
-    setSyncStatus(res.ok ? 'ok' : 'error');
-  } catch { setSyncStatus('error'); }
+  saveLocal(rows); setSyncStatus('syncing');
+  try { const res = await apiCall('saveAll', { rows }); setSyncStatus(res.ok ? 'ok' : 'error'); }
+  catch { setSyncStatus('error'); }
 }
 
 function setSyncStatus(status) {
   const el = document.getElementById('syncStatus');
   if (!el) return;
-  if (status === 'syncing') { el.textContent = '🔄 กำลัง sync...'; el.style.color = 'var(--gray-400)'; }
-  else if (status === 'ok')  { el.textContent = '☁️ Synced';        el.style.color = 'var(--green)'; }
-  else                        { el.textContent = '⚠️ Offline';       el.style.color = '#f59e0b'; }
+  el.className = status;
+  if (status==='syncing') el.textContent = '🔄 กำลัง sync...';
+  else if (status==='ok')  el.textContent = '☁️ Synced';
+  else                      el.textContent = '⚠️ Offline';
 }
 
 // ─── UTILS ───────────────────────────────────────────────────────────────────
-function fmt(n) {
-  if (n == null || n === '') return '—';
-  return Number(n).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
+function fmt(n) { if (n==null||n==='') return '—'; return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtDate(d) {
   if (!d) return '';
-  const dt = new Date(d + 'T00:00:00');
-  return dt.toLocaleDateString('th-TH', {day:'2-digit', month:'short', year:'numeric'});
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric'});
 }
-function isWorkDay(r) { return (r.grab || 0) > 0 || (r.tip || 0) > 0; }
-function profit(r) { return (r.grab||0) + (r.tip||0) - (r.oil||0); }
-function income(r) { return (r.grab||0) + (r.tip||0); }
+function isWorkDay(r) { return (r.grab||0)>0||(r.tip||0)>0; }
+function profit(r) { return (r.grab||0)+(r.tip||0)-(r.oil||0); }
+function income(r) { return (r.grab||0)+(r.tip||0); }
+
+// ── ANIMATED COUNTER ─────────────────────────────────────────────────────────
+function animateCount(el, targetVal, duration=800) {
+  if (!el) return;
+  const start = performance.now();
+  const from = 0;
+  function tick(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    const cur = from + (targetVal - from) * ease;
+    el.textContent = cur.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = targetVal.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  requestAnimationFrame(tick);
+}
 
 function showToast(msg, type='') {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'show ' + type;
-  setTimeout(() => t.className = '', 2500);
+  t.textContent = msg; t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 2800);
 }
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
-function showTab(name) {
+function showTab(name, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
-  if (name === 'dashboard') renderDashboard();
-  if (name === 'history') renderHistory();
-  if (name === 'monthly') renderMonthly();
+  if (btn) btn.classList.add('active');
+  if (name==='dashboard') renderDashboard();
+  if (name==='history') renderHistory();
+  if (name==='monthly') renderMonthly();
 }
 
-// ─── FORM PREVIEW ────────────────────────────────────────────────────────────
-['f-grab','f-tip','f-oil'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updatePreview);
-});
+// ─── FORM PREVIEW ─────────────────────────────────────────────────────────────
+['f-grab','f-tip','f-oil'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
 function updatePreview() {
   const g = parseFloat(document.getElementById('f-grab').value)||0;
   const t = parseFloat(document.getElementById('f-tip').value)||0;
   const o = parseFloat(document.getElementById('f-oil').value)||0;
-  document.getElementById('prev-income').textContent = fmt(g+t) + ' บาท';
-  document.getElementById('prev-profit').textContent = fmt(g+t-o) + ' บาท';
+  const incEl = document.getElementById('prev-income');
+  const pEl   = document.getElementById('prev-profit');
+  const box   = document.getElementById('previewBox');
+  const hasVal = g||t||o;
+  box.classList.toggle('active-entry', !!hasVal);
+  function setAnimated(el, val) {
+    el.textContent = fmt(val) + ' บาท';
+    el.classList.remove('updated');
+    void el.offsetWidth;
+    el.classList.add('updated');
+    setTimeout(() => el.classList.remove('updated'), 400);
+  }
+  setAnimated(incEl, g+t);
+  const pVal = g+t-o;
+  setAnimated(pEl, pVal);
+  pEl.style.color = pVal < 0 ? 'var(--red)' : 'var(--green-dark)';
 }
 
 // ─── SAVE ENTRY ──────────────────────────────────────────────────────────────
@@ -810,28 +1004,23 @@ async function saveEntry() {
   if (!date) { showToast('กรุณาเลือกวันที่','red'); return; }
   const rows = loadData();
   let existRow = rows.find(r => r.date === date);
-  if (existRow) {
-    if (!confirm('มีข้อมูลของวันนี้แล้ว ต้องการแทนที่?')) return;
-  }
+  if (existRow && !confirm('มีข้อมูลของวันนี้แล้ว ต้องการแทนที่?')) return;
   const row = {
     id: existRow ? existRow.id : newId(), date,
-    grab: parseFloat(document.getElementById('f-grab').value)||0,
-    tip: parseFloat(document.getElementById('f-tip').value)||0,
-    oil: parseFloat(document.getElementById('f-oil').value)||0,
-    oilReal: parseFloat(document.getElementById('f-oilReal').value)||0,
-    credit: parseFloat(document.getElementById('f-credit').value)||0,
+    grab:     parseFloat(document.getElementById('f-grab').value)||0,
+    tip:      parseFloat(document.getElementById('f-tip').value)||0,
+    oil:      parseFloat(document.getElementById('f-oil').value)||0,
+    oilReal:  parseFloat(document.getElementById('f-oilReal').value)||0,
+    credit:   parseFloat(document.getElementById('f-credit').value)||0,
     withdraw: parseFloat(document.getElementById('f-withdraw').value)||0,
     note: document.getElementById('f-note').value.trim(),
   };
-  showToast('💾 กำลังบันทึก...', '');
+  showToast('💾 กำลังบันทึก...');
   await saveRow(row);
-  const dt = new Date(date + 'T00:00:00');
+  const dt = new Date(date+'T00:00:00');
   dt.setDate(dt.getDate()+1);
-  const next = dt.toISOString().slice(0,10);
-  ['f-grab','f-tip','f-oil','f-oilReal','f-credit','f-withdraw','f-note'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  tdpSetValue('f-date', next);
+  ['f-grab','f-tip','f-oil','f-oilReal','f-credit','f-withdraw','f-note'].forEach(id => document.getElementById(id).value = '');
+  tdpSetValue('f-date', dt.toISOString().slice(0,10));
   updatePreview();
   renderDashboard();
   showToast('✅ บันทึกแล้ว', 'green');
@@ -841,427 +1030,420 @@ async function saveEntry() {
 function renderDashboard() {
   const rows = getRows();
   const workRows = rows.filter(isWorkDay);
-  const totalIncome = rows.reduce((s,r) => s + income(r), 0);
-  const totalTip = rows.reduce((s,r) => s + (r.tip||0), 0);
-  const totalOil = rows.reduce((s,r) => s + (r.oil||0), 0);
-  const totalOilReal = rows.reduce((s,r) => s + (r.oilReal||0), 0);
-  const totalCredit = rows.reduce((s,r) => s + (r.credit||0), 0);
-  const totalWithdraw = rows.reduce((s,r) => s + (r.withdraw||0), 0);
-  const totalProfit = rows.reduce((s,r) => s + profit(r), 0);
-  const avgProfit = workRows.length ? totalProfit / workRows.length : 0;
-  const avgIncome = workRows.length ? totalIncome / workRows.length : 0;
+  const totalGrab    = rows.reduce((s,r)=>s+(r.grab||0),0);
+  const totalTip     = rows.reduce((s,r)=>s+(r.tip||0),0);
+  const totalIncome  = rows.reduce((s,r)=>s+income(r),0);
+  const totalOil     = rows.reduce((s,r)=>s+(r.oil||0),0);
+  const totalOilReal = rows.reduce((s,r)=>s+(r.oilReal||0),0);
+  const totalCredit  = rows.reduce((s,r)=>s+(r.credit||0),0);
+  const totalWithdraw= rows.reduce((s,r)=>s+(r.withdraw||0),0);
+  const totalProfit  = rows.reduce((s,r)=>s+profit(r),0);
+  const avgProfit    = workRows.length ? totalProfit / workRows.length : 0;
+  const avgIncome    = workRows.length ? totalIncome / workRows.length : 0;
 
-  document.getElementById('statGrid').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">💚 รายได้ Grab รวม</div>
-      <div class="stat-value green">${fmt(rows.reduce((s,r)=>s+(r.grab||0),0))}</div>
-      <div class="stat-sub">บาท</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">👋 Tip มือรวม</div>
-      <div class="stat-value green">${fmt(totalTip)}</div>
-      <div class="stat-sub">บาท</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">💰 รายได้รวมทั้งสิ้น</div>
-      <div class="stat-value green">${fmt(totalIncome)}</div>
-      <div class="stat-sub">บาท</div>
-    </div>
-    <div class="stat-card red">
-      <div class="stat-label">⛽ ค่าน้ำมัน (ประมาณ)</div>
-      <div class="stat-value red">${fmt(totalOil)}</div>
-      <div class="stat-sub">บาท | เติมจริง ${fmt(totalOilReal)} บาท</div>
-    </div>
-    <div class="stat-card yellow">
-      <div class="stat-label">💳 เครดิต Grab รวม</div>
-      <div class="stat-value yellow">${fmt(totalCredit)}</div>
-      <div class="stat-sub">บาท</div>
-    </div>
-    <div class="stat-card blue">
-      <div class="stat-label">🏦 ถอนเข้ากรุงศรี</div>
-      <div class="stat-value blue">${fmt(totalWithdraw)}</div>
-      <div class="stat-sub">บาท</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">💵 กำไรสุทธิรวม</div>
-      <div class="stat-value green">${fmt(totalProfit)}</div>
-      <div class="stat-sub">บาท</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">📅 วันทำงาน</div>
-      <div class="stat-value green">${workRows.length}</div>
-      <div class="stat-sub">วัน (จาก ${rows.length} วัน)</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">📈 รายได้เฉลี่ย/วัน</div>
-      <div class="stat-value green">${fmt(avgIncome)}</div>
-      <div class="stat-sub">บาท/วันทำงาน</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">📈 กำไรเฉลี่ย/วัน</div>
-      <div class="stat-value green">${fmt(avgProfit)}</div>
-      <div class="stat-sub">บาท/วันทำงาน</div>
-    </div>
-  `;
+  const cards = [
+    { label:'💚 รายได้ Grab รวม', val:totalGrab,    color:'green', sub:'บาท' },
+    { label:'👋 Tip มือรวม',      val:totalTip,     color:'green', sub:'บาท' },
+    { label:'💰 รายได้รวมทั้งสิ้น',val:totalIncome, color:'green', sub:'บาท' },
+    { label:'⛽ ค่าน้ำมัน',       val:totalOil,     color:'red',   sub:`บาท | เติมจริง ${fmt(totalOilReal)} บาท`, cls:'red' },
+    { label:'💳 เครดิต Grab',     val:totalCredit,  color:'yellow',sub:'บาท', cls:'yellow' },
+    { label:'🏦 ถอนเข้ากรุงศรี',  val:totalWithdraw,color:'blue',  sub:'บาท', cls:'blue' },
+    { label:'💵 กำไรสุทธิรวม',    val:totalProfit,  color:'green', sub:'บาท' },
+    { label:'📅 วันทำงาน',        val:workRows.length, color:'green', sub:`วัน (จาก ${rows.length} วัน)`, isInt:true },
+    { label:'📈 รายได้เฉลี่ย/วัน', val:avgIncome,   color:'green', sub:'บาท/วันทำงาน' },
+    { label:'📈 กำไรเฉลี่ย/วัน',  val:avgProfit,    color:'green', sub:'บาท/วันทำงาน' },
+  ];
 
-  // Bar chart: last 30 days with data
-  const recent = rows.filter(isWorkDay).slice(-30);
-  const maxP = Math.max(...recent.map(r => profit(r)), 1);
-  const barHtml = recent.length === 0
-    ? '<div class="empty"><div class="empty-icon">📊</div><div>ยังไม่มีข้อมูล</div></div>'
-    : recent.map(r => {
-        const p = profit(r);
-        const pct = Math.max((p / maxP) * 100, 2);
-        return `<div class="bar-row">
-          <div class="bar-label">${(()=>{const [y,m,d]=r.date.split('-').map(Number);return d+' '+TH_MONTHS_S[m-1];})()}</div>
-          <div class="bar-track">
-            <div class="bar-fill ${p<0?'red':''}" style="width:${pct}%"></div>
-          </div>
-          <div class="bar-val">${fmt(p)}</div>
-        </div>`;
-      }).join('');
-  document.getElementById('barChart').innerHTML = barHtml;
+  document.getElementById('statGrid').innerHTML = cards.map((c,i) =>
+    `<div class="stat-card ${c.cls||''}" style="animation:rowIn 0.35s ${i*0.04}s ease both;opacity:0">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value ${c.color}" id="sv${i}">0</div>
+      <div class="stat-sub">${c.sub}</div>
+    </div>`
+  ).join('');
+
+  // Animate counters
+  requestAnimationFrame(() => {
+    cards.forEach((c,i) => {
+      const el = document.getElementById('sv'+i);
+      if (!el) return;
+      if (c.isInt) { setTimeout(() => animateCount(el, c.val, 600), i*40); }
+      else { setTimeout(() => animateCount(el, c.val, 700+i*30), i*40); }
+    });
+  });
+
+  renderBarChart(rows);
   renderTrendChart(rows);
   renderGoal(rows);
   renderWeekCompare(rows);
   renderDowChart(rows);
 }
 
+// ─── BAR CHART ───────────────────────────────────────────────────────────────
+function renderBarChart(rows) {
+  const recent = rows.filter(isWorkDay).slice(-30);
+  const maxP = Math.max(...recent.map(r=>profit(r)),1);
+  if (!recent.length) {
+    document.getElementById('barChart').innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>ยังไม่มีข้อมูล</p></div>';
+    return;
+  }
+  const html = recent.map((r,i) => {
+    const p = profit(r);
+    const pct = Math.max((p/maxP)*100, 2);
+    const [,m,d] = r.date.split('-').map(Number);
+    const cls = p < 0 ? 'red' : p > maxP*0.8 ? 'good' : '';
+    return `<div class="bar-row" style="animation:rowIn 0.3s ${i*0.02}s ease both;opacity:0">
+      <div class="bar-label">${d} ${TH_MONTHS_S[m-1]}</div>
+      <div class="bar-track" title="${fmtDate(r.date)}: ${fmt(p)} บาท">
+        <div class="bar-fill ${cls}" id="bf${i}" style="width:0%"></div>
+      </div>
+      <div class="bar-val">${fmt(p)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('barChart').innerHTML = html;
+  requestAnimationFrame(() => {
+    recent.forEach((_,i) => {
+      const p = profit(recent[i]);
+      const pct = Math.max((p/maxP)*100, 2);
+      setTimeout(() => {
+        const el = document.getElementById('bf'+i);
+        if (el) el.style.width = pct+'%';
+      }, i*20);
+    });
+  });
+}
+
+// ─── TREND CHART (interactive tooltip) ──────────────────────────────────────
 function renderTrendChart(rows) {
   const el = document.getElementById('trendChart');
   if (!el) return;
-
-  // Get last 3 months of data grouped by day
   const now = new Date();
-  const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  const cutoff = new Date(now.getFullYear(), now.getMonth()-2, 1);
   const cutoffStr = cutoff.toISOString().slice(0,10);
   const recent = rows.filter(r => r.date >= cutoffStr && isWorkDay(r));
 
   if (recent.length < 2) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📉</div><div>ต้องการข้อมูลอย่างน้อย 2 วัน</div></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📉</div><p>ต้องการข้อมูลอย่างน้อย 2 วัน</p></div>';
     return;
   }
 
-  // Chart dimensions
-  const W = Math.max(el.clientWidth || 700, 400);
-  const H = 240;
-  const PAD = { top:20, right:16, bottom:44, left:60 };
-  const CW = W - PAD.left - PAD.right;
-  const CH = H - PAD.top - PAD.bottom;
+  const W = Math.max(el.clientWidth||700, 400);
+  const H = 250;
+  const PAD = {top:20, right:16, bottom:44, left:62};
+  const CW = W-PAD.left-PAD.right, CH = H-PAD.top-PAD.bottom;
   const n = recent.length;
+  const incomes = recent.map(r=>income(r));
+  const profits = recent.map(r=>profit(r));
+  const oils    = recent.map(r=>r.oil||0);
+  const allVals = [...incomes,...profits,...oils];
+  const minV = Math.min(...allVals,0), maxV = Math.max(...allVals,1);
+  const range = maxV-minV||1;
 
-  const incomes = recent.map(r => income(r));
-  const profits = recent.map(r => profit(r));
-  const oils    = recent.map(r => r.oil||0);
+  function xp(i) { return PAD.left+(i/(n-1))*CW; }
+  function yp(v) { return PAD.top+CH-((v-minV)/range)*CH; }
 
-  const allVals = [...incomes, ...profits, ...oils];
-  const minV = Math.min(...allVals, 0);
-  const maxV = Math.max(...allVals, 1);
-  const range = maxV - minV || 1;
-
-  function xp(i) { return PAD.left + (i/(n-1)) * CW; }
-  function yp(v) { return PAD.top + CH - ((v - minV)/range) * CH; }
-
-  function makePath(vals, color, dashed=false) {
-    const d = vals.map((v,i) => (i===0?'M':'L') + xp(i).toFixed(1)+','+yp(v).toFixed(1)).join(' ');
+  function makePath(vals,color,dashed=false) {
+    const d = vals.map((v,i)=>(i===0?'M':'L')+xp(i).toFixed(1)+','+yp(v).toFixed(1)).join(' ');
     return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"${dashed?' stroke-dasharray="5,4"':''} opacity="0.9"/>`;
   }
-
-  function makeDots(vals, color) {
-    return vals.map((v,i) => `<circle cx="${xp(i).toFixed(1)}" cy="${yp(v).toFixed(1)}" r="3" fill="${color}" stroke="white" stroke-width="1.5">
+  function makeArea(vals,color) {
+    const base = yp(Math.max(minV,0));
+    const d = vals.map((v,i)=>(i===0?'M':'L')+xp(i).toFixed(1)+','+yp(v).toFixed(1)).join(' ')
+      +`L${xp(n-1).toFixed(1)},${base} L${PAD.left},${base} Z`;
+    return `<path d="${d}" fill="${color}" opacity="0.06"/>`;
+  }
+  function makeDots(vals,color) {
+    return vals.map((v,i)=>`<circle class="chart-dot" cx="${xp(i).toFixed(1)}" cy="${yp(v).toFixed(1)}" r="4" fill="${color}" stroke="white" stroke-width="1.5" style="cursor:pointer" data-date="${recent[i].date}" data-val="${v.toFixed(0)}" data-color="${color}">
       <title>${fmtDate(recent[i].date)}: ${fmt(v)} บาท</title>
     </circle>`).join('');
   }
 
-  // Zero line
   const zeroY = yp(0).toFixed(1);
-  const zeroLine = minV < 0 ? `<line x1="${PAD.left}" y1="${zeroY}" x2="${PAD.left+CW}" y2="${zeroY}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3,3"/>` : '';
-
-  // Y axis ticks
+  const zeroLine = minV < 0 ? `<line x1="${PAD.left}" y1="${zeroY}" x2="${PAD.left+CW}" y2="${zeroY}" stroke="#fca5a5" stroke-width="1" stroke-dasharray="4,3"/>` : '';
   const tickCount = 5;
-  const ticks = Array.from({length:tickCount+1},(_,i)=> minV + (range/tickCount)*i);
-  const yAxis = ticks.map(v => {
-    const y = yp(v).toFixed(1);
+  const ticks = Array.from({length:tickCount+1},(_,i)=>minV+(range/tickCount)*i);
+  const yAxis = ticks.map(v=>{
+    const y=yp(v).toFixed(1);
     return `<line x1="${PAD.left-4}" y1="${y}" x2="${PAD.left+CW}" y2="${y}" stroke="#f3f4f6" stroke-width="1"/>
     <text x="${PAD.left-8}" y="${parseFloat(y)+4}" text-anchor="end" font-size="10" fill="#9ca3af">${Math.round(v)}</text>`;
   }).join('');
 
-  // X axis labels - show date labels evenly (max 10)
-  const step = Math.max(1, Math.floor(n/10));
-  const xLabels = recent.map((r,i) => {
-    if (i % step !== 0 && i !== n-1) return '';
-    const [,m,d] = r.date.split('-').map(Number);
-    const label = d+'/'+m;
-    return `<text x="${xp(i).toFixed(1)}" y="${H - PAD.bottom + 16}" text-anchor="middle" font-size="10" fill="#9ca3af">${label}</text>`;
+  const step = Math.max(1,Math.floor(n/10));
+  const xLabels = recent.map((r,i)=>{
+    if (i%step!==0&&i!==n-1) return '';
+    const [,m,d]=r.date.split('-').map(Number);
+    return `<text x="${xp(i).toFixed(1)}" y="${H-PAD.bottom+16}" text-anchor="middle" font-size="10" fill="#9ca3af">${d}/${m}</text>`;
   }).join('');
 
-  // Month separators
-  let lastMonth = '';
-  const monthLabels = recent.map((r,i) => {
-    const mo = r.date.slice(0,7);
-    if (mo === lastMonth) return '';
-    lastMonth = mo;
-    const [y,m] = mo.split('-').map(Number);
-    const x = xp(i).toFixed(1);
-    return `<line x1="${x}" y1="${PAD.top}" x2="${x}" y2="${PAD.top+CH}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="2,3"/>
-    <text x="${parseFloat(x)+4}" y="${PAD.top+12}" font-size="10" fill="#6b7280" font-weight="600">${TH_MONTHS_S[m-1]}</text>`;
+  let lastMonth='';
+  const monthLabels = recent.map((r,i)=>{
+    const mo=r.date.slice(0,7);
+    if (mo===lastMonth) return '';
+    lastMonth=mo;
+    const [,m]=mo.split('-').map(Number);
+    return `<line x1="${xp(i).toFixed(1)}" y1="${PAD.top}" x2="${xp(i).toFixed(1)}" y2="${PAD.top+CH}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="2,3"/>
+    <text x="${parseFloat(xp(i).toFixed(1))+4}" y="${PAD.top+13}" font-size="10" fill="#6b7280" font-weight="600">${TH_MONTHS_S[m-1]}</text>`;
   }).join('');
 
-  // Trend line (linear regression on profit)
-  const xs = profits.map((_,i)=>i);
-  const meanX = xs.reduce((a,b)=>a+b,0)/n;
-  const meanY = profits.reduce((a,b)=>a+b,0)/n;
-  const num = xs.reduce((s,x,i)=>s+(x-meanX)*(profits[i]-meanY),0);
-  const den = xs.reduce((s,x)=>s+(x-meanX)**2,0);
-  const slope = den ? num/den : 0;
-  const intercept = meanY - slope*meanX;
-  const trendColor = slope >= 0 ? '#00b14f' : '#e53e3e';
-  const ty0 = yp(intercept).toFixed(1);
-  const ty1 = yp(intercept + slope*(n-1)).toFixed(1);
-  const trendLine = `<line x1="${PAD.left}" y1="${ty0}" x2="${PAD.left+CW}" y2="${ty1}" stroke="${trendColor}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5"/>`;
-  const trendPct = meanY ? ((slope*(n-1))/Math.abs(meanY)*100).toFixed(1) : 0;
-  const trendLabel = slope >= 0
-    ? `<tspan fill="#00b14f">▲ Trend +${trendPct}%</tspan>`
-    : `<tspan fill="#e53e3e">▼ Trend ${trendPct}%</tspan>`;
+  // Trend line
+  const xs=profits.map((_,i)=>i);
+  const meanX=xs.reduce((a,b)=>a+b,0)/n;
+  const meanY=profits.reduce((a,b)=>a+b,0)/n;
+  const num=xs.reduce((s,x,i)=>s+(x-meanX)*(profits[i]-meanY),0);
+  const den=xs.reduce((s,x)=>s+(x-meanX)**2,0);
+  const slope=den?num/den:0;
+  const intercept=meanY-slope*meanX;
+  const trendColor=slope>=0?'var(--green)':'var(--red)';
+  const ty0=yp(intercept).toFixed(1), ty1=yp(intercept+slope*(n-1)).toFixed(1);
+  const trendLine=`<line x1="${PAD.left}" y1="${ty0}" x2="${PAD.left+CW}" y2="${ty1}" stroke="${trendColor}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5"/>`;
+  const trendPct=meanY?((slope*(n-1))/Math.abs(meanY)*100).toFixed(1):0;
+  const trendLabel=slope>=0?`<tspan fill="var(--green)">▲ +${trendPct}%</tspan>`:`<tspan fill="var(--red)">▼ ${trendPct}%</tspan>`;
+
+  // Hover crosshair line
+  const crosshair = `<line id="tc-cross" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top+CH}" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,3" opacity="0" pointer-events="none"/>`;
 
   el.innerHTML = `<div style="position:relative">
-    <svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;overflow:visible">
-      ${yAxis}
-      ${zeroLine}
-      ${monthLabels}
+    <div class="chart-tooltip" id="chartTip"></div>
+    <svg id="trendSvg" width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;overflow:visible;cursor:crosshair">
+      ${yAxis}${zeroLine}${monthLabels}
+      ${makeArea(incomes,'#00b14f')}${makeArea(profits,'#3b82f6')}
       ${trendLine}
-      ${makePath(incomes,'#00b14f')}
-      ${makePath(profits,'#3b82f6')}
-      ${makePath(oils,'#e53e3e',true)}
-      ${makeDots(incomes,'#00b14f')}
-      ${makeDots(profits,'#3b82f6')}
+      ${makePath(incomes,'#00b14f')}${makePath(profits,'#3b82f6')}${makePath(oils,'#e53e3e',true)}
+      ${crosshair}
+      ${makeDots(incomes,'#00b14f')}${makeDots(profits,'#3b82f6')}
       ${xLabels}
-      <text x="${PAD.left}" y="${H-2}" font-size="11" fill="#6b7280">${trendLabel} (กำไรสุทธิ)</text>
+      <text x="${PAD.left}" y="${H-2}" font-size="11" fill="#6b7280">Trend ${trendLabel} (กำไรสุทธิ 3 เดือน)</text>
       <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+CH}" stroke="#e5e7eb" stroke-width="1"/>
       <line x1="${PAD.left}" y1="${PAD.top+CH}" x2="${PAD.left+CW}" y2="${PAD.top+CH}" stroke="#e5e7eb" stroke-width="1"/>
     </svg>
   </div>`;
+
+  // Tooltip on dots
+  el.querySelectorAll('.chart-dot').forEach(dot => {
+    dot.addEventListener('mouseenter', (e) => {
+      const tip = document.getElementById('chartTip');
+      const svg = document.getElementById('trendSvg');
+      const svgRect = svg.getBoundingClientRect();
+      const dotRect = dot.getBoundingClientRect();
+      const x = dotRect.left - svgRect.left + dotRect.width/2;
+      const y = dotRect.top  - svgRect.top  - 38;
+      const [,m,d] = dot.dataset.date.split('-').map(Number);
+      tip.innerHTML = `<span style="color:${dot.dataset.color}">●</span> ${d} ${TH_MONTHS_S[m-1]}: <strong>${Number(dot.dataset.val).toLocaleString('th-TH',{minimumFractionDigits:0})} ฿</strong>`;
+      tip.style.left = (x - tip.offsetWidth/2) + 'px';
+      tip.style.top  = y + 'px';
+      tip.classList.add('show');
+      dot.setAttribute('r','6');
+    });
+    dot.addEventListener('mouseleave', () => {
+      document.getElementById('chartTip').classList.remove('show');
+      dot.setAttribute('r','4');
+    });
+  });
 }
 
-
-// ─── GOAL ────────────────────────────────────────────────────────────────────
+// ─── GOAL ─────────────────────────────────────────────────────────────────────
 function saveGoal() {
   const v = parseFloat(document.getElementById('goalInput').value);
-  if (!v || v <= 0) { showToast('กรุณากรอกเป้าหมาย','red'); return; }
+  if (!v||v<=0) { showToast('กรุณากรอกเป้าหมาย','red'); return; }
   localStorage.setItem('grab_goal', v);
   renderDashboard();
   showToast('🎯 บันทึกเป้าหมายแล้ว','green');
 }
-
 function renderGoal(rows) {
-  const goal = parseFloat(localStorage.getItem('grab_goal')) || 0;
+  const goal = parseFloat(localStorage.getItem('grab_goal'))||0;
   const el = document.getElementById('goalContent');
   const inp = document.getElementById('goalInput');
-
-  // This month
   const now = new Date();
   const thisMonthPfx = now.toISOString().slice(0,7);
-  const monthRows = rows.filter(r => r.date.startsWith(thisMonthPfx));
-  const monthProfit = monthRows.reduce((s,r) => s + profit(r), 0);
-  const monthIncome = monthRows.reduce((s,r) => s + income(r), 0);
-
-  // Days left in month
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const today = now.getDate();
-  const daysLeft = daysInMonth - today;
+  const monthRows = rows.filter(r=>r.date.startsWith(thisMonthPfx));
+  const monthProfit = monthRows.reduce((s,r)=>s+profit(r),0);
   const workDays = monthRows.filter(isWorkDay).length;
+  const daysInMonth = new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const daysLeft = daysInMonth - now.getDate();
 
   if (!goal) {
-    el.innerHTML = `<div style="color:var(--gray-400);font-size:0.88rem;padding:8px 0">กรอกเป้าหมายด้านล่างเพื่อเริ่มติดตาม</div>
-      <div style="font-size:0.85rem;color:var(--gray-600);margin-top:6px">เดือนนี้: <strong style="color:var(--green-dark)">${fmt(monthProfit)} บาท</strong> (${workDays} วัน)</div>`;
+    el.innerHTML = `<div style="color:var(--gray-400);font-size:0.86rem;padding:8px 0">กรอกเป้าหมายด้านล่างเพื่อเริ่มติดตาม</div>
+      <div style="font-size:0.83rem;color:var(--gray-600);margin-top:6px">เดือนนี้: <strong style="color:var(--green-dark)">${fmt(monthProfit)} บาท</strong> (${workDays} วัน)</div>`;
     return;
   }
-
   inp.value = inp.value || goal;
-  const pct = Math.min((monthProfit / goal) * 100, 100);
+  const pct = Math.min((monthProfit/goal)*100,100);
   const over = monthProfit >= goal;
-  const remaining = Math.max(goal - monthProfit, 0);
-  const [mo] = thisMonthPfx.split('-').map((_,i,a)=>a[i]);
+  const remaining = Math.max(goal-monthProfit, 0);
   const moName = TH_MONTHS_S[now.getMonth()];
-
-  let needPerDay = '';
-  if (!over && daysLeft > 0) {
-    const nd = remaining / daysLeft;
-    needPerDay = `<div style="font-size:0.8rem;color:var(--gray-600);margin-top:4px">ต้องทำ <strong>${fmt(nd)}</strong> บาท/วัน (${daysLeft} วันที่เหลือ)</div>`;
-  }
+  let needPerDay = !over && daysLeft > 0 ? `<div style="font-size:0.79rem;color:var(--gray-600);margin-top:4px">ต้องทำ <strong>${fmt(remaining/daysLeft)}</strong> บาท/วัน (${daysLeft} วันที่เหลือ)</div>` : '';
 
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
-      <span style="font-size:0.85rem;color:var(--gray-600)">${moName} ${now.getFullYear()+543}</span>
-      <span style="font-size:0.82rem;font-weight:700;color:${over?'#b7870a':'var(--green-dark)'}">${pct.toFixed(1)}%</span>
+      <span style="font-size:0.83rem;color:var(--gray-600)">${moName} ${now.getFullYear()+543}</span>
+      <span style="font-size:0.82rem;font-weight:800;color:${over?'#b7870a':'var(--green-dark)'}">${pct.toFixed(1)}%</span>
     </div>
     <div class="goal-bar-wrap">
-      <div class="goal-bar-fill ${over?'over':''}" style="width:${pct}%"></div>
+      <div class="goal-bar-fill ${over?'over':''}" id="goalBar" style="width:0%"></div>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--gray-600)">
+    <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--gray-600)">
       <span>กำไร <strong style="color:var(--green-dark)">${fmt(monthProfit)}</strong> บาท</span>
       <span>เป้า <strong>${fmt(goal)}</strong> บาท</span>
     </div>
     ${over
-      ? `<div style="font-size:0.82rem;margin-top:6px;color:#b7870a;font-weight:700">🎉 ถึงเป้าแล้ว! เกิน ${fmt(monthProfit-goal)} บาท</div>`
+      ? `<div style="font-size:0.82rem;margin-top:6px;color:#b7870a;font-weight:800">🎉 ถึงเป้าแล้ว! เกิน ${fmt(monthProfit-goal)} บาท</div>`
       : `<div style="font-size:0.82rem;margin-top:4px;color:var(--gray-600)">ยังขาดอีก <strong style="color:var(--red)">${fmt(remaining)}</strong> บาท</div>${needPerDay}`
     }`;
+  setTimeout(() => {
+    const bar = document.getElementById('goalBar');
+    if (bar) bar.style.width = pct + '%';
+  }, 200);
 }
 
 // ─── WEEK COMPARE ─────────────────────────────────────────────────────────────
 function renderWeekCompare(rows) {
   const el = document.getElementById('weekCompare');
   const now = new Date();
-  // Start of this week (Monday)
-  const dow = now.getDay(); // 0=Sun
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
-  monday.setHours(0,0,0,0);
-  const lastMonday = new Date(monday); lastMonday.setDate(monday.getDate() - 7);
-  const lastSunday = new Date(monday); lastSunday.setDate(monday.getDate() - 1);
-
+  const dow = now.getDay();
+  const monday = new Date(now); monday.setDate(now.getDate()-(dow===0?6:dow-1)); monday.setHours(0,0,0,0);
+  const lastMonday = new Date(monday); lastMonday.setDate(monday.getDate()-7);
+  const lastSunday = new Date(monday); lastSunday.setDate(monday.getDate()-1);
   const toStr = d => d.toISOString().slice(0,10);
-  const thisWeek = rows.filter(r => r.date >= toStr(monday) && r.date <= toStr(now));
-  const lastWeek = rows.filter(r => r.date >= toStr(lastMonday) && r.date <= toStr(lastSunday));
-
+  const thisWeek = rows.filter(r=>r.date>=toStr(monday)&&r.date<=toStr(now));
+  const lastWeek = rows.filter(r=>r.date>=toStr(lastMonday)&&r.date<=toStr(lastSunday));
   const thisP = thisWeek.reduce((s,r)=>s+profit(r),0);
   const lastP = lastWeek.reduce((s,r)=>s+profit(r),0);
   const thisI = thisWeek.reduce((s,r)=>s+income(r),0);
   const lastI = lastWeek.reduce((s,r)=>s+income(r),0);
-  const diffP = thisP - lastP;
+  const diffP = thisP-lastP;
   const diffPct = lastP ? ((diffP/Math.abs(lastP))*100).toFixed(1) : null;
-
-  const diffClass = diffP > 0 ? 'up' : diffP < 0 ? 'down' : 'flat';
-  const diffIcon = diffP > 0 ? '▲' : diffP < 0 ? '▼' : '–';
-  const diffLabel = diffPct !== null ? `${diffIcon} ${Math.abs(diffPct)}%` : `${diffIcon} ${fmt(Math.abs(diffP))} บาท`;
+  const diffClass = diffP>0?'up':diffP<0?'down':'flat';
+  const diffIcon = diffP>0?'▲':diffP<0?'▼':'–';
+  const diffLabel = diffPct!==null ? `${diffIcon} ${Math.abs(diffPct)}%` : `${diffIcon} ${fmt(Math.abs(diffP))} บาท`;
 
   el.innerHTML = `
     <div class="week-grid">
       <div class="week-col">
         <div class="week-col-title">สัปดาห์นี้</div>
-        <div class="week-col-val" style="color:var(--green-dark)">${fmt(thisP)}</div>
-        <div style="font-size:0.78rem;color:var(--gray-400);margin-top:2px">รายได้ ${fmt(thisI)} บาท</div>
-        <div style="font-size:0.78rem;color:var(--gray-400)">${thisWeek.filter(isWorkDay).length} วันทำงาน</div>
+        <div class="week-col-val" style="color:var(--green-dark)" id="wkThis">—</div>
+        <div style="font-size:0.77rem;color:var(--gray-400);margin-top:2px">รายได้ ${fmt(thisI)} บาท</div>
+        <div style="font-size:0.77rem;color:var(--gray-400)">${thisWeek.filter(isWorkDay).length} วันทำงาน</div>
       </div>
       <div class="week-col">
         <div class="week-col-title">สัปดาห์ที่แล้ว</div>
-        <div class="week-col-val" style="color:var(--gray-600)">${fmt(lastP)}</div>
-        <div style="font-size:0.78rem;color:var(--gray-400);margin-top:2px">รายได้ ${fmt(lastI)} บาท</div>
-        <div style="font-size:0.78rem;color:var(--gray-400)">${lastWeek.filter(isWorkDay).length} วันทำงาน</div>
+        <div class="week-col-val" style="color:var(--gray-600)" id="wkLast">—</div>
+        <div style="font-size:0.77rem;color:var(--gray-400);margin-top:2px">รายได้ ${fmt(lastI)} บาท</div>
+        <div style="font-size:0.77rem;color:var(--gray-400)">${lastWeek.filter(isWorkDay).length} วันทำงาน</div>
       </div>
     </div>
-    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span class="week-diff ${diffClass}">${diffLabel}</span>
-      <span style="font-size:0.8rem;color:var(--gray-400)">เทียบกำไรสุทธิ</span>
+      <span style="font-size:0.79rem;color:var(--gray-400)">เทียบกำไรสุทธิ</span>
     </div>`;
+  setTimeout(() => {
+    animateCount(document.getElementById('wkThis'), thisP, 600);
+    animateCount(document.getElementById('wkLast'), lastP, 600);
+  }, 100);
 }
 
-// ─── DAY OF WEEK CHART ────────────────────────────────────────────────────────
+// ─── DOW CHART ────────────────────────────────────────────────────────────────
 function renderDowChart(rows) {
   const el = document.getElementById('dowChart');
   const DOW_LABELS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
-  // Aggregate: sum & count per dow (0=Sun…6=Sat)
-  const sums = Array(7).fill(0), counts = Array(7).fill(0);
+  const sums=Array(7).fill(0), counts=Array(7).fill(0);
   rows.filter(isWorkDay).forEach(r => {
-    const dow = new Date(r.date + 'T00:00:00').getDay();
-    sums[dow] += income(r);
-    counts[dow]++;
+    const d=new Date(r.date+'T00:00:00').getDay();
+    sums[d]+=income(r); counts[d]++;
   });
-  const avgs = sums.map((s,i) => counts[i] ? s/counts[i] : 0);
-  const maxAvg = Math.max(...avgs, 1);
-  const bestDow = avgs.indexOf(Math.max(...avgs));
+  const avgs=sums.map((s,i)=>counts[i]?s/counts[i]:0);
+  const maxAvg=Math.max(...avgs,1);
+  const bestDow=avgs.indexOf(Math.max(...avgs));
 
-  if (rows.filter(isWorkDay).length === 0) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📅</div><div>ยังไม่มีข้อมูล</div></div>';
-    return;
+  if (!rows.filter(isWorkDay).length) {
+    el.innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>ยังไม่มีข้อมูล</p></div>'; return;
   }
-
-  el.innerHTML = `
-    <div class="dow-grid">
-      ${DOW_LABELS.map((label, i) => {
-        const h = avgs[i] ? Math.max((avgs[i]/maxAvg)*80, 4) : 4;
-        const isBest = i === bestDow && avgs[i] > 0;
-        return `<div class="dow-col">
-          <div class="dow-bar-wrap">
-            <div style="font-size:0.72rem;color:${isBest?'#b7870a':'var(--gray-400)'};margin-bottom:2px;font-weight:${isBest?700:400}">${avgs[i]>0?fmt(avgs[i]):''}</div>
-            <div class="dow-bar ${isBest?'best':''}" style="height:${h}px"></div>
+  el.innerHTML = `<div class="dow-grid">
+    ${DOW_LABELS.map((label,i)=>{
+      const h=avgs[i]?Math.max((avgs[i]/maxAvg)*90,4):4;
+      const isBest=i===bestDow&&avgs[i]>0;
+      return `<div class="dow-col" title="${label}: เฉลี่ย ${fmt(avgs[i])} บาท (${counts[i]} วัน)">
+        <div class="dow-bar-wrap">
+          <div style="font-size:0.7rem;color:${isBest?'#b7870a':'var(--gray-400)'};font-weight:${isBest?800:500};margin-bottom:2px;transition:all 0.2s">
+            ${avgs[i]>0?Math.round(avgs[i]/1000)+'k':''}
           </div>
-          <div class="dow-label" style="color:${isBest?'#b7870a':'var(--gray-600)'}">${label}</div>
-          <div class="dow-val">${counts[i]?counts[i]+' วัน':'-'}</div>
-        </div>`;
-      }).join('')}
-    </div>
-    <div style="margin-top:10px;font-size:0.82rem;color:var(--gray-600)">
-      🏆 วันที่ดีที่สุด: <strong style="color:#b7870a">${DOW_LABELS[bestDow]}</strong> เฉลี่ย <strong style="color:#b7870a">${fmt(avgs[bestDow])} บาท</strong>
-    </div>`;
+          <div class="dow-bar ${isBest?'best':''}" id="dbar${i}" style="height:0px"></div>
+        </div>
+        <div class="dow-label" style="color:${isBest?'#b7870a':'var(--gray-600)'}">${label}</div>
+        <div class="dow-val">${counts[i]?counts[i]+'วัน':'-'}</div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div style="margin-top:12px;font-size:0.82rem;color:var(--gray-600)">
+    🏆 วันที่ดีที่สุด: <strong style="color:#b7870a">${DOW_LABELS[bestDow]}</strong> เฉลี่ย <strong style="color:#b7870a">${fmt(avgs[bestDow])} บาท</strong>
+  </div>`;
+
+  // Animate bars
+  requestAnimationFrame(() => {
+    DOW_LABELS.forEach((_,i) => {
+      setTimeout(() => {
+        const bar = document.getElementById('dbar'+i);
+        if (bar) { const h=avgs[i]?Math.max((avgs[i]/maxAvg)*90,4):4; bar.style.height=h+'px'; }
+      }, i*60);
+    });
+  });
 }
 
-// ─── HISTORY ─────────────────────────────────────────────────────────────────
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
 function renderHistory() {
   let rows = getRows();
   const monthFilter = document.getElementById('filterMonth').value;
-  const typeFilter = document.getElementById('filterType').value;
-  if (monthFilter) rows = rows.filter(r => r.date.startsWith(monthFilter));
-  if (typeFilter === 'work') rows = rows.filter(isWorkDay);
-  if (typeFilter === 'rest') rows = rows.filter(r => !isWorkDay(r));
+  const typeFilter  = document.getElementById('filterType').value;
+  if (monthFilter) rows = rows.filter(r=>r.date.startsWith(monthFilter));
+  if (typeFilter==='work') rows=rows.filter(isWorkDay);
+  if (typeFilter==='rest') rows=rows.filter(r=>!isWorkDay(r));
 
   const tbody = document.getElementById('historyBody');
-  if (rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" class="empty"><div class="empty-icon">📋</div><div>ไม่มีข้อมูล</div></td></tr>`;
+  if (!rows.length) {
+    tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="empty-icon">📋</div><p>ไม่มีข้อมูล</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.reverse().map(r => {
-    const p = profit(r);
-    return `<tr>
+  tbody.innerHTML = rows.reverse().map((r,i) => {
+    const p=profit(r);
+    return `<tr class="row-anim" style="animation-delay:${i*0.018}s">
       <td class="td-date">${fmtDate(r.date)}</td>
-      <td class="td-num">${r.grab ? fmt(r.grab) : '<span class="td-gray">—</span>'}</td>
-      <td class="td-num">${r.tip ? fmt(r.tip) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.grab?fmt(r.grab):'<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.tip?fmt(r.tip):'<span class="td-gray">—</span>'}</td>
       <td class="td-num td-green">${fmt(income(r))}</td>
-      <td class="td-num td-red">${r.oil ? fmt(r.oil) : '<span class="td-gray">—</span>'}</td>
-      <td class="td-num">${r.oilReal ? fmt(r.oilReal) : '<span class="td-gray">—</span>'}</td>
-      <td class="td-num">${r.credit ? fmt(r.credit) : '<span class="td-gray">—</span>'}</td>
-      <td class="td-num">${r.withdraw ? fmt(r.withdraw) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num td-red">${r.oil?fmt(r.oil):'<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.oilReal?fmt(r.oilReal):'<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.credit?fmt(r.credit):'<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.withdraw?fmt(r.withdraw):'<span class="td-gray">—</span>'}</td>
       <td class="td-num"><strong class="${p>=0?'td-green':'td-red'}">${fmt(p)}</strong></td>
       <td class="note-cell" title="${r.note||''}">${r.note||''}</td>
       <td style="display:flex;gap:4px;padding:8px">
-        <button class="btn btn-outline btn-sm" onclick="openEdit('${r.id}')">✏️</button>
-        <button class="btn btn-red btn-sm" onclick="requireAuth(()=>deleteRow('${r.id}'))">🗑️</button>
+        <button class="btn btn-outline btn-sm" onclick="addRipple(event);openEdit('${r.id}')">✏️</button>
+        <button class="btn btn-red btn-sm" onclick="addRipple(event);requireAuth(()=>deleteRow('${r.id}'))">🗑️</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-// ─── MONTHLY ─────────────────────────────────────────────────────────────────
+// ─── MONTHLY ──────────────────────────────────────────────────────────────────
 function renderMonthly() {
   const rows = getRows();
   const byMonth = {};
-  rows.forEach(r => {
-    const m = r.date.slice(0,7);
-    if (!byMonth[m]) byMonth[m] = [];
-    byMonth[m].push(r);
-  });
-
+  rows.forEach(r => { const m=r.date.slice(0,7); if(!byMonth[m]) byMonth[m]=[]; byMonth[m].push(r); });
   const months = Object.keys(byMonth).sort().reverse();
-  if (months.length === 0) {
-    document.getElementById('monthlyContent').innerHTML = `<div class="empty"><div class="empty-icon">📅</div><div>ยังไม่มีข้อมูล</div></div>`;
-    return;
+  if (!months.length) {
+    document.getElementById('monthlyContent').innerHTML=`<div class="empty"><div class="empty-icon">📅</div><p>ยังไม่มีข้อมูล</p></div>`; return;
   }
-
-  const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-
-  document.getElementById('monthlyContent').innerHTML = months.map(m => {
-    const mrs = byMonth[m];
-    const workDays = mrs.filter(isWorkDay).length;
-    const totIncome = mrs.reduce((s,r)=>s+income(r),0);
-    const totOil = mrs.reduce((s,r)=>s+(r.oil||0),0);
-    const totOilReal = mrs.reduce((s,r)=>s+(r.oilReal||0),0);
-    const totCredit = mrs.reduce((s,r)=>s+(r.credit||0),0);
-    const totWithdraw = mrs.reduce((s,r)=>s+(r.withdraw||0),0);
-    const totProfit = mrs.reduce((s,r)=>s+profit(r),0);
-    const [yr, mo] = m.split('-');
-    const monthName = `${thMonths[parseInt(mo)-1]} ${parseInt(yr)+543}`;
-
-    return `<div class="month-section">
+  document.getElementById('monthlyContent').innerHTML = months.map((m,mi)=>{
+    const mrs=byMonth[m];
+    const workDays=mrs.filter(isWorkDay).length;
+    const totIncome=mrs.reduce((s,r)=>s+income(r),0);
+    const totOil=mrs.reduce((s,r)=>s+(r.oil||0),0);
+    const totOilReal=mrs.reduce((s,r)=>s+(r.oilReal||0),0);
+    const totCredit=mrs.reduce((s,r)=>s+(r.credit||0),0);
+    const totWithdraw=mrs.reduce((s,r)=>s+(r.withdraw||0),0);
+    const totProfit=mrs.reduce((s,r)=>s+profit(r),0);
+    const [yr,mo]=m.split('-');
+    const monthName=`${TH_MONTHS_S[parseInt(mo)-1]} ${parseInt(yr)+543}`;
+    return `<div class="month-section" style="animation:rowIn 0.4s ${mi*0.08}s ease both;opacity:0">
       <div class="month-header">
         <div class="month-title">📅 ${monthName}</div>
         <div class="month-stats">
@@ -1271,17 +1453,15 @@ function renderMonthly() {
         </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
-        <table style="font-size:0.85rem">
-          <thead>
-            <tr>
-              <th>วันที่</th><th class="td-num">รายได้ Grab</th><th class="td-num">Tip</th>
-              <th class="td-num">รายได้รวม</th><th class="td-num">ค่าน้ำมัน</th>
-              <th class="td-num">เติมน้ำมันจริง</th><th class="td-num">เครดิต Grab</th>
-              <th class="td-num">ถอนกรุงศรี</th><th class="td-num">กำไรสุทธิ</th>
-            </tr>
-          </thead>
+        <table style="font-size:0.84rem">
+          <thead><tr>
+            <th>วันที่</th><th class="td-num">รายได้ Grab</th><th class="td-num">Tip</th>
+            <th class="td-num">รายได้รวม</th><th class="td-num">ค่าน้ำมัน</th>
+            <th class="td-num">เติมน้ำมันจริง</th><th class="td-num">เครดิต Grab</th>
+            <th class="td-num">ถอนกรุงศรี</th><th class="td-num">กำไรสุทธิ</th>
+          </tr></thead>
           <tbody>
-            ${mrs.map(r => `<tr>
+            ${mrs.map(r=>`<tr>
               <td>${fmtDate(r.date)}</td>
               <td class="td-num">${r.grab?fmt(r.grab):'<span class="td-gray">—</span>'}</td>
               <td class="td-num">${r.tip?fmt(r.tip):'<span class="td-gray">—</span>'}</td>
@@ -1292,7 +1472,7 @@ function renderMonthly() {
               <td class="td-num">${r.withdraw?fmt(r.withdraw):'<span class="td-gray">—</span>'}</td>
               <td class="td-num"><strong class="${profit(r)>=0?'td-green':'td-red'}">${fmt(profit(r))}</strong></td>
             </tr>`).join('')}
-            <tr style="background:var(--green-light);font-weight:700;">
+            <tr style="background:var(--green-light);font-weight:800;">
               <td>รวม ${monthName}</td>
               <td class="td-num">${fmt(mrs.reduce((s,r)=>s+(r.grab||0),0))}</td>
               <td class="td-num">${fmt(mrs.reduce((s,r)=>s+(r.tip||0),0))}</td>
@@ -1310,515 +1490,335 @@ function renderMonthly() {
   }).join('');
 }
 
-// ─── EDIT / DELETE ───────────────────────────────────────────────────────────
+// ─── EDIT / DELETE ────────────────────────────────────────────────────────────
 function openEdit(id) {
-  const rows = loadData();
-  const r = rows.find(x => x.id === id);
+  const r = loadData().find(x=>x.id===id);
   if (!r) return;
-  editingId = id;
-  tdpSetValue('e-date', r.date);
-  document.getElementById('e-grab').value = r.grab||'';
-  document.getElementById('e-tip').value = r.tip||'';
-  document.getElementById('e-oil').value = r.oil||'';
-  document.getElementById('e-oilReal').value = r.oilReal||'';
-  document.getElementById('e-credit').value = r.credit||'';
-  document.getElementById('e-withdraw').value = r.withdraw||'';
-  document.getElementById('e-note').value = r.note||'';
+  editingId=id;
+  tdpSetValue('e-date',r.date);
+  ['grab','tip','oil','oilReal','credit','withdraw'].forEach(f=>document.getElementById('e-'+f).value=r[f]||'');
+  document.getElementById('e-note').value=r.note||'';
   document.getElementById('editModal').classList.add('show');
 }
-function closeModal() {
-  document.getElementById('editModal').classList.remove('show');
-  editingId = null;
-}
+function closeModal() { document.getElementById('editModal').classList.remove('show'); editingId=null; }
 async function saveEdit() {
-  const rows = loadData();
-  const idx = rows.findIndex(r => r.id === editingId);
-  if (idx < 0) return;
-  const row = {
-    ...rows[idx],
-    date: document.getElementById('e-date').value,
-    grab: parseFloat(document.getElementById('e-grab').value)||0,
-    tip: parseFloat(document.getElementById('e-tip').value)||0,
-    oil: parseFloat(document.getElementById('e-oil').value)||0,
-    oilReal: parseFloat(document.getElementById('e-oilReal').value)||0,
-    credit: parseFloat(document.getElementById('e-credit').value)||0,
-    withdraw: parseFloat(document.getElementById('e-withdraw').value)||0,
-    note: document.getElementById('e-note').value.trim(),
-  };
-  closeModal();
-  showToast('💾 กำลังบันทึก...', '');
-  await saveRow(row);
-  renderHistory();
-  showToast('✅ แก้ไขแล้ว', 'green');
+  const rows=loadData(); const idx=rows.findIndex(r=>r.id===editingId);
+  if (idx<0) return;
+  const row={...rows[idx], date:document.getElementById('e-date').value,
+    grab:parseFloat(document.getElementById('e-grab').value)||0,
+    tip:parseFloat(document.getElementById('e-tip').value)||0,
+    oil:parseFloat(document.getElementById('e-oil').value)||0,
+    oilReal:parseFloat(document.getElementById('e-oilReal').value)||0,
+    credit:parseFloat(document.getElementById('e-credit').value)||0,
+    withdraw:parseFloat(document.getElementById('e-withdraw').value)||0,
+    note:document.getElementById('e-note').value.trim()};
+  closeModal(); showToast('💾 กำลังบันทึก...');
+  await saveRow(row); renderHistory(); showToast('✅ แก้ไขแล้ว','green');
 }
 function deleteRow(id) {
-  pinAction = { type: 'deleteRow', id };
-  pinBuffer = '';
-  updatePinDots();
-  document.getElementById('pinMsg').textContent = '';
-  document.getElementById('pinTitle').textContent = '🗑️ ยืนยันการลบรายการ';
+  pinAction={type:'deleteRow',id}; pinBuffer=''; updatePinDots();
+  document.getElementById('pinMsg').textContent='';
+  document.getElementById('pinTitle').textContent='🗑️ ยืนยันการลบรายการ';
   document.getElementById('pinModal').classList.add('show');
 }
 
-// ─── IMPORT EXCEL ────────────────────────────────────────────────────────────
+// ─── IMPORT EXCEL ─────────────────────────────────────────────────────────────
 function excelSerialToDateStr(serial) {
-  // Excel serial: days since 1899-12-30 (with Lotus bug)
-  const utc = (serial - 25569) * 86400000;
-  const d = new Date(utc);
-  // Use UTC to avoid timezone shift
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth()+1).padStart(2,'0');
-  const dd = String(d.getUTCDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
+  const utc=(serial-25569)*86400000; const d=new Date(utc);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
 }
-
-function parseDateVal(dateVal) {
-  if (!dateVal) return null;
-  if (dateVal instanceof Date) {
-    const y = dateVal.getFullYear();
-    const m = String(dateVal.getMonth()+1).padStart(2,'0');
-    const d = String(dateVal.getDate()).padStart(2,'0');
-    return `${y}-${m}-${d}`;
-  }
-  if (typeof dateVal === 'number' && dateVal > 1000) {
-    return excelSerialToDateStr(dateVal);
-  }
-  if (typeof dateVal === 'string') {
-    const m = dateVal.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  }
+function parseDateVal(v) {
+  if (!v) return null;
+  if (v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
+  if (typeof v==='number'&&v>1000) return excelSerialToDateStr(v);
+  if (typeof v==='string') { const m=v.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return `${m[1]}-${m[2]}-${m[3]}`; }
   return null;
 }
 
-// ─── IMPORT EXCEL ────────────────────────────────────────────────────────────
-let pendingImportData = null;
-
-document.getElementById('importFile').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  e.target.value = '';
-  const reader = new FileReader();
-  reader.onload = function(ev) {
+let pendingImportData=null;
+document.getElementById('importFile').addEventListener('change',function(e){
+  const file=e.target.files[0]; if(!file) return; e.target.value='';
+  const reader=new FileReader();
+  reader.onload=function(ev){
     try {
-      const wb = XLSX.read(ev.target.result, {type:'array', cellDates:false});
-
-      // รองรับ 2 รูปแบบ:
-      // 1. ไฟล์ Grab เดิม: วันที่เป็น serial number (>40000) ใน col A, header อยู่แถวก่อน
-      // 2. ไฟล์ Export จากแอปนี้: วันที่เป็น string "YYYY-MM-DD" ใน col A, header แถวแรก
-
-      function isDateSerial(v) { return typeof v === 'number' && v > 40000; }
-      function isDateString(v) { return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v); }
-      function isDateCell(v) { return isDateSerial(v) || isDateString(v); }
-
-      let raw = null;
-      for (const name of wb.SheetNames) {
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:null});
-        if (rows.some(r => r && isDateCell(r[0]))) { raw = rows; break; }
+      const wb=XLSX.read(ev.target.result,{type:'array',cellDates:false});
+      function isDateSerial(v){return typeof v==='number'&&v>40000;}
+      function isDateString(v){return typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v);}
+      function isDateCell(v){return isDateSerial(v)||isDateString(v);}
+      let raw=null;
+      for(const name of wb.SheetNames){
+        const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:null});
+        if(rows.some(r=>r&&isDateCell(r[0]))){raw=rows;break;}
       }
-      if (!raw) { showToast('ไม่พบข้อมูลวันที่ในไฟล์', 'red'); return; }
-
-      // หาแถวแรกที่ col[0] เป็นวันที่ (serial หรือ string)
-      const firstDataRow = raw.findIndex(r => r && isDateCell(r[0]));
-      if (firstDataRow < 0) { showToast('ไม่พบข้อมูล', 'red'); return; }
-
-      // ตรวจ header แถวก่อนหน้า เพื่อ map คอลัมน์ให้ถูก (รองรับไฟล์ต่างโครงสร้าง)
-      const headerRow = firstDataRow > 0 ? raw[firstDataRow - 1] : null;
-      const headers = (headerRow || []).map(h => h ? String(h) : '');
-      function colOf(keywords) {
-        for (const kw of keywords) {
-          const idx = headers.findIndex(h => h.includes(kw));
-          if (idx >= 0) return idx;
-        }
-        return -1;
+      if(!raw){showToast('ไม่พบข้อมูลวันที่ในไฟล์','red');return;}
+      const firstDataRow=raw.findIndex(r=>r&&isDateCell(r[0]));
+      if(firstDataRow<0){showToast('ไม่พบข้อมูล','red');return;}
+      const headerRow=firstDataRow>0?raw[firstDataRow-1]:null;
+      const headers=(headerRow||[]).map(h=>h?String(h):'');
+      function colOf(kws){for(const kw of kws){const i=headers.findIndex(h=>h.includes(kw));if(i>=0)return i;}return -1;}
+      const cGrab=colOf(['Grab'])>=0?colOf(['Grab']):1;
+      const cTip=colOf(['Tip','tip'])>=0?colOf(['Tip','tip']):2;
+      const cOil=colOf(['ค่าน้ำมัน'])>=0?colOf(['ค่าน้ำมัน']):4;
+      const cOilReal=colOf(['เติมน้ำมันจริง'])>=0?colOf(['เติมน้ำมันจริง']):5;
+      const cCredit=colOf(['เครดิต'])>=0?colOf(['เครดิต']):6;
+      const cWithdraw=colOf(['ถอน'])>=0?colOf(['ถอน']):7;
+      const cNote=colOf(['หมายเหตุ','note'])>=0?colOf(['หมายเหตุ','note']):9;
+      const parsed=[];
+      for(let i=firstDataRow;i<raw.length;i++){
+        const row=raw[i]; if(!row) continue;
+        const dateStr=parseDateVal(row[0]); if(!dateStr) continue;
+        parsed.push({id:newId(),date:dateStr,grab:parseFloat(row[cGrab])||0,tip:parseFloat(row[cTip])||0,oil:parseFloat(row[cOil])||0,oilReal:parseFloat(row[cOilReal])||0,credit:parseFloat(row[cCredit])||0,withdraw:parseFloat(row[cWithdraw])||0,note:cNote>=0&&row[cNote]?String(row[cNote]).trim():''});
       }
-      // ถ้าหา header ได้ ใช้ header; ถ้าไม่ได้ใช้ตำแหน่งมาตรฐาน
-      const cGrab     = colOf(['Grab']) >= 0 ? colOf(['Grab']) : 1;
-      const cTip      = colOf(['Tip','tip']) >= 0 ? colOf(['Tip','tip']) : 2;
-      const cOil      = colOf(['ค่าน้ำมัน']) >= 0 ? colOf(['ค่าน้ำมัน']) : 4;
-      const cOilReal  = colOf(['เติมน้ำมันจริง']) >= 0 ? colOf(['เติมน้ำมันจริง']) : 5;
-      const cCredit   = colOf(['เครดิต']) >= 0 ? colOf(['เครดิต']) : 6;
-      const cWithdraw = colOf(['ถอน']) >= 0 ? colOf(['ถอน']) : 7;
-      const cNote     = colOf(['หมายเหตุ','note']) >= 0 ? colOf(['หมายเหตุ','note']) : 9;
-
-      const parsed = [];
-      for (let i = firstDataRow; i < raw.length; i++) {
-        const row = raw[i];
-        if (!row) continue;
-        const dateStr = parseDateVal(row[0]);
-        if (!dateStr) continue;
-        parsed.push({
-          id: newId(), date: dateStr,
-          grab:     parseFloat(row[cGrab])     || 0,
-          tip:      parseFloat(row[cTip])      || 0,
-          oil:      parseFloat(row[cOil])      || 0,
-          oilReal:  parseFloat(row[cOilReal])  || 0,
-          credit:   parseFloat(row[cCredit])   || 0,
-          withdraw: parseFloat(row[cWithdraw]) || 0,
-          note:     cNote >= 0 && row[cNote] ? String(row[cNote]).trim() : '',
-        });
-      }
-      if (parsed.length === 0) { showToast('ไม่พบข้อมูล', 'red'); return; }
-      pendingImportData = parsed;
-      document.getElementById('importCount').textContent = parsed.length;
+      if(!parsed.length){showToast('ไม่พบข้อมูล','red');return;}
+      pendingImportData=parsed;
+      document.getElementById('importCount').textContent=parsed.length;
       document.getElementById('importModal').classList.add('show');
-    } catch(err) {
-      showToast('เกิดข้อผิดพลาด: ' + err.message, 'red');
-      console.error(err);
-    }
+    } catch(err){showToast('เกิดข้อผิดพลาด: '+err.message,'red');console.error(err);}
   };
   reader.readAsArrayBuffer(file);
 });
 
 async function doImport(replaceAll) {
   document.getElementById('importModal').classList.remove('show');
-  if (!pendingImportData) return;
-  const base = replaceAll ? [] : loadData();
-  const existDates = new Set(base.map(r => r.date));
-  let added = 0, skipped = 0;
-  for (const row of pendingImportData) {
-    if (existDates.has(row.date)) { skipped++; continue; }
-    base.push(row);
-    existDates.add(row.date);
-    added++;
+  if(!pendingImportData) return;
+  const base=replaceAll?[]:loadData();
+  const existDates=new Set(base.map(r=>r.date));
+  let added=0,skipped=0;
+  for(const row of pendingImportData){
+    if(existDates.has(row.date)){skipped++;continue;}
+    base.push(row); existDates.add(row.date); added++;
   }
-  pendingImportData = null;
-  showToast(`⏳ กำลัง sync ${base.length} วันไปยัง Sheets...`, '');
+  pendingImportData=null;
+  showToast(`⏳ กำลัง sync ${base.length} วัน...`);
   await saveAllRemote(base);
   renderDashboard();
-  showToast(replaceAll ? `✅ Import สำเร็จ: ${added} วัน` : `✅ Import สำเร็จ: ${added} วัน (ข้าม ${skipped} ซ้ำ)`, 'green');
+  showToast(replaceAll?`✅ Import สำเร็จ: ${added} วัน`:`✅ Import: ${added} วัน (ข้าม ${skipped} ซ้ำ)`,'green');
 }
 
-// ─── EXPORT ──────────────────────────────────────────────────────────────────
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
 function exportData() {
-  const rows = getRows();
-  const ws_data = [
-    ['วันที่','รายได้ Grab (บาท)','Tip มือ (บาท)','รายได้รวม (บาท)','ค่าน้ำมัน (บาท)','เติมน้ำมันจริง (บาท)','เครดิต Grab (บาท)','ถอนเข้ากรุงศรี (บาท)','กำไรสุทธิ (บาท)','หมายเหตุ'],
-    ...rows.map(r => [r.date, r.grab||0, r.tip||0, income(r), r.oil||0, r.oilReal||0, r.credit||0, r.withdraw||0, profit(r), r.note||''])
-  ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws_data), 'บัญชีรายวัน');
-  XLSX.writeFile(wb, `Grab_${new Date().toISOString().slice(0,10)}.xlsx`);
-  showToast('📤 Export สำเร็จ', 'green');
+  const rows=getRows();
+  const ws_data=[['วันที่','รายได้ Grab (บาท)','Tip มือ (บาท)','รายได้รวม (บาท)','ค่าน้ำมัน (บาท)','เติมน้ำมันจริง (บาท)','เครดิต Grab (บาท)','ถอนเข้ากรุงศรี (บาท)','กำไรสุทธิ (บาท)','หมายเหตุ'],
+    ...rows.map(r=>[r.date,r.grab||0,r.tip||0,income(r),r.oil||0,r.oilReal||0,r.credit||0,r.withdraw||0,profit(r),r.note||''])];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ws_data),'บัญชีรายวัน');
+  XLSX.writeFile(wb,`Grab_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('📤 Export สำเร็จ','green');
 }
 
+// ─── THAI DATE PICKER ─────────────────────────────────────────────────────────
+const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MONTHS_S=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_DOWS=['อา','จ','อ','พ','พฤ','ศ','ส'];
+const TDP={};
 
-// ─── THAI DATE PICKER ────────────────────────────────────────────────────────
-const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-const TH_MONTHS_S = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const TH_DOWS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
-const TDP = {}; // fieldId -> { year, month, mode:'day'|'month'|'year' }
-
-function tdpOpen(fieldId) {
-  // close others
-  document.querySelectorAll('.tdp-pop.show').forEach(p => { if (p.id !== fieldId+'-pop') p.classList.remove('show'); });
-  const pop = document.getElementById(fieldId+'-pop');
-  if (pop.classList.contains('show')) { pop.classList.remove('show'); return; }
-  const val = document.getElementById(fieldId).value;
-  const now = new Date();
-  let y = now.getFullYear(), m = now.getMonth();
-  if (val) { const d = new Date(val+'T00:00:00'); y=d.getFullYear(); m=d.getMonth(); }
-  TDP[fieldId] = { year:y, month:m, mode:'day' };
-  tdpRender(fieldId);
-  pop.classList.add('show');
+function tdpOpen(fieldId){
+  document.querySelectorAll('.tdp-pop.show').forEach(p=>{if(p.id!==fieldId+'-pop')p.classList.remove('show');});
+  const pop=document.getElementById(fieldId+'-pop');
+  if(pop.classList.contains('show')){pop.classList.remove('show');return;}
+  const val=document.getElementById(fieldId).value;
+  const now=new Date(); let y=now.getFullYear(),m=now.getMonth();
+  if(val){const d=new Date(val+'T00:00:00');y=d.getFullYear();m=d.getMonth();}
+  TDP[fieldId]={year:y,month:m,mode:'day'};
+  tdpRender(fieldId); pop.classList.add('show');
   document.getElementById(fieldId+'-btn').classList.add('open');
-  // close on outside click - use mousedown to avoid re-render timing issue
-  setTimeout(() => {
-    function outside(e) {
-      const btn = document.getElementById(fieldId+'-btn');
-      const popEl = document.getElementById(fieldId+'-pop');
-      if (btn && !btn.contains(e.target) && popEl && !popEl.contains(e.target)) {
-        popEl.classList.remove('show');
-        btn.classList.remove('open');
-        document.removeEventListener('mousedown', outside);
+  setTimeout(()=>{
+    function outside(e){
+      const btn=document.getElementById(fieldId+'-btn');
+      const popEl=document.getElementById(fieldId+'-pop');
+      if(btn&&!btn.contains(e.target)&&popEl&&!popEl.contains(e.target)){
+        popEl.classList.remove('show'); btn.classList.remove('open');
+        document.removeEventListener('mousedown',outside);
       }
     }
-    document.addEventListener('mousedown', outside);
-  }, 0);
+    document.addEventListener('mousedown',outside);
+  },0);
 }
 
-function tdpRender(fieldId) {
-  const state = TDP[fieldId];
-  const pop = document.getElementById(fieldId+'-pop');
-  const selectedVal = document.getElementById(fieldId).value;
-  const todayStr = new Date().toISOString().slice(0,10);
+function tdpRender(fieldId){
+  const state=TDP[fieldId];
+  const pop=document.getElementById(fieldId+'-pop');
+  const selectedVal=document.getElementById(fieldId).value;
+  const todayStr=new Date().toISOString().slice(0,10);
 
-  if (state.mode === 'day') {
-    const firstDay = new Date(state.year, state.month, 1).getDay();
-    const daysInMonth = new Date(state.year, state.month+1, 0).getDate();
-    let cells = '';
-    for (let i=0; i<firstDay; i++) cells += '<div class="tdp-day empty"></div>';
-    for (let d=1; d<=daysInMonth; d++) {
-      const ds = `${state.year}-${String(state.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const cls = [
-        'tdp-day',
-        ds===selectedVal?'selected':'',
-        ds===todayStr&&ds!==selectedVal?'today':''
-      ].join(' ');
-      cells += `<div class="${cls}" onclick="tdpSelect('${fieldId}','${ds}')">${d}</div>`;
+  if(state.mode==='day'){
+    const firstDay=new Date(state.year,state.month,1).getDay();
+    const daysInMonth=new Date(state.year,state.month+1,0).getDate();
+    let cells='';
+    for(let i=0;i<firstDay;i++) cells+='<div class="tdp-day empty"></div>';
+    for(let d=1;d<=daysInMonth;d++){
+      const ds=`${state.year}-${String(state.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const cls=['tdp-day',ds===selectedVal?'selected':'',ds===todayStr&&ds!==selectedVal?'today':''].join(' ');
+      cells+=`<div class="${cls}" onclick="tdpSelect('${fieldId}','${ds}')">${d}</div>`;
     }
-    pop.innerHTML = `
-      <div class="tdp-head">
-        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="tdpNav('${fieldId}',-1)">◀</button>
-        <span class="tdp-title" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].mode='month';tdpRender('${fieldId}')">${TH_MONTHS[state.month]} ${state.year+543}</span>
-        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="tdpNav('${fieldId}',1)">▶</button>
-      </div>
-      <div class="tdp-grid">
-        ${TH_DOWS.map(d=>`<div class="tdp-dow">${d}</div>`).join('')}
-        ${cells}
-      </div>`;
-  } else if (state.mode === 'month') {
-    const items = TH_MONTHS_S.map((m,i) => `<div class="tdp-sel-item${i===state.month?' selected':''}" onclick="TDP['${fieldId}'].month=${i};TDP['${fieldId}'].mode='day';tdpRender('${fieldId}')">${m}</div>`).join('');
-    pop.innerHTML = `
-      <div class="tdp-head">
-        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year--;tdpRender('${fieldId}')">◀</button>
-        <span class="tdp-title" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].mode='year';tdpRender('${fieldId}')">${state.year+543}</span>
-        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year++;tdpRender('${fieldId}')">▶</button>
-      </div>
-      <div class="tdp-sel-grid">${items}</div>`;
+    pop.innerHTML=`<div class="tdp-head">
+      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="tdpNav('${fieldId}',-1)">◀</button>
+      <span class="tdp-title" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].mode='month';tdpRender('${fieldId}')">${TH_MONTHS[state.month]} ${state.year+543}</span>
+      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="tdpNav('${fieldId}',1)">▶</button>
+    </div>
+    <div class="tdp-grid">${TH_DOWS.map(d=>`<div class="tdp-dow">${d}</div>`).join('')}${cells}</div>`;
+  } else if(state.mode==='month'){
+    const items=TH_MONTHS_S.map((m,i)=>`<div class="tdp-sel-item${i===state.month?' selected':''}" onclick="TDP['${fieldId}'].month=${i};TDP['${fieldId}'].mode='day';tdpRender('${fieldId}')">${m}</div>`).join('');
+    pop.innerHTML=`<div class="tdp-head">
+      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year--;tdpRender('${fieldId}')">◀</button>
+      <span class="tdp-title" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].mode='year';tdpRender('${fieldId}')">${state.year+543}</span>
+      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year++;tdpRender('${fieldId}')">▶</button>
+    </div><div class="tdp-sel-grid">${items}</div>`;
   } else {
-    // year picker: show 12 years around current
-    const base = state.year - 5;
-    const items = Array.from({length:12},(_,i)=>base+i).map(y=>`<div class="tdp-sel-item${y===state.year?' selected':''}" onclick="TDP['${fieldId}'].year=${y};TDP['${fieldId}'].mode='month';tdpRender('${fieldId}')">${y+543}</div>`).join('');
-    pop.innerHTML = `
-      <div class="tdp-head">
-        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year-=12;tdpRender('${fieldId}')">◀</button>
-        <span class="tdp-title">เลือกปี</span>
-        <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year+=12;tdpRender('${fieldId}')">▶</button>
-      </div>
-      <div class="tdp-sel-grid">${items}</div>`;
+    const base=state.year-5;
+    const items=Array.from({length:12},(_,i)=>base+i).map(y=>`<div class="tdp-sel-item${y===state.year?' selected':''}" onclick="TDP['${fieldId}'].year=${y};TDP['${fieldId}'].mode='month';tdpRender('${fieldId}')">${y+543}</div>`).join('');
+    pop.innerHTML=`<div class="tdp-head">
+      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year-=12;tdpRender('${fieldId}')">◀</button>
+      <span class="tdp-title">เลือกปี</span>
+      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year+=12;tdpRender('${fieldId}')">▶</button>
+    </div><div class="tdp-sel-grid">${items}</div>`;
   }
 }
 
-function tdpNav(fieldId, dir) {
-  const s = TDP[fieldId];
-  s.month += dir;
-  if (s.month > 11) { s.month=0; s.year++; }
-  if (s.month < 0) { s.month=11; s.year--; }
+function tdpNav(fieldId,dir){
+  const s=TDP[fieldId]; s.month+=dir;
+  if(s.month>11){s.month=0;s.year++;} if(s.month<0){s.month=11;s.year--;}
   tdpRender(fieldId);
 }
-
-function tdpSelect(fieldId, dateStr) {
-  document.getElementById(fieldId).value = dateStr;
-  const [y,m,d] = dateStr.split('-').map(Number);
-  const btn = document.getElementById(fieldId+'-btn');
-  btn.textContent = `${d} ${TH_MONTHS[m-1]} ${y+543}`;
+function tdpSelect(fieldId,dateStr){
+  document.getElementById(fieldId).value=dateStr;
+  const [y,m,d]=dateStr.split('-').map(Number);
+  const btn=document.getElementById(fieldId+'-btn');
+  btn.textContent=`${d} ${TH_MONTHS[m-1]} ${y+543}`;
   btn.classList.remove('placeholder','open');
   document.getElementById(fieldId+'-pop').classList.remove('show');
-  if (fieldId === 'f-date') updatePreview();
+  if(fieldId==='f-date') updatePreview();
 }
-
-function tdpSetValue(fieldId, dateStr) {
-  if (!dateStr) return;
-  document.getElementById(fieldId).value = dateStr;
-  const [y,m,d] = dateStr.split('-').map(Number);
-  const btn = document.getElementById(fieldId+'-btn');
-  btn.textContent = `${d} ${TH_MONTHS[m-1]} ${y+543}`;
+function tdpSetValue(fieldId,dateStr){
+  if(!dateStr) return;
+  document.getElementById(fieldId).value=dateStr;
+  const [y,m,d]=dateStr.split('-').map(Number);
+  const btn=document.getElementById(fieldId+'-btn');
+  btn.textContent=`${d} ${TH_MONTHS[m-1]} ${y+543}`;
   btn.classList.remove('placeholder');
 }
 
-
-// ─── THAI MONTH PICKER (for filter) ─────────────────────────────────────────
-function tdpOpenMonth(fieldId) {
-  document.querySelectorAll('.tdp-pop.show').forEach(p => p.classList.remove('show'));
-  const pop = document.getElementById(fieldId+'-pop');
-  pop.onmousedown = e => e.stopPropagation(); // prevent outside-click from firing
-  const val = document.getElementById(fieldId).value; // "YYYY-MM"
-  const now = new Date();
-  let y = now.getFullYear(), m = now.getMonth();
-  if (val) { const [vy,vm] = val.split('-'); y=parseInt(vy); m=parseInt(vm)-1; }
-  TDP[fieldId] = { year:y, month:m, mode:'monthYear' };
-  tdpRenderMonth(fieldId);
-  pop.classList.add('show');
-  setTimeout(() => {
-    function outside(e) {
-      const btn = document.getElementById(fieldId+'-btn');
-      const popEl = document.getElementById(fieldId+'-pop');
-      if (btn && !btn.contains(e.target) && popEl && !popEl.contains(e.target)) {
-        popEl.classList.remove('show');
-        btn.classList.remove('open');
-        document.removeEventListener('mousedown', outside);
+// ─── MONTH PICKER ─────────────────────────────────────────────────────────────
+function tdpOpenMonth(fieldId){
+  document.querySelectorAll('.tdp-pop.show').forEach(p=>p.classList.remove('show'));
+  const pop=document.getElementById(fieldId+'-pop');
+  pop.onmousedown=e=>e.stopPropagation();
+  const val=document.getElementById(fieldId).value;
+  const now=new Date(); let y=now.getFullYear(),m=now.getMonth();
+  if(val){const [vy,vm]=val.split('-');y=parseInt(vy);m=parseInt(vm)-1;}
+  TDP[fieldId]={year:y,month:m,mode:'monthYear'};
+  tdpRenderMonth(fieldId); pop.classList.add('show');
+  setTimeout(()=>{
+    function outside(e){
+      const btn=document.getElementById(fieldId+'-btn');
+      const popEl=document.getElementById(fieldId+'-pop');
+      if(btn&&!btn.contains(e.target)&&popEl&&!popEl.contains(e.target)){
+        popEl.classList.remove('show'); btn.classList.remove('open');
+        document.removeEventListener('mousedown',outside);
       }
     }
-    document.addEventListener('mousedown', outside);
-  }, 0);
+    document.addEventListener('mousedown',outside);
+  },0);
 }
-
-function tdpRenderMonth(fieldId) {
-  const state = TDP[fieldId];
-  const pop = document.getElementById(fieldId+'-pop');
-  const selVal = document.getElementById(fieldId).value;
-  const items = TH_MONTHS_S.map((mn,i) => {
-    const v = `${state.year}-${String(i+1).padStart(2,'0')}`;
+function tdpRenderMonth(fieldId){
+  const state=TDP[fieldId];
+  const pop=document.getElementById(fieldId+'-pop');
+  const selVal=document.getElementById(fieldId).value;
+  const items=TH_MONTHS_S.map((mn,i)=>{
+    const v=`${state.year}-${String(i+1).padStart(2,'0')}`;
     return `<div class="tdp-sel-item${v===selVal?' selected':''}" onclick="tdpSelectMonth('${fieldId}','${v}',${i})">${mn}</div>`;
   }).join('');
-  pop.innerHTML = `
-    <div class="tdp-head">
-      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year--;tdpRenderMonth('${fieldId}')">◀</button>
-      <span class="tdp-title">${state.year+543}</span>
-      <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year++;tdpRenderMonth('${fieldId}')">▶</button>
-    </div>
-    <div class="tdp-sel-grid">${items}</div>`;
+  pop.innerHTML=`<div class="tdp-head">
+    <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year--;tdpRenderMonth('${fieldId}')">◀</button>
+    <span class="tdp-title">${state.year+543}</span>
+    <button class="tdp-nav" onmousedown="event.stopPropagation()" onclick="TDP['${fieldId}'].year++;tdpRenderMonth('${fieldId}')">▶</button>
+  </div><div class="tdp-sel-grid">${items}</div>`;
 }
-
-function tdpSelectMonth(fieldId, val, monthIdx) {
-  document.getElementById(fieldId).value = val;
-  const [y] = val.split('-');
-  const btn = document.getElementById(fieldId+'-btn');
-  btn.textContent = `${TH_MONTHS_S[monthIdx]} ${parseInt(y)+543}`;
+function tdpSelectMonth(fieldId,val,monthIdx){
+  document.getElementById(fieldId).value=val;
+  const [y]=val.split('-');
+  const btn=document.getElementById(fieldId+'-btn');
+  btn.textContent=`${TH_MONTHS_S[monthIdx]} ${parseInt(y)+543}`;
   btn.classList.remove('placeholder','open');
   document.getElementById(fieldId+'-pop').classList.remove('show');
   renderHistory();
 }
-
-function clearMonthFilter() {
-  document.getElementById('filterMonth').value = '';
-  const btn = document.getElementById('filterMonth-btn');
-  btn.textContent = 'ทุกเดือน';
-  btn.classList.add('placeholder');
-  document.getElementById('filterType').value = 'all';
+function clearMonthFilter(){
+  document.getElementById('filterMonth').value='';
+  const btn=document.getElementById('filterMonth-btn');
+  btn.textContent='ทุกเดือน'; btn.classList.add('placeholder');
+  document.getElementById('filterType').value='all';
   renderHistory();
 }
 
-// ─── PIN MODAL ────────────────────────────────────────────────────────────────
-const PIN_CORRECT = '120946';
-let pinBuffer = '';
-let pinAction = null; // { type: 'clearAll' | 'deleteRow' | 'auth', callback? }
-
-// ── SESSION AUTH ─────────────────────────────────────────────────────────────
-// เก็บสถานะ auth ใน sessionStorage (หายเมื่อปิด browser/tab)
-function isAuthed() { return sessionStorage.getItem('grab_authed') === '1'; }
-function setAuthed() { sessionStorage.setItem('grab_authed', '1'); updateAuthUI(); }
-function clearAuthed() { sessionStorage.removeItem('grab_authed'); updateAuthUI(); }
-
-function updateAuthUI() {
-  const btn = document.getElementById('lockBtn');
-  if (!btn) return;
-  if (isAuthed()) {
-    btn.textContent = '🔓 ล็อค';
-    btn.title = 'กดเพื่อล็อคการแก้ไข';
-  } else {
-    btn.textContent = '🔒 ปลดล็อค';
-    btn.title = 'กดเพื่อปลดล็อคการแก้ไข';
-  }
+// ─── PIN ──────────────────────────────────────────────────────────────────────
+const PIN_CORRECT='120946';
+let pinBuffer='', pinAction=null;
+function isAuthed(){return sessionStorage.getItem('grab_authed')==='1';}
+function setAuthed(){sessionStorage.setItem('grab_authed','1');updateAuthUI();}
+function clearAuthed(){sessionStorage.removeItem('grab_authed');updateAuthUI();}
+function updateAuthUI(){
+  const btn=document.getElementById('lockBtn'); if(!btn) return;
+  btn.textContent=isAuthed()?'🔓 ล็อค':'🔒 ปลดล็อค';
+  btn.title=isAuthed()?'กดเพื่อล็อคการแก้ไข':'กดเพื่อปลดล็อคการแก้ไข';
 }
-
-// requireAuth(callback) — ถ้า authed แล้วให้รัน callback ทันที
-// ถ้ายังไม่ authed ให้เปิด PIN modal ก่อน
-function requireAuth(callback) {
-  if (isAuthed()) { callback(); return; }
-  pinAction = { type: 'auth', callback };
-  pinBuffer = '';
-  updatePinDots();
-  document.getElementById('pinMsg').textContent = '';
-  document.getElementById('pinTitle').textContent = '🔐 กรอกรหัสเพื่อแก้ไขข้อมูล';
+function requireAuth(callback){
+  if(isAuthed()){callback();return;}
+  pinAction={type:'auth',callback}; pinBuffer=''; updatePinDots();
+  document.getElementById('pinMsg').textContent='';
+  document.getElementById('pinTitle').textContent='🔐 กรอกรหัสเพื่อแก้ไขข้อมูล';
   document.getElementById('pinModal').classList.add('show');
 }
-
-function clearAllConfirm() {
-  pinAction = { type: 'clearAll' };
-  pinBuffer = '';
-  updatePinDots();
-  document.getElementById('pinMsg').textContent = '';
-  document.getElementById('pinTitle').textContent = '🗑️ ยืนยันการล้างข้อมูลทั้งหมด';
+function clearAllConfirm(){
+  pinAction={type:'clearAll'}; pinBuffer=''; updatePinDots();
+  document.getElementById('pinMsg').textContent='';
+  document.getElementById('pinTitle').textContent='🗑️ ยืนยันการล้างข้อมูลทั้งหมด';
   document.getElementById('pinModal').classList.add('show');
 }
-
-function closePinModal() {
-  pinBuffer = '';
-  updatePinDots();
-  document.getElementById('pinMsg').textContent = '';
-  document.getElementById('pinModal').classList.remove('show');
-}
-
-function pinKey(k) {
-  if (k === 'del') {
-    pinBuffer = pinBuffer.slice(0,-1);
-    updatePinDots();
-    document.getElementById('pinMsg').textContent = '';
-    return;
-  }
-  if (pinBuffer.length >= 6) return;
-  pinBuffer += k;
-  updatePinDots();
-  if (pinBuffer.length === 6) {
-    if (pinBuffer === PIN_CORRECT) {
+function closePinModal(){pinBuffer='';updatePinDots();document.getElementById('pinMsg').textContent='';document.getElementById('pinModal').classList.remove('show');}
+function pinKey(k){
+  if(k==='del'){pinBuffer=pinBuffer.slice(0,-1);updatePinDots();document.getElementById('pinMsg').textContent='';return;}
+  if(pinBuffer.length>=6) return;
+  pinBuffer+=k; updatePinDots();
+  if(pinBuffer.length===6){
+    if(pinBuffer===PIN_CORRECT){
       closePinModal();
-      if (pinAction?.type === 'auth') {
-        setAuthed();
-        showToast('🔓 ปลดล็อคแล้ว', 'green');
-        const cb = pinAction.callback;
-        pinAction = null;
-        if (cb) cb();
-      } else if (pinAction?.type === 'clearAll') {
-        showToast('🗑️ กำลังล้างข้อมูล...', '');
-        saveAllRemote([]).then(() => {
-          localStorage.removeItem(STORAGE_KEY);
-          renderDashboard();
-          renderHistory();
-          showToast('🗑️ ล้างข้อมูลแล้ว');
-        });
-        pinAction = null;
-      } else if (pinAction?.type === 'deleteRow') {
-        showToast('🗑️ กำลังลบ...', '');
-        deleteRowRemote(pinAction.id).then(() => {
-          renderHistory();
-          showToast('🗑️ ลบแล้ว');
-        });
-        pinAction = null;
+      if(pinAction?.type==='auth'){
+        setAuthed(); showToast('🔓 ปลดล็อคแล้ว','green');
+        const cb=pinAction.callback; pinAction=null; if(cb) cb();
+      } else if(pinAction?.type==='clearAll'){
+        showToast('🗑️ กำลังล้างข้อมูล...');
+        saveAllRemote([]).then(()=>{localStorage.removeItem(STORAGE_KEY);renderDashboard();renderHistory();showToast('🗑️ ล้างข้อมูลแล้ว');});
+        pinAction=null;
+      } else if(pinAction?.type==='deleteRow'){
+        showToast('🗑️ กำลังลบ...');
+        deleteRowRemote(pinAction.id).then(()=>{renderHistory();showToast('🗑️ ลบแล้ว');});
+        pinAction=null;
       }
     } else {
-      document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
-      document.getElementById('pinMsg').textContent = '❌ รหัสไม่ถูกต้อง';
-      setTimeout(() => {
-        pinBuffer = '';
-        updatePinDots();
-        document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
-        document.getElementById('pinMsg').textContent = '';
-      }, 1000);
+      document.querySelectorAll('.pin-dot').forEach(d=>d.classList.add('error'));
+      document.getElementById('pinMsg').textContent='❌ รหัสไม่ถูกต้อง';
+      setTimeout(()=>{pinBuffer='';updatePinDots();document.querySelectorAll('.pin-dot').forEach(d=>d.classList.remove('error'));document.getElementById('pinMsg').textContent='';},1000);
     }
   }
 }
+function updatePinDots(){for(let i=0;i<6;i++){const dot=document.getElementById('pd'+i);dot.classList.toggle('filled',i<pinBuffer.length);dot.classList.remove('error');}}
 
-function updatePinDots() {
-  for (let i=0; i<6; i++) {
-    const dot = document.getElementById('pd'+i);
-    dot.classList.toggle('filled', i < pinBuffer.length);
-    dot.classList.remove('error');
-  }
+// ─── MISC ─────────────────────────────────────────────────────────────────────
+async function manualSync(){
+  showToast('🔄 กำลัง sync...');
+  await syncFromSheets(); renderDashboard(); renderHistory(); showToast('✅ Sync สำเร็จ','green');
+}
+function toggleLock(){
+  if(isAuthed()){clearAuthed();showToast('🔒 ล็อคแล้ว');}
+  else{pinAction={type:'auth',callback:null};pinBuffer='';updatePinDots();document.getElementById('pinMsg').textContent='';document.getElementById('pinTitle').textContent='🔐 กรอกรหัสเพื่อปลดล็อค';document.getElementById('pinModal').classList.add('show');}
 }
 
-// ─── MANUAL SYNC ────────────────────────────────────────────────────────────
-async function manualSync() {
-  showToast('🔄 กำลัง sync...', '');
-  await syncFromSheets();
-  renderDashboard();
-  renderHistory();
-  showToast('✅ Sync สำเร็จ', 'green');
-}
-
-// ─── LOCK / UNLOCK ──────────────────────────────────────────────────────────
-function toggleLock() {
-  if (isAuthed()) {
-    clearAuthed();
-    showToast('🔒 ล็อคแล้ว');
-  } else {
-    pinAction = { type: 'auth', callback: null };
-    pinBuffer = '';
-    updatePinDots();
-    document.getElementById('pinMsg').textContent = '';
-    document.getElementById('pinTitle').textContent = '🔐 กรอกรหัสเพื่อปลดล็อค';
-    document.getElementById('pinModal').classList.add('show');
-  }
-}
-
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// ─── INIT ─────────────────────────────────────────────────────────────────────
 tdpSetValue('f-date', new Date().toISOString().slice(0,10));
 updateAuthUI();
-renderDashboard(); // render จาก cache ก่อน
-syncFromSheets().then(() => {
-  renderDashboard();
-  renderHistory();
-});
+renderDashboard();
+syncFromSheets().then(()=>{renderDashboard();renderHistory();});
 </script>
 </body>
 </html>
