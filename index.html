@@ -942,17 +942,18 @@ function profit(r) { return (r.grab||0)+(r.tip||0)-(r.oil||0); }
 function income(r) { return (r.grab||0)+(r.tip||0); }
 
 // ── ANIMATED COUNTER ─────────────────────────────────────────────────────────
-function animateCount(el, targetVal, duration=800) {
+function animateCount(el, targetVal, duration=800, isInt=false) {
   if (!el) return;
   const start = performance.now();
   const from = 0;
+  const opts = isInt ? {minimumFractionDigits:0, maximumFractionDigits:0} : {minimumFractionDigits:2, maximumFractionDigits:2};
   function tick(now) {
     const t = Math.min((now - start) / duration, 1);
     const ease = 1 - Math.pow(1 - t, 3);
     const cur = from + (targetVal - from) * ease;
-    el.textContent = cur.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+    el.textContent = (isInt ? Math.round(cur) : cur).toLocaleString('th-TH', opts);
     if (t < 1) requestAnimationFrame(tick);
-    else el.textContent = targetVal.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+    else el.textContent = targetVal.toLocaleString('th-TH', opts);
   }
   requestAnimationFrame(tick);
 }
@@ -1067,7 +1068,7 @@ function renderDashboard() {
     cards.forEach((c,i) => {
       const el = document.getElementById('sv'+i);
       if (!el) return;
-      if (c.isInt) { setTimeout(() => animateCount(el, c.val, 600), i*40); }
+      if (c.isInt) { setTimeout(() => animateCount(el, c.val, 600, true), i*40); }
       else { setTimeout(() => animateCount(el, c.val, 700+i*30), i*40); }
     });
   });
