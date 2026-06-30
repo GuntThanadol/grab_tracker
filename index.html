@@ -628,6 +628,11 @@
     </div>
 
     <div class="card" style="margin-bottom:18px">
+      <div class="card-title">📆 เดือนนี้ vs เดือนที่แล้ว</div>
+      <div id="monthCompare"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
       <div class="card-title">📅 รายได้เฉลี่ยแต่ละวันในสัปดาห์</div>
       <div id="dowChart"></div>
     </div>
@@ -1077,6 +1082,7 @@ function renderDashboard() {
   renderTrendChart(rows);
   renderGoal(rows);
   renderWeekCompare(rows);
+  renderMonthCompare(rows);
   renderDowChart(rows);
 }
 
@@ -1339,6 +1345,57 @@ function renderWeekCompare(rows) {
   setTimeout(() => {
     animateCount(document.getElementById('wkThis'), thisP, 600);
     animateCount(document.getElementById('wkLast'), lastP, 600);
+  }, 100);
+}
+
+// ─── MONTH COMPARE ─────────────────────────────────────────────────────────────
+function renderMonthCompare(rows) {
+  const el = document.getElementById('monthCompare');
+  if (!el) return;
+  const now = new Date();
+  const thisMonthPfx = now.toISOString().slice(0,7);
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const lastMonthPfx = lastMonthDate.toISOString().slice(0,7);
+
+  const thisMonth = rows.filter(r=>r.date.startsWith(thisMonthPfx));
+  const lastMonth  = rows.filter(r=>r.date.startsWith(lastMonthPfx));
+
+  const thisP = thisMonth.reduce((s,r)=>s+profit(r),0);
+  const lastP = lastMonth.reduce((s,r)=>s+profit(r),0);
+  const thisI = thisMonth.reduce((s,r)=>s+income(r),0);
+  const lastI = lastMonth.reduce((s,r)=>s+income(r),0);
+
+  const diffP = thisP-lastP;
+  const diffPct = lastP ? ((diffP/Math.abs(lastP))*100).toFixed(1) : null;
+  const diffClass = diffP>0?'up':diffP<0?'down':'flat';
+  const diffIcon = diffP>0?'▲':diffP<0?'▼':'–';
+  const diffLabel = diffPct!==null ? `${diffIcon} ${Math.abs(diffPct)}%` : `${diffIcon} ${fmt(Math.abs(diffP))} บาท`;
+
+  const thisName = `${TH_MONTHS_S[now.getMonth()]} ${now.getFullYear()+543}`;
+  const lastName = `${TH_MONTHS_S[lastMonthDate.getMonth()]} ${lastMonthDate.getFullYear()+543}`;
+
+  el.innerHTML = `
+    <div class="week-grid">
+      <div class="week-col">
+        <div class="week-col-title">${thisName}</div>
+        <div class="week-col-val" style="color:var(--green-dark)" id="moThis">—</div>
+        <div style="font-size:0.77rem;color:var(--gray-400);margin-top:2px">รายได้ ${fmt(thisI)} บาท</div>
+        <div style="font-size:0.77rem;color:var(--gray-400)">${thisMonth.filter(isWorkDay).length} วันทำงาน</div>
+      </div>
+      <div class="week-col">
+        <div class="week-col-title">${lastName}</div>
+        <div class="week-col-val" style="color:var(--gray-600)" id="moLast">—</div>
+        <div style="font-size:0.77rem;color:var(--gray-400);margin-top:2px">รายได้ ${fmt(lastI)} บาท</div>
+        <div style="font-size:0.77rem;color:var(--gray-400)">${lastMonth.filter(isWorkDay).length} วันทำงาน</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="week-diff ${diffClass}">${diffLabel}</span>
+      <span style="font-size:0.79rem;color:var(--gray-400)">เทียบกำไรสุทธิ</span>
+    </div>`;
+  setTimeout(() => {
+    animateCount(document.getElementById('moThis'), thisP, 600);
+    animateCount(document.getElementById('moLast'), lastP, 600);
   }, 100);
 }
 
