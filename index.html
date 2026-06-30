@@ -1261,7 +1261,7 @@ function renderGoal(rows) {
   const el = document.getElementById('goalContent');
   const inp = document.getElementById('goalInput');
   const now = new Date();
-  const thisMonthPfx = now.toISOString().slice(0,7);
+  const thisMonthPfx = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const monthRows = rows.filter(r=>r.date.startsWith(thisMonthPfx));
   const monthProfit = monthRows.reduce((s,r)=>s+profit(r),0);
   const workDays = monthRows.filter(isWorkDay).length;
@@ -1353,9 +1353,10 @@ function renderMonthCompare(rows) {
   const el = document.getElementById('monthCompare');
   if (!el) return;
   const now = new Date();
-  const thisMonthPfx = now.toISOString().slice(0,7);
+  function localMonthPfx(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+  const thisMonthPfx = localMonthPfx(now);
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const lastMonthPfx = lastMonthDate.toISOString().slice(0,7);
+  const lastMonthPfx = localMonthPfx(lastMonthDate);
 
   const thisMonth = rows.filter(r=>r.date.startsWith(thisMonthPfx));
   const lastMonth  = rows.filter(r=>r.date.startsWith(lastMonthPfx));
