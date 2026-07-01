@@ -1603,30 +1603,33 @@ function extractBonuses(note) {
   }
   return results;
 }
-function getBonusRows(rows) {
-  const list = [];
+function getBonusGroups(rows) {
+  // รวมอินเพชร+อินพิเศษของแต่ละวัน (แต่ละแถวข้อมูล) ไว้ในกลุ่มเดียวกัน
+  const groups = [];
   rows.forEach(r => {
-    extractBonuses(r.note).forEach(b => {
-      list.push({ date: r.date, type: b.type, amount: b.amount, note: r.note, rowId: r.id });
-    });
+    const bs = extractBonuses(r.note);
+    if (!bs.length) return;
+    const diamond = bs.filter(b=>b.type==='diamond').reduce((s,b)=>s+b.amount,0);
+    const special = bs.filter(b=>b.type==='special').reduce((s,b)=>s+b.amount,0);
+    groups.push({ date: r.date, diamond, special, note: r.note, rowId: r.id });
   });
-  return list.sort((a,b)=>a.date.localeCompare(b.date));
+  return groups.sort((a,b)=>a.date.localeCompare(b.date));
 }
 function renderBonus() {
   const rows = getRows();
-  const bonuses = getBonusRows(rows);
+  const groups = getBonusGroups(rows);
   const filterType = document.getElementById('bonusFilterType') ? document.getElementById('bonusFilterType').value : 'all';
 
-  const totalDiamond = bonuses.filter(b=>b.type==='diamond').reduce((s,b)=>s+b.amount,0);
-  const totalSpecial = bonuses.filter(b=>b.type==='special').reduce((s,b)=>s+b.amount,0);
-  const daysDiamond = new Set(bonuses.filter(b=>b.type==='diamond').map(b=>b.date)).size;
-  const daysSpecial = new Set(bonuses.filter(b=>b.type==='special').map(b=>b.date)).size;
+  const totalDiamond = groups.reduce((s,g)=>s+g.diamond,0);
+  const totalSpecial = groups.reduce((s,g)=>s+g.special,0);
+  const daysDiamond = groups.filter(g=>g.diamond>0).length;
+  const daysSpecial = groups.filter(g=>g.special>0).length;
   const totalAll = totalDiamond + totalSpecial;
 
   const summaryCards = [
     { label:'💎 อินเพชรรวม', val:totalDiamond, cls:'blue', color:'blue', sub:`${daysDiamond} วัน` },
     { label:'⭐ อินพิเศษรวม', val:totalSpecial, cls:'yellow', color:'yellow', sub:`${daysSpecial} วัน` },
-    { label:'💰 รวมทั้งหมด', val:totalAll, cls:'', color:'green', sub:`${bonuses.length} รายการ` },
+    { label:'💰 รวมทั้งหมด', val:totalAll, cls:'', color:'green', sub:`${groups.length} วัน` },
   ];
   const summaryEl = document.getElementById('bonusSummary');
   if (summaryEl) {
@@ -1644,9 +1647,9 @@ function renderBonus() {
     });
   }
 
-  let filtered = bonuses;
-  if (filterType === 'diamond') filtered = bonuses.filter(b=>b.type==='diamond');
-  if (filterType === 'special') filtered = bonuses.filter(b=>b.type==='special');
+  let filtered = groups;
+  if (filterType === 'diamond') filtered = groups.filter(g=>g.diamond>0);
+  if (filterType === 'special') filtered = groups.filter(g=>g.special>0);
   filtered = filtered.slice().reverse();
 
   const tbody = document.getElementById('bonusBody');
@@ -1655,15 +1658,27 @@ function renderBonus() {
     tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">💎</div><p>ยังไม่มีวันที่ได้อินพิเศษ/อินเพชร<br>พิมพ์คำว่า "อินเพชร 80" หรือ "อินพิเศษ 50" ในช่องหมายเหตุ</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map((b,i)=>{
-    const badge = b.type==='diamond'
-      ? `<span class="bonus-type-badge diamond">💎 อินเพชร</span>`
-      : `<span class="bonus-type-badge special">⭐ อินพิเศษ</span>`;
+  tbody.innerHTML = filtered.map((g,i)=>{
+    let badges = '';
+    if (g.diamond>0) badges += `<span class="bonus-type-badge diamond">💎 อินเพชร</span>`;
+    if (g.special>0) badges += `<span class="bonus-type-badge special">⭐ อินพิเศษ</span>`;
+
+    let amountHtml;
+    if (g.diamond>0 && g.special>0) {
+      amountHtml = `<div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">
+        <span style="color:#1d6fd1;font-weight:800">💎 ${fmt(g.diamond)}</span>
+        <span style="color:#a5710a;font-weight:800">⭐ ${fmt(g.special)}</span>
+        <span class="td-green" style="font-size:0.78rem;font-weight:900;border-top:1px solid var(--gray-100);padding-top:2px;margin-top:1px">รวม ${fmt(g.diamond+g.special)}</span>
+      </div>`;
+    } else {
+      amountHtml = `<strong class="td-green">${fmt(g.diamond+g.special)}</strong>`;
+    }
+
     return `<tr class="row-anim" style="animation-delay:${i*0.02}s">
-      <td class="td-date">${fmtDate(b.date)}</td>
-      <td>${badge}</td>
-      <td class="td-num td-green"><strong>${fmt(b.amount)}</strong></td>
-      <td class="note-cell" style="max-width:260px" title="${b.note||''}">${b.note||''}</td>
+      <td class="td-date">${fmtDate(g.date)}</td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:5px">${badges}</div></td>
+      <td class="td-num">${amountHtml}</td>
+      <td class="note-cell" style="max-width:260px" title="${g.note||''}">${g.note||''}</td>
     </tr>`;
   }).join('');
 }
