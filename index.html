@@ -1658,20 +1658,26 @@ function renderBonus() {
     tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">💎</div><p>ยังไม่มีวันที่ได้อินพิเศษ/อินเพชร<br>พิมพ์คำว่า "อินเพชร 80" หรือ "อินพิเศษ 50" ในช่องหมายเหตุ</p></div></td></tr>`;
     return;
   }
+  const showDiamond = filterType !== 'special';
+  const showSpecial = filterType !== 'diamond';
+
   tbody.innerHTML = filtered.map((g,i)=>{
     let badges = '';
-    if (g.diamond>0) badges += `<span class="bonus-type-badge diamond">💎 อินเพชร</span>`;
-    if (g.special>0) badges += `<span class="bonus-type-badge special">⭐ อินพิเศษ</span>`;
+    if (showDiamond && g.diamond>0) badges += `<span class="bonus-type-badge diamond">💎 อินเพชร</span>`;
+    if (showSpecial && g.special>0) badges += `<span class="bonus-type-badge special">⭐ อินพิเศษ</span>`;
+
+    const dAmt = showDiamond ? g.diamond : 0;
+    const sAmt = showSpecial ? g.special : 0;
 
     let amountHtml;
-    if (g.diamond>0 && g.special>0) {
+    if (dAmt>0 && sAmt>0) {
       amountHtml = `<div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">
-        <span style="color:#1d6fd1;font-weight:800">💎 ${fmt(g.diamond)}</span>
-        <span style="color:#a5710a;font-weight:800">⭐ ${fmt(g.special)}</span>
-        <span class="td-green" style="font-size:0.78rem;font-weight:900;border-top:1px solid var(--gray-100);padding-top:2px;margin-top:1px">รวม ${fmt(g.diamond+g.special)}</span>
+        <span style="color:#1d6fd1;font-weight:800">💎 ${fmt(dAmt)}</span>
+        <span style="color:#a5710a;font-weight:800">⭐ ${fmt(sAmt)}</span>
+        <span class="td-green" style="font-size:0.78rem;font-weight:900;border-top:1px solid var(--gray-100);padding-top:2px;margin-top:1px">รวม ${fmt(dAmt+sAmt)}</span>
       </div>`;
     } else {
-      amountHtml = `<strong class="td-green">${fmt(g.diamond+g.special)}</strong>`;
+      amountHtml = `<strong class="td-green">${fmt(dAmt+sAmt)}</strong>`;
     }
 
     return `<tr class="row-anim" style="animation-delay:${i*0.02}s">
