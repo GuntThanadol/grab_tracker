@@ -579,6 +579,12 @@
 
   /* number counter */
   .count-up { display: inline-block; transition: all 0.05s; }
+
+  /* ── BONUS TAB ── */
+  .bonus-type-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 11px; border-radius:20px; font-size:0.76rem; font-weight:800; }
+  .bonus-type-badge.diamond { background: linear-gradient(135deg,#e0f2ff,#cfe8ff); color:#1d6fd1; }
+  .bonus-type-badge.special { background: linear-gradient(135deg,#fff3cd,#ffe9a8); color:#a5710a; }
+  .bonus-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:18px; }
 </style>
 </head>
 <body>
@@ -603,6 +609,7 @@
   <button class="tab-btn" onclick="showTab('entry',this)">➕ กรอกข้อมูล</button>
   <button class="tab-btn" onclick="showTab('history',this)">📋 รายวัน</button>
   <button class="tab-btn" onclick="showTab('monthly',this)">📅 รายเดือน</button>
+  <button class="tab-btn" onclick="showTab('bonus',this)">💎 อินพิเศษ/อินเพชร</button>
 </div>
 
 <div class="main">
@@ -709,6 +716,7 @@
         <li>รายได้รวม = รายได้ Grab + Tip มือ</li>
         <li>กำไรสุทธิ = รายได้รวม − ค่าน้ำมัน (ประมาณการ)</li>
         <li>เครดิต Grab และถอนกรุงศรีไม่นับรวมในกำไร</li>
+        <li>หากมีอินพิเศษ/อินเพชร ให้พิมพ์ในหมายเหตุ เช่น "อินเพชร 80" หรือ "อินพิเศษ 50" ระบบจะรวมยอดให้อัตโนมัติในแท็บ 💎 อินพิเศษ/อินเพชร</li>
       </ul>
     </div>
   </div>
@@ -758,6 +766,36 @@
   <!-- MONTHLY -->
   <div class="page" id="page-monthly">
     <div id="monthlyContent"></div>
+  </div>
+
+  <!-- BONUS (อินพิเศษ/อินเพชร) -->
+  <div class="page" id="page-bonus">
+    <div class="section-header">
+      <div class="section-title">💎 วันที่ได้อินพิเศษ / อินเพชร</div>
+    </div>
+    <div class="bonus-summary-grid" id="bonusSummary"></div>
+    <div class="filter-bar">
+      <select id="bonusFilterType" onchange="renderBonus()">
+        <option value="all">ทุกประเภท</option>
+        <option value="diamond">💎 อินเพชร</option>
+        <option value="special">⭐ อินพิเศษ</option>
+      </select>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+        <table id="bonusTable">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>ประเภท</th>
+              <th class="td-num">จำนวนเงิน</th>
+              <th>หมายเหตุเต็ม</th>
+            </tr>
+          </thead>
+          <tbody id="bonusBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -978,6 +1016,7 @@ function showTab(name, btn) {
   if (name==='dashboard') renderDashboard();
   if (name==='history') renderHistory();
   if (name==='monthly') renderMonthly();
+  if (name==='bonus') renderBonus();
 }
 
 // ─── FORM PREVIEW ─────────────────────────────────────────────────────────────
@@ -1546,6 +1585,86 @@ function renderMonthly() {
         </table>
       </div>
     </div>`;
+  }).join('');
+}
+
+// ─── BONUS (อินพิเศษ / อินเพชร) ────────────────────────────────────────────────
+// ตรวจจับคำว่า "อินเพชร" หรือ "อินพิเศษ" ในหมายเหตุ พร้อมตัวเลขที่ตามมา
+// รองรับ เช่น "อินเพชร 80", "อินเพชร80บาท", "อินพิเศษ:50", "อินพิเศษ 30 อินเพชร 70"
+function extractBonuses(note) {
+  if (!note) return [];
+  const results = [];
+  const re = /(อินเพชร|อินพิเศษ)\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/g;
+  let m;
+  while ((m = re.exec(note)) !== null) {
+    const type = m[1] === 'อินเพชร' ? 'diamond' : 'special';
+    const amount = parseFloat(m[2].replace(',', ''));
+    if (!isNaN(amount)) results.push({ type, amount });
+  }
+  return results;
+}
+function getBonusRows(rows) {
+  const list = [];
+  rows.forEach(r => {
+    extractBonuses(r.note).forEach(b => {
+      list.push({ date: r.date, type: b.type, amount: b.amount, note: r.note, rowId: r.id });
+    });
+  });
+  return list.sort((a,b)=>a.date.localeCompare(b.date));
+}
+function renderBonus() {
+  const rows = getRows();
+  const bonuses = getBonusRows(rows);
+  const filterType = document.getElementById('bonusFilterType') ? document.getElementById('bonusFilterType').value : 'all';
+
+  const totalDiamond = bonuses.filter(b=>b.type==='diamond').reduce((s,b)=>s+b.amount,0);
+  const totalSpecial = bonuses.filter(b=>b.type==='special').reduce((s,b)=>s+b.amount,0);
+  const daysDiamond = new Set(bonuses.filter(b=>b.type==='diamond').map(b=>b.date)).size;
+  const daysSpecial = new Set(bonuses.filter(b=>b.type==='special').map(b=>b.date)).size;
+  const totalAll = totalDiamond + totalSpecial;
+
+  const summaryCards = [
+    { label:'💎 อินเพชรรวม', val:totalDiamond, cls:'blue', color:'blue', sub:`${daysDiamond} วัน` },
+    { label:'⭐ อินพิเศษรวม', val:totalSpecial, cls:'yellow', color:'yellow', sub:`${daysSpecial} วัน` },
+    { label:'💰 รวมทั้งหมด', val:totalAll, cls:'', color:'green', sub:`${bonuses.length} รายการ` },
+  ];
+  const summaryEl = document.getElementById('bonusSummary');
+  if (summaryEl) {
+    summaryEl.innerHTML = summaryCards.map((c,i)=>`
+      <div class="stat-card ${c.cls}" style="animation:rowIn 0.35s ${i*0.05}s ease both;opacity:0">
+        <div class="stat-label">${c.label}</div>
+        <div class="stat-value ${c.color}" id="bsv${i}">0</div>
+        <div class="stat-sub">${c.sub}</div>
+      </div>`).join('');
+    requestAnimationFrame(()=>{
+      summaryCards.forEach((c,i)=>{
+        const el = document.getElementById('bsv'+i);
+        if (el) setTimeout(()=>animateCount(el, c.val, 700+i*30), i*40);
+      });
+    });
+  }
+
+  let filtered = bonuses;
+  if (filterType === 'diamond') filtered = bonuses.filter(b=>b.type==='diamond');
+  if (filterType === 'special') filtered = bonuses.filter(b=>b.type==='special');
+  filtered = filtered.slice().reverse();
+
+  const tbody = document.getElementById('bonusBody');
+  if (!tbody) return;
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">💎</div><p>ยังไม่มีวันที่ได้อินพิเศษ/อินเพชร<br>พิมพ์คำว่า "อินเพชร 80" หรือ "อินพิเศษ 50" ในช่องหมายเหตุ</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map((b,i)=>{
+    const badge = b.type==='diamond'
+      ? `<span class="bonus-type-badge diamond">💎 อินเพชร</span>`
+      : `<span class="bonus-type-badge special">⭐ อินพิเศษ</span>`;
+    return `<tr class="row-anim" style="animation-delay:${i*0.02}s">
+      <td class="td-date">${fmtDate(b.date)}</td>
+      <td>${badge}</td>
+      <td class="td-num td-green"><strong>${fmt(b.amount)}</strong></td>
+      <td class="note-cell" style="max-width:260px" title="${b.note||''}">${b.note||''}</td>
+    </tr>`;
   }).join('');
 }
 
