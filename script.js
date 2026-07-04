@@ -1,3 +1,86 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ── LOGIN CONFIG ─────────────────────────────────────────────────────────────
+// แก้ไข USERNAME และ PASSWORD_HASH ตรงนี้เพื่อเปลี่ยนบัญชีเข้าสู่ระบบ
+// ค่าเริ่มต้น:  ชื่อผู้ใช้ = admin   รหัสผ่าน = grab2026
+// วิธีเปลี่ยนรหัสผ่าน: เปิดหน้าเว็บ กด F12 เปิด Console แล้วพิมพ์
+//   await hashPassword("รหัสผ่านใหม่ของคุณ")
+// จะได้ค่า hash ยาวๆ ออกมา ก็อปมาแทนที่ PASSWORD_HASH ด้านล่างนี้ แล้วเซฟไฟล์
+// ═══════════════════════════════════════════════════════════════════════════
+const LOGIN_CONFIG = {
+  USERNAME: 'admin',
+  // นี่คือ hash (SHA-256) ของรหัสผ่าน "grab2026"
+  PASSWORD_HASH: '28fc0e7502703ebc003c8e4b3582dc9284b1e1099c045320972638eee554b5a',
+};
+
+async function sha256Hex(str) {
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+// เอาไว้เรียกจาก Console เพื่อสร้าง hash รหัสผ่านใหม่ เช่น await hashPassword("myNewPass")
+async function hashPassword(pw) {
+  const h = await sha256Hex(pw);
+  console.log('PASSWORD_HASH =', h);
+  return h;
+}
+
+const LOGIN_SESSION_KEY = 'grab_login_authed';
+
+function isLoggedIn() {
+  return sessionStorage.getItem(LOGIN_SESSION_KEY) === '1';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').classList.add('hide');
+  document.getElementById('appRoot').style.display = '';
+  initApp();
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').classList.remove('hide');
+  document.getElementById('appRoot').style.display = 'none';
+  setTimeout(() => { const u = document.getElementById('login-user'); if (u) u.focus(); }, 50);
+}
+
+async function doLogin() {
+  const userEl = document.getElementById('login-user');
+  const passEl = document.getElementById('login-pass');
+  const errEl = document.getElementById('loginError');
+  const user = userEl.value.trim();
+  const pass = passEl.value;
+  if (!user || !pass) {
+    errEl.textContent = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
+    return;
+  }
+  const hash = await sha256Hex(pass);
+  if (user === LOGIN_CONFIG.USERNAME && hash === LOGIN_CONFIG.PASSWORD_HASH) {
+    sessionStorage.setItem(LOGIN_SESSION_KEY, '1');
+    errEl.textContent = '';
+    passEl.value = '';
+    showApp();
+  } else {
+    errEl.textContent = '❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+    const card = document.querySelector('.login-card');
+    card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+    passEl.value = '';
+    passEl.focus();
+  }
+}
+
+function doLogout() {
+  if (!confirm('ต้องการออกจากระบบใช่หรือไม่?')) return;
+  sessionStorage.removeItem(LOGIN_SESSION_KEY);
+  sessionStorage.removeItem('grab_authed'); // ล้างการปลดล็อคแก้ไขด้วย
+  showLogin();
+}
+
+function toggleLoginPass() {
+  const inp = document.getElementById('login-pass');
+  const btn = document.getElementById('loginEyeBtn');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁️'; }
+}
+
 // ─── DATA ───────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'grab_tracker_v1';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxJs_MWuY6IjX5tMyx10Tk20d0iz6x2nozHr9MmZYNvPAGKUrGp4EfJdOEmRqrpNCM6/exec';
@@ -24,7 +107,8 @@ function addRipple(e) {
 
 // ── SCROLL TO TOP ────────────────────────────────────────────────────────────
 window.addEventListener('scroll', () => {
-  document.getElementById('scrollTop').classList.toggle('show', window.scrollY > 300);
+  const btn = document.getElementById('scrollTop');
+  if (btn) btn.classList.toggle('show', window.scrollY > 300);
 });
 
 // ── GOOGLE SHEETS API ────────────────────────────────────────────────────────
@@ -132,7 +216,6 @@ function showTab(name, btn) {
 }
 
 // ─── FORM PREVIEW ─────────────────────────────────────────────────────────────
-['f-grab','f-tip','f-oil'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
 function updatePreview() {
   const g = parseFloat(document.getElementById('f-grab').value)||0;
   const t = parseFloat(document.getElementById('f-tip').value)||0;
@@ -701,8 +784,6 @@ function renderMonthly() {
 }
 
 // ─── BONUS (อินพิเศษ / อินเพชร) ────────────────────────────────────────────────
-// ตรวจจับคำว่า "อินเพชร" หรือ "อินพิเศษ" ในหมายเหตุ พร้อมตัวเลขที่ตามมา
-// รองรับ เช่น "อินเพชร 80", "อินเพชร80บาท", "อินพิเศษ:50", "อินพิเศษ 30 อินเพชร 70"
 function extractBonuses(note) {
   if (!note) return [];
   const results = [];
@@ -716,7 +797,6 @@ function extractBonuses(note) {
   return results;
 }
 function getBonusGroups(rows) {
-  // รวมอินเพชร+อินพิเศษของแต่ละวัน (แต่ละแถวข้อมูล) ไว้ในกลุ่มเดียวกัน
   const groups = [];
   rows.forEach(r => {
     const bs = extractBonuses(r.note);
@@ -847,64 +927,6 @@ function parseDateVal(v) {
 }
 
 let pendingImportData=null;
-document.getElementById('importFile').addEventListener('change',function(e){
-  const file=e.target.files[0]; if(!file) return; e.target.value='';
-  const reader=new FileReader();
-  reader.onload=function(ev){
-    try {
-      const wb=XLSX.read(ev.target.result,{type:'array',cellDates:false});
-      function isDateSerial(v){return typeof v==='number'&&v>40000;}
-      function isDateString(v){return typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v);}
-      function isDateCell(v){return isDateSerial(v)||isDateString(v);}
-      let raw=null;
-      for(const name of wb.SheetNames){
-        const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:null});
-        if(rows.some(r=>r&&isDateCell(r[0]))){raw=rows;break;}
-      }
-      if(!raw){showToast('ไม่พบข้อมูลวันที่ในไฟล์','red');return;}
-      const firstDataRow=raw.findIndex(r=>r&&isDateCell(r[0]));
-      if(firstDataRow<0){showToast('ไม่พบข้อมูล','red');return;}
-      const headerRow=firstDataRow>0?raw[firstDataRow-1]:null;
-      const headers=(headerRow||[]).map(h=>h?String(h):'');
-      function colOf(kws){for(const kw of kws){const i=headers.findIndex(h=>h.includes(kw));if(i>=0)return i;}return -1;}
-      const cGrab=colOf(['Grab'])>=0?colOf(['Grab']):1;
-      const cTip=colOf(['Tip','tip'])>=0?colOf(['Tip','tip']):2;
-      const cOil=colOf(['ค่าน้ำมัน'])>=0?colOf(['ค่าน้ำมัน']):4;
-      const cOilReal=colOf(['เติมน้ำมันจริง'])>=0?colOf(['เติมน้ำมันจริง']):5;
-      const cCredit=colOf(['เครดิต'])>=0?colOf(['เครดิต']):6;
-      const cWithdraw=colOf(['ถอน'])>=0?colOf(['ถอน']):7;
-      const cNote=colOf(['หมายเหตุ','note'])>=0?colOf(['หมายเหตุ','note']):9;
-      const parsed=[];
-      for(let i=firstDataRow;i<raw.length;i++){
-        const row=raw[i]; if(!row) continue;
-        const dateStr=parseDateVal(row[0]); if(!dateStr) continue;
-        parsed.push({id:newId(),date:dateStr,grab:parseFloat(row[cGrab])||0,tip:parseFloat(row[cTip])||0,oil:parseFloat(row[cOil])||0,oilReal:parseFloat(row[cOilReal])||0,credit:parseFloat(row[cCredit])||0,withdraw:parseFloat(row[cWithdraw])||0,note:cNote>=0&&row[cNote]?String(row[cNote]).trim():''});
-      }
-      if(!parsed.length){showToast('ไม่พบข้อมูล','red');return;}
-      pendingImportData=parsed;
-      document.getElementById('importCount').textContent=parsed.length;
-      document.getElementById('importModal').classList.add('show');
-    } catch(err){showToast('เกิดข้อผิดพลาด: '+err.message,'red');console.error(err);}
-  };
-  reader.readAsArrayBuffer(file);
-});
-
-async function doImport(replaceAll) {
-  document.getElementById('importModal').classList.remove('show');
-  if(!pendingImportData) return;
-  const base=replaceAll?[]:loadData();
-  const existDates=new Set(base.map(r=>r.date));
-  let added=0,skipped=0;
-  for(const row of pendingImportData){
-    if(existDates.has(row.date)){skipped++;continue;}
-    base.push(row); existDates.add(row.date); added++;
-  }
-  pendingImportData=null;
-  showToast(`⏳ กำลัง sync ${base.length} วัน...`);
-  await saveAllRemote(base);
-  renderDashboard();
-  showToast(replaceAll?`✅ Import สำเร็จ: ${added} วัน`:`✅ Import: ${added} วัน (ข้าม ${skipped} ซ้ำ)`,'green');
-}
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
 function exportData() {
@@ -1062,7 +1084,7 @@ function clearMonthFilter(){
   renderHistory();
 }
 
-// ─── PIN ──────────────────────────────────────────────────────────────────────
+// ─── PIN (สำหรับยืนยันการแก้ไข/ลบข้อมูล แยกจากระบบล็อคอิน) ────────────────────
 const PIN_CORRECT='120946';
 let pinBuffer='', pinAction=null;
 function isAuthed(){return sessionStorage.getItem('grab_authed')==='1';}
@@ -1125,8 +1147,76 @@ function toggleLock(){
   else{pinAction={type:'auth',callback:null};pinBuffer='';updatePinDots();document.getElementById('pinMsg').textContent='';document.getElementById('pinTitle').textContent='🔐 กรอกรหัสเพื่อปลดล็อค';document.getElementById('pinModal').classList.add('show');}
 }
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-tdpSetValue('f-date', new Date().toISOString().slice(0,10));
-updateAuthUI();
-renderDashboard();
-syncFromSheets().then(()=>{renderDashboard();renderHistory();});
+// ─── APP INIT (เรียกหลังล็อคอินสำเร็จเท่านั้น) ──────────────────────────────
+let appInitialized = false;
+function initApp(){
+  if (appInitialized) return;
+  appInitialized = true;
+  ['f-grab','f-tip','f-oil'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+  document.getElementById('importFile').addEventListener('change', function(e){
+    const file=e.target.files[0]; if(!file) return; e.target.value='';
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      try {
+        const wb=XLSX.read(ev.target.result,{type:'array',cellDates:false});
+        function isDateSerial(v){return typeof v==='number'&&v>40000;}
+        function isDateString(v){return typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v);}
+        function isDateCell(v){return isDateSerial(v)||isDateString(v);}
+        let raw=null;
+        for(const name of wb.SheetNames){
+          const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:null});
+          if(rows.some(r=>r&&isDateCell(r[0]))){raw=rows;break;}
+        }
+        if(!raw){showToast('ไม่พบข้อมูลวันที่ในไฟล์','red');return;}
+        const firstDataRow=raw.findIndex(r=>r&&isDateCell(r[0]));
+        if(firstDataRow<0){showToast('ไม่พบข้อมูล','red');return;}
+        const headerRow=firstDataRow>0?raw[firstDataRow-1]:null;
+        const headers=(headerRow||[]).map(h=>h?String(h):'');
+        function colOf(kws){for(const kw of kws){const i=headers.findIndex(h=>h.includes(kw));if(i>=0)return i;}return -1;}
+        const cGrab=colOf(['Grab'])>=0?colOf(['Grab']):1;
+        const cTip=colOf(['Tip','tip'])>=0?colOf(['Tip','tip']):2;
+        const cOil=colOf(['ค่าน้ำมัน'])>=0?colOf(['ค่าน้ำมัน']):4;
+        const cOilReal=colOf(['เติมน้ำมันจริง'])>=0?colOf(['เติมน้ำมันจริง']):5;
+        const cCredit=colOf(['เครดิต'])>=0?colOf(['เครดิต']):6;
+        const cWithdraw=colOf(['ถอน'])>=0?colOf(['ถอน']):7;
+        const cNote=colOf(['หมายเหตุ','note'])>=0?colOf(['หมายเหตุ','note']):9;
+        const parsed=[];
+        for(let i=firstDataRow;i<raw.length;i++){
+          const row=raw[i]; if(!row) continue;
+          const dateStr=parseDateVal(row[0]); if(!dateStr) continue;
+          parsed.push({id:newId(),date:dateStr,grab:parseFloat(row[cGrab])||0,tip:parseFloat(row[cTip])||0,oil:parseFloat(row[cOil])||0,oilReal:parseFloat(row[cOilReal])||0,credit:parseFloat(row[cCredit])||0,withdraw:parseFloat(row[cWithdraw])||0,note:cNote>=0&&row[cNote]?String(row[cNote]).trim():''});
+        }
+        if(!parsed.length){showToast('ไม่พบข้อมูล','red');return;}
+        pendingImportData=parsed;
+        document.getElementById('importCount').textContent=parsed.length;
+        document.getElementById('importModal').classList.add('show');
+      } catch(err){showToast('เกิดข้อผิดพลาด: '+err.message,'red');console.error(err);}
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  tdpSetValue('f-date', new Date().toISOString().slice(0,10));
+  updateAuthUI();
+  renderDashboard();
+  syncFromSheets().then(()=>{renderDashboard();renderHistory();});
+}
+
+async function doImport(replaceAll) {
+  document.getElementById('importModal').classList.remove('show');
+  if(!pendingImportData) return;
+  const base=replaceAll?[]:loadData();
+  const existDates=new Set(base.map(r=>r.date));
+  let added=0,skipped=0;
+  for(const row of pendingImportData){
+    if(existDates.has(row.date)){skipped++;continue;}
+    base.push(row); existDates.add(row.date); added++;
+  }
+  pendingImportData=null;
+  showToast(`⏳ กำลัง sync ${base.length} วัน...`);
+  await saveAllRemote(base);
+  renderDashboard();
+  showToast(replaceAll?`✅ Import สำเร็จ: ${added} วัน`:`✅ Import: ${added} วัน (ข้าม ${skipped} ซ้ำ)`,'green');
+}
+
+// ─── ENTRY POINT ──────────────────────────────────────────────────────────────
+if (isLoggedIn()) { showApp(); } else { showLogin(); }

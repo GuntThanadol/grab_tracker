@@ -9,6 +9,32 @@
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">🛵</div>
+    <div class="login-title">Grab บัญชีรายวัน</div>
+    <div class="login-sub">เข้าสู่ระบบเพื่อจัดการบัญชีของคุณ</div>
+    <div class="login-form">
+      <div class="form-group">
+        <label>👤 ชื่อผู้ใช้</label>
+        <input type="text" id="login-user" autocomplete="username" placeholder="ชื่อผู้ใช้" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div class="form-group">
+        <label>🔑 รหัสผ่าน</label>
+        <div class="login-pass-wrap">
+          <input type="password" id="login-pass" autocomplete="current-password" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')doLogin()">
+          <button type="button" class="login-eye" onclick="toggleLoginPass()" id="loginEyeBtn" tabindex="-1">👁️</button>
+        </div>
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <button class="btn btn-green login-submit" onclick="addRipple(event);doLogin()">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none">
+
 <div class="nav">
   <div class="nav-brand"><span class="logo-icon">🛵</span> Grab บัญชีรายวัน</div>
   <div id="syncStatus">☁️ Synced</div>
@@ -20,6 +46,7 @@
     <button class="btn btn-outline btn-sm" onclick="addRipple(event);exportData()">📤 Export</button>
     <button class="btn btn-outline btn-sm" onclick="addRipple(event);manualSync()">🔄 Sync</button>
     <button class="btn btn-outline btn-sm" id="lockBtn" onclick="addRipple(event);toggleLock()" title="ปลดล็อคการแก้ไข">🔒 ปลดล็อค</button>
+    <button class="btn btn-outline btn-sm" onclick="addRipple(event);doLogout()" title="ออกจากระบบ">🚪 ออกจากระบบ</button>
     <button class="btn btn-red btn-sm" onclick="addRipple(event);clearAllConfirm()">🗑️ ล้างข้อมูล</button>
   </div>
 </div>
@@ -304,6 +331,8 @@
 
 <div id="toast"></div>
 <button id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="กลับขึ้นบน">↑</button>
+
+</div>
 
 <script src="script.js"></script>
 </body>
