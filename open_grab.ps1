@@ -1,4 +1,4 @@
-Start-Process "chrome.exe" "--app=https://guntthanadol.github.io/grab_tracker"
+Start-Process "chrome.exe" "--app=https://grabtracker.netlify.app"
 Start-Sleep -Seconds 2
 $shell = New-Object -ComObject Shell.Application
 Add-Type @"

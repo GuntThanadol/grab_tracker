@@ -1,14 +1,6 @@
-// ═══════════════════════════════════════════════════════════════════════════
-// ── LOGIN CONFIG ─────────────────────────────────────────────────────────────
-// แก้ไข USERNAME และ PASSWORD_HASH ตรงนี้เพื่อเปลี่ยนบัญชีเข้าสู่ระบบ
-// ค่าเริ่มต้น:  ชื่อผู้ใช้ = admin   รหัสผ่าน = 
-// วิธีเปลี่ยนรหัสผ่าน: เปิดหน้าเว็บ กด F12 เปิด Console แล้วพิมพ์
-//   await hashPassword("รหัสผ่านใหม่ของคุณ")
-// จะได้ค่า hash ยาวๆ ออกมา ก็อปมาแทนที่ PASSWORD_HASH ด้านล่างนี้ แล้วเซฟไฟล์
-// ═══════════════════════════════════════════════════════════════════════════
 const LOGIN_CONFIG = {
   USERNAME: 'admin',
-  // นี่คือ hash (SHA-256) ของรหัสผ่าน ""
+  //
   PASSWORD_HASH: 'e6ede62a1283d6e95761194fb9413ffddc8ab95c5352aa6cb66270168fe9ca9a',
 };
 
@@ -17,7 +9,7 @@ async function sha256Hex(str) {
   const buf = await crypto.subtle.digest('SHA-256', enc);
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
-// เอาไว้เรียกจาก Console เพื่อสร้าง hash รหัสผ่านใหม่ เช่น await hashPassword("myNewPass")
+// 
 async function hashPassword(pw) {
   const h = await sha256Hex(pw);
   console.log('PASSWORD_HASH =', h);
@@ -1084,7 +1076,7 @@ function clearMonthFilter(){
   renderHistory();
 }
 
-// ─── PIN (สำหรับยืนยันการแก้ไข/ลบข้อมูล แยกจากระบบล็อคอิน) ────────────────────
+//
 const PIN_CORRECT='120946';
 let pinBuffer='', pinAction=null;
 function isAuthed(){return sessionStorage.getItem('grab_authed')==='1';}
