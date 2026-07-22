@@ -143,8 +143,15 @@ async function saveRow(row) {
 async function deleteRowRemote(id) {
   saveLocal(loadData().filter(r => r.id !== id));
   setSyncStatus('syncing');
-  try { const res = await apiCall('delete', { id }); setSyncStatus(res.ok ? 'ok' : 'error'); }
-  catch { setSyncStatus('error'); }
+  try {
+    const res = await apiCall('delete', { id });
+    setSyncStatus(res.ok ? 'ok' : 'error');
+    return res;
+  }
+  catch (err) {
+    setSyncStatus('error');
+    return { ok: false, error: String(err) };
+  }
 }
 async function saveAllRemote(rows) {
   saveLocal(rows); setSyncStatus('syncing');
