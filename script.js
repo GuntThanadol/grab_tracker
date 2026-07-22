@@ -1117,7 +1117,10 @@ function pinKey(k){
         pinAction=null;
       } else if(pinAction?.type==='deleteRow'){
         showToast('🗑️ กำลังลบ...');
-        deleteRowRemote(pinAction.id).then(()=>{renderHistory();showToast('🗑️ ลบแล้ว');});
+        deleteRowRemote(pinAction.id).then((res)=>{
+          renderHistory();
+          showToast(res && res.ok !== false ? '🗑️ ลบแล้ว' : '⚠️ ลบไม่สำเร็จ ลองใหม่','red');
+        });
         pinAction=null;
       }
     } else {
