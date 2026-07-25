@@ -17,15 +17,21 @@ async function hashPassword(pw) {
 }
 
 const LOGIN_SESSION_KEY = 'grab_login_authed';
+const LOGIN_ROLE_KEY = 'grab_login_role';
 
 function isLoggedIn() {
   return sessionStorage.getItem(LOGIN_SESSION_KEY) === '1';
+}
+
+function isGuest() {
+  return sessionStorage.getItem(LOGIN_ROLE_KEY) === 'guest';
 }
 
 function showApp() {
   document.getElementById('loginScreen').classList.add('hide');
   document.getElementById('appRoot').style.display = '';
   initApp();
+  applyRoleUI();
 }
 
 function showLogin() {
@@ -47,6 +53,7 @@ async function doLogin() {
   const hash = await sha256Hex(pass);
   if (user === LOGIN_CONFIG.USERNAME && hash === LOGIN_CONFIG.PASSWORD_HASH) {
     sessionStorage.setItem(LOGIN_SESSION_KEY, '1');
+    sessionStorage.setItem(LOGIN_ROLE_KEY, 'admin');
     errEl.textContent = '';
     passEl.value = '';
     showApp();
@@ -59,9 +66,17 @@ async function doLogin() {
   }
 }
 
+function loginAsGuest() {
+  sessionStorage.setItem(LOGIN_SESSION_KEY, '1');
+  sessionStorage.setItem(LOGIN_ROLE_KEY, 'guest');
+  document.getElementById('loginError').textContent = '';
+  showApp();
+}
+
 function doLogout() {
   if (!confirm('ต้องการออกจากระบบใช่หรือไม่?')) return;
   sessionStorage.removeItem(LOGIN_SESSION_KEY);
+  sessionStorage.removeItem(LOGIN_ROLE_KEY);
   sessionStorage.removeItem('grab_authed'); // ล้างการปลดล็อคแก้ไขด้วย
   showLogin();
 }
@@ -71,6 +86,29 @@ function toggleLoginPass() {
   const btn = document.getElementById('loginEyeBtn');
   if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
   else { inp.type = 'password'; btn.textContent = '👁️'; }
+}
+
+// ─── GUEST MODE UI ──────────────────────────────────────────────────────────
+function guestBlocked() {
+  showToast('👀 บัญชี Guest ดูข้อมูลได้อย่างเดียว ไม่สามารถแก้ไขได้', 'red');
+}
+
+function applyRoleUI() {
+  const guest = isGuest();
+  ['importLabel', 'clearBtn', 'lockBtn', 'tabEntryBtn', 'goalInputRow'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('guest-hidden', guest);
+  });
+  const badge = document.getElementById('guestBadge');
+  if (badge) badge.style.display = guest ? 'inline-block' : 'none';
+  const actionsTh = document.getElementById('historyActionsTh');
+  if (actionsTh) actionsTh.classList.toggle('guest-hidden', guest);
+  // If currently on the entry page as guest (edge case), bounce back to dashboard
+  if (guest && document.getElementById('page-entry') && document.getElementById('page-entry').classList.contains('active')) {
+    const dashBtn = document.querySelector('.tab-btn');
+    showTab('dashboard', dashBtn);
+  }
+  renderHistory();
 }
 
 // ─── DATA ───────────────────────────────────────────────────────────────────
@@ -127,7 +165,7 @@ async function syncFromSheets() {
       });
       const localRows = loadData();
       if (rows.length > 0 || localRows.length === 0) { saveLocal(rows); }
-      else if (rows.length === 0 && localRows.length > 0) { await apiCall('saveAll', { rows: localRows }); }
+      else if (rows.length === 0 && localRows.length > 0 && !isGuest()) { await apiCall('saveAll', { rows: localRows }); }
       setSyncStatus('ok');
     } else { setSyncStatus('error'); }
   } catch(e) { setSyncStatus('error'); }
@@ -135,12 +173,14 @@ async function syncFromSheets() {
 }
 
 async function saveRow(row) {
+  if (isGuest()) { guestBlocked(); return; }
   saveLocal(loadData().filter(r => r.id !== row.id).concat(row));
   setSyncStatus('syncing');
   try { const res = await apiCall('save', { row }); setSyncStatus(res.ok ? 'ok' : 'error'); }
   catch { setSyncStatus('error'); }
 }
 async function deleteRowRemote(id) {
+  if (isGuest()) { guestBlocked(); return { ok:false }; }
   saveLocal(loadData().filter(r => r.id !== id));
   setSyncStatus('syncing');
   try {
@@ -154,6 +194,7 @@ async function deleteRowRemote(id) {
   }
 }
 async function saveAllRemote(rows) {
+  if (isGuest()) { guestBlocked(); return; }
   saveLocal(rows); setSyncStatus('syncing');
   try { const res = await apiCall('saveAll', { rows }); setSyncStatus(res.ok ? 'ok' : 'error'); }
   catch { setSyncStatus('error'); }
@@ -204,6 +245,7 @@ function showToast(msg, type='') {
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
 function showTab(name, btn) {
+  if (name === 'entry' && isGuest()) { guestBlocked(); return; }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
@@ -239,6 +281,7 @@ function updatePreview() {
 
 // ─── SAVE ENTRY ──────────────────────────────────────────────────────────────
 async function saveEntry() {
+  if (isGuest()) { guestBlocked(); return; }
   const date = document.getElementById('f-date').value;
   if (!date) { showToast('กรุณาเลือกวันที่','red'); return; }
   const rows = loadData();
@@ -483,6 +526,7 @@ function renderTrendChart(rows) {
 
 // ─── GOAL ─────────────────────────────────────────────────────────────────────
 function saveGoal() {
+  if (isGuest()) { guestBlocked(); return; }
   const v = parseFloat(document.getElementById('goalInput').value);
   if (!v||v<=0) { showToast('กรุณากรอกเป้าหมาย','red'); return; }
   localStorage.setItem('grab_goal', v);
@@ -689,13 +733,19 @@ function renderHistory() {
   if (typeFilter==='work') rows=rows.filter(isWorkDay);
   if (typeFilter==='rest') rows=rows.filter(r=>!isWorkDay(r));
 
+  const guest = isGuest();
+  const colCount = guest ? 10 : 11;
   const tbody = document.getElementById('historyBody');
   if (!rows.length) {
-    tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="empty-icon">📋</div><p>ไม่มีข้อมูล</p></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="${colCount}"><div class="empty"><div class="empty-icon">📋</div><p>ไม่มีข้อมูล</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = rows.reverse().map((r,i) => {
     const p=profit(r);
+    const actionsCell = guest ? '' : `<td style="display:flex;gap:4px;padding:8px">
+        <button class="btn btn-outline btn-sm" onclick="addRipple(event);openEdit('${r.id}')">✏️</button>
+        <button class="btn btn-red btn-sm" onclick="addRipple(event);requireAuth(()=>deleteRow('${r.id}'))">🗑️</button>
+      </td>`;
     return `<tr class="row-anim" style="animation-delay:${i*0.018}s">
       <td class="td-date">${fmtDate(r.date)}</td>
       <td class="td-num">${r.grab?fmt(r.grab):'<span class="td-gray">—</span>'}</td>
@@ -707,10 +757,7 @@ function renderHistory() {
       <td class="td-num">${r.withdraw?fmt(r.withdraw):'<span class="td-gray">—</span>'}</td>
       <td class="td-num"><strong class="${p>=0?'td-green':'td-red'}">${fmt(p)}</strong></td>
       <td class="note-cell" title="${r.note||''}">${r.note||''}</td>
-      <td style="display:flex;gap:4px;padding:8px">
-        <button class="btn btn-outline btn-sm" onclick="addRipple(event);openEdit('${r.id}')">✏️</button>
-        <button class="btn btn-red btn-sm" onclick="addRipple(event);requireAuth(()=>deleteRow('${r.id}'))">🗑️</button>
-      </td>
+      ${actionsCell}
     </tr>`;
   }).join('');
 }
@@ -882,6 +929,7 @@ function renderBonus() {
 
 // ─── EDIT / DELETE ────────────────────────────────────────────────────────────
 function openEdit(id) {
+  if (isGuest()) { guestBlocked(); return; }
   const r = loadData().find(x=>x.id===id);
   if (!r) return;
   editingId=id;
@@ -892,6 +940,7 @@ function openEdit(id) {
 }
 function closeModal() { document.getElementById('editModal').classList.remove('show'); editingId=null; }
 async function saveEdit() {
+  if (isGuest()) { guestBlocked(); return; }
   const rows=loadData(); const idx=rows.findIndex(r=>r.id===editingId);
   if (idx<0) return;
   const row={...rows[idx], date:document.getElementById('e-date').value,
@@ -906,6 +955,7 @@ async function saveEdit() {
   await saveRow(row); renderHistory(); showToast('✅ แก้ไขแล้ว','green');
 }
 function deleteRow(id) {
+  if (isGuest()) { guestBlocked(); return; }
   pinAction={type:'deleteRow',id}; pinBuffer=''; updatePinDots();
   document.getElementById('pinMsg').textContent='';
   document.getElementById('pinTitle').textContent='🗑️ ยืนยันการลบรายการ';
@@ -1095,6 +1145,7 @@ function updateAuthUI(){
   btn.title=isAuthed()?'กดเพื่อล็อคการแก้ไข':'กดเพื่อปลดล็อคการแก้ไข';
 }
 function requireAuth(callback){
+  if (isGuest()) { guestBlocked(); return; }
   if(isAuthed()){callback();return;}
   pinAction={type:'auth',callback}; pinBuffer=''; updatePinDots();
   document.getElementById('pinMsg').textContent='';
@@ -1102,6 +1153,7 @@ function requireAuth(callback){
   document.getElementById('pinModal').classList.add('show');
 }
 function clearAllConfirm(){
+  if (isGuest()) { guestBlocked(); return; }
   pinAction={type:'clearAll'}; pinBuffer=''; updatePinDots();
   document.getElementById('pinMsg').textContent='';
   document.getElementById('pinTitle').textContent='🗑️ ยืนยันการล้างข้อมูลทั้งหมด';
@@ -1145,6 +1197,7 @@ async function manualSync(){
   await syncFromSheets(); renderDashboard(); renderHistory(); showToast('✅ Sync สำเร็จ','green');
 }
 function toggleLock(){
+  if (isGuest()) { guestBlocked(); return; }
   if(isAuthed()){clearAuthed();showToast('🔒 ล็อคแล้ว');}
   else{pinAction={type:'auth',callback:null};pinBuffer='';updatePinDots();document.getElementById('pinMsg').textContent='';document.getElementById('pinTitle').textContent='🔐 กรอกรหัสเพื่อปลดล็อค';document.getElementById('pinModal').classList.add('show');}
 }
@@ -1156,6 +1209,7 @@ function initApp(){
   appInitialized = true;
   ['f-grab','f-tip','f-oil'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
   document.getElementById('importFile').addEventListener('change', function(e){
+    if (isGuest()) { guestBlocked(); e.target.value=''; return; }
     const file=e.target.files[0]; if(!file) return; e.target.value='';
     const reader=new FileReader();
     reader.onload=function(ev){
@@ -1204,6 +1258,7 @@ function initApp(){
 }
 
 async function doImport(replaceAll) {
+  if (isGuest()) { guestBlocked(); document.getElementById('importModal').classList.remove('show'); return; }
   document.getElementById('importModal').classList.remove('show');
   if(!pendingImportData) return;
   const base=replaceAll?[]:loadData();

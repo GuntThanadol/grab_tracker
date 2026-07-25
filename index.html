@@ -29,6 +29,12 @@
       </div>
       <div class="login-error" id="loginError"></div>
       <button class="btn btn-green login-submit" onclick="addRipple(event);doLogin()">เข้าสู่ระบบ</button>
+      <div style="display:flex;align-items:center;gap:10px;margin:2px 0;">
+        <div style="flex:1;height:1px;background:var(--gray-200)"></div>
+        <span style="font-size:0.76rem;color:var(--gray-400)">หรือ</span>
+        <div style="flex:1;height:1px;background:var(--gray-200)"></div>
+      </div>
+      <button type="button" class="btn btn-outline login-submit" onclick="addRipple(event);loginAsGuest()">👀 เข้าชมแบบ Guest (ดูอย่างเดียว)</button>
     </div>
   </div>
 </div>
@@ -37,23 +43,24 @@
 
 <div class="nav">
   <div class="nav-brand"><span class="logo-icon">🛵</span> Grab บัญชีรายวัน</div>
+  <span id="guestBadge" style="display:none;font-size:0.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:#fff3cd;color:#a5710a;white-space:nowrap;">👀 Guest (ดูอย่างเดียว)</span>
   <div id="syncStatus">☁️ Synced</div>
   <div class="nav-actions">
-    <label class="btn btn-outline btn-sm" style="cursor:pointer">
+    <label class="btn btn-outline btn-sm" style="cursor:pointer" id="importLabel">
       📥 Import
       <input type="file" accept=".xlsx,.xls" id="importFile" style="display:none">
     </label>
-    <button class="btn btn-outline btn-sm" onclick="addRipple(event);exportData()">📤 Export</button>
-    <button class="btn btn-outline btn-sm" onclick="addRipple(event);manualSync()">🔄 Sync</button>
+    <button class="btn btn-outline btn-sm" id="exportBtn" onclick="addRipple(event);exportData()">📤 Export</button>
+    <button class="btn btn-outline btn-sm" id="syncBtn" onclick="addRipple(event);manualSync()">🔄 Sync</button>
     <button class="btn btn-outline btn-sm" id="lockBtn" onclick="addRipple(event);toggleLock()" title="ปลดล็อคการแก้ไข">🔒 ปลดล็อค</button>
     <button class="btn btn-outline btn-sm" onclick="addRipple(event);doLogout()" title="ออกจากระบบ">🚪 ออกจากระบบ</button>
-    <button class="btn btn-red btn-sm" onclick="addRipple(event);clearAllConfirm()">🗑️ ล้างข้อมูล</button>
+    <button class="btn btn-red btn-sm" id="clearBtn" onclick="addRipple(event);clearAllConfirm()">🗑️ ล้างข้อมูล</button>
   </div>
 </div>
 
 <div class="tabs">
   <button class="tab-btn active" onclick="showTab('dashboard',this)">📊 ภาพรวม</button>
-  <button class="tab-btn" onclick="showTab('entry',this)">➕ กรอกข้อมูล</button>
+  <button class="tab-btn" id="tabEntryBtn" onclick="showTab('entry',this)">➕ กรอกข้อมูล</button>
   <button class="tab-btn" onclick="showTab('history',this)">📋 รายวัน</button>
   <button class="tab-btn" onclick="showTab('monthly',this)">📅 รายเดือน</button>
   <button class="tab-btn" onclick="showTab('bonus',this)">💎 อินพิเศษ/อินเพชร</button>
@@ -69,7 +76,7 @@
       <div class="card" style="margin-bottom:0">
         <div class="card-title">🎯 เป้าหมายรายเดือน</div>
         <div id="goalContent"></div>
-        <div class="goal-input-row">
+        <div class="goal-input-row" id="goalInputRow">
           <span style="font-size:0.83rem;color:var(--gray-600)">ตั้งเป้า:</span>
           <input type="number" id="goalInput" placeholder="เช่น 15000" step="100">
           <button class="btn btn-green btn-sm" onclick="addRipple(event);saveGoal()">บันทึก</button>
@@ -201,7 +208,7 @@
               <th class="td-num">ถอนกรุงศรี</th>
               <th class="td-num">กำไรสุทธิ</th>
               <th>หมายเหตุ</th>
-              <th></th>
+              <th id="historyActionsTh"></th>
             </tr>
           </thead>
           <tbody id="historyBody"></tbody>
