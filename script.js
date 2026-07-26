@@ -95,7 +95,7 @@ function guestBlocked() {
 
 function applyRoleUI() {
   const guest = isGuest();
-  ['importLabel', 'clearBtn', 'lockBtn', 'tabEntryBtn', 'goalInputRow'].forEach(id => {
+  ['importLabel', 'clearBtn', 'lockBtn', 'tabEntryBtn', 'goalCard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('guest-hidden', guest);
   });
