@@ -793,6 +793,7 @@ function renderMonthly() {
         </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
+      <div class="table-wrap">
         <table style="font-size:0.84rem">
           <thead><tr>
             <th>วันที่</th><th class="td-num">รายได้ Grab</th><th class="td-num">Tip</th>
@@ -825,6 +826,7 @@ function renderMonthly() {
             </tr>
           </tbody>
         </table>
+      </div>
       </div>
     </div>`;
   }).join('');
