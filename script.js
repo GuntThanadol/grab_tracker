@@ -546,7 +546,8 @@ function renderGoal(rows) {
   const daysLeft = daysInMonth - now.getDate();
 
   if (!goal) {
-    el.innerHTML = `<div style="color:var(--gray-400);font-size:0.86rem;padding:8px 0">กรอกเป้าหมายด้านล่างเพื่อเริ่มติดตาม</div>
+    const hint = isGuest() ? 'ยังไม่มีการตั้งเป้าหมาย' : 'กรอกเป้าหมายด้านล่างเพื่อเริ่มติดตาม';
+    el.innerHTML = `<div style="color:var(--gray-400);font-size:0.86rem;padding:8px 0">${hint}</div>
       <div style="font-size:0.83rem;color:var(--gray-600);margin-top:6px">เดือนนี้: <strong style="color:var(--green-dark)">${fmt(monthProfit)} บาท</strong> (${workDays} วัน)</div>`;
     return;
   }
@@ -1254,7 +1255,7 @@ function initApp(){
   tdpSetValue('f-date', new Date().toISOString().slice(0,10));
   updateAuthUI();
   renderDashboard();
-  syncFromSheets().then(()=>{renderDashboard();renderHistory();});
+  syncFromSheets().then(()=>{renderDashboard();renderHistory();applyRoleUI();});
 }
 
 async function doImport(replaceAll) {
