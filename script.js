@@ -221,10 +221,10 @@ function profit(r) { return (r.grab||0)+(r.tip||0)-(r.oil||0); }
 function income(r) { return (r.grab||0)+(r.tip||0); }
 
 // ── HOURS HELPERS ────────────────────────────────────────────────────────────
-// Dropdown range: 1 - 12 ชั่วโมง, step ครึ่งชั่วโมง
+// Dropdown range: 1 - 6 ชั่วโมง, step ครึ่งชั่วโมง
 const HOURS_OPTIONS = (() => {
   const arr = [];
-  for (let h = 1; h <= 12; h += 0.5) arr.push(h);
+  for (let h = 1; h <= 6; h += 0.5) arr.push(h);
   return arr;
 })();
 function fmtHoursLabel(h) {
