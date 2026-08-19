@@ -161,7 +161,7 @@ async function syncFromSheets() {
       const rows = data.rows.map(r => {
         let dateStr = String(r.date);
         if (dateStr.includes('T')) { const d = new Date(dateStr); d.setHours(d.getHours()+7); dateStr = d.toISOString().slice(0,10); }
-        return { id:String(r.id), date:dateStr, grab:Number(r.grab)||0, tip:Number(r.tip)||0, oil:Number(r.oil)||0, oilReal:Number(r.oilReal)||0, credit:Number(r.credit)||0, withdraw:Number(r.withdraw)||0, note:String(r.note||'') };
+        return { id:String(r.id), date:dateStr, grab:Number(r.grab)||0, tip:Number(r.tip)||0, oil:Number(r.oil)||0, oilReal:Number(r.oilReal)||0, credit:Number(r.credit)||0, withdraw:Number(r.withdraw)||0, hours:r.hours!=null&&r.hours!==''?Number(r.hours):null, note:String(r.note||'') };
       });
       const localRows = loadData();
       if (rows.length > 0 || localRows.length === 0) { saveLocal(rows); }
@@ -219,6 +219,33 @@ function fmtDate(d) {
 function isWorkDay(r) { return (r.grab||0)>0||(r.tip||0)>0; }
 function profit(r) { return (r.grab||0)+(r.tip||0)-(r.oil||0); }
 function income(r) { return (r.grab||0)+(r.tip||0); }
+
+// ── HOURS HELPERS ────────────────────────────────────────────────────────────
+// Dropdown range: 1 - 12 ชั่วโมง, step ครึ่งชั่วโมง
+const HOURS_OPTIONS = (() => {
+  const arr = [];
+  for (let h = 1; h <= 12; h += 0.5) arr.push(h);
+  return arr;
+})();
+function fmtHoursLabel(h) {
+  const wholeH = Math.floor(h);
+  const mins = Math.round((h - wholeH) * 60);
+  return mins > 0 ? `${wholeH} ชั่วโมง ${mins} นาที` : `${wholeH} ชั่วโมง`;
+}
+function fmtHoursShort(h) {
+  if (h == null || h === '') return '—';
+  return fmtHoursLabel(Number(h));
+}
+function populateHoursSelect(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  HOURS_OPTIONS.forEach(h => {
+    const opt = document.createElement('option');
+    opt.value = h;
+    opt.textContent = fmtHoursLabel(h);
+    sel.appendChild(opt);
+  });
+}
 
 // ── ANIMATED COUNTER ─────────────────────────────────────────────────────────
 function animateCount(el, targetVal, duration=800, isInt=false) {
@@ -287,6 +314,7 @@ async function saveEntry() {
   const rows = loadData();
   let existRow = rows.find(r => r.date === date);
   if (existRow && !confirm('มีข้อมูลของวันนี้แล้ว ต้องการแทนที่?')) return;
+  const hoursVal = document.getElementById('f-hours').value;
   const row = {
     id: existRow ? existRow.id : newId(), date,
     grab:     parseFloat(document.getElementById('f-grab').value)||0,
@@ -295,6 +323,7 @@ async function saveEntry() {
     oilReal:  parseFloat(document.getElementById('f-oilReal').value)||0,
     credit:   parseFloat(document.getElementById('f-credit').value)||0,
     withdraw: parseFloat(document.getElementById('f-withdraw').value)||0,
+    hours:    hoursVal ? parseFloat(hoursVal) : null,
     note: document.getElementById('f-note').value.trim(),
   };
   showToast('💾 กำลังบันทึก...');
@@ -302,6 +331,7 @@ async function saveEntry() {
   const dt = new Date(date+'T00:00:00');
   dt.setDate(dt.getDate()+1);
   ['f-grab','f-tip','f-oil','f-oilReal','f-credit','f-withdraw','f-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-hours').value = '';
   tdpSetValue('f-date', dt.toISOString().slice(0,10));
   updatePreview();
   renderDashboard();
@@ -735,7 +765,7 @@ function renderHistory() {
   if (typeFilter==='rest') rows=rows.filter(r=>!isWorkDay(r));
 
   const guest = isGuest();
-  const colCount = guest ? 10 : 11;
+  const colCount = guest ? 11 : 12;
   const tbody = document.getElementById('historyBody');
   if (!rows.length) {
     tbody.innerHTML=`<tr><td colspan="${colCount}"><div class="empty"><div class="empty-icon">📋</div><p>ไม่มีข้อมูล</p></div></td></tr>`;
@@ -756,6 +786,7 @@ function renderHistory() {
       <td class="td-num">${r.oilReal?fmt(r.oilReal):'<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.credit?fmt(r.credit):'<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.withdraw?fmt(r.withdraw):'<span class="td-gray">—</span>'}</td>
+      <td class="td-num">${r.hours?fmtHoursShort(r.hours):'<span class="td-gray">—</span>'}</td>
       <td class="td-num"><strong class="${p>=0?'td-green':'td-red'}">${fmt(p)}</strong></td>
       <td class="note-cell" title="${r.note||''}">${r.note||''}</td>
       ${actionsCell}
@@ -781,6 +812,7 @@ function renderMonthly() {
     const totCredit=mrs.reduce((s,r)=>s+(r.credit||0),0);
     const totWithdraw=mrs.reduce((s,r)=>s+(r.withdraw||0),0);
     const totProfit=mrs.reduce((s,r)=>s+profit(r),0);
+    const totHours=mrs.reduce((s,r)=>s+(r.hours||0),0);
     const [yr,mo]=m.split('-');
     const monthName=`${TH_MONTHS_S[parseInt(mo)-1]} ${parseInt(yr)+543}`;
     return `<div class="month-section" style="animation:rowIn 0.4s ${mi*0.08}s ease both;opacity:0">
@@ -790,6 +822,7 @@ function renderMonthly() {
           <span>ทำงาน <strong>${workDays} วัน</strong></span>
           <span>รายได้รวม <strong>${fmt(totIncome)} ฿</strong></span>
           <span>กำไรสุทธิ <strong style="color:var(--green-dark)">${fmt(totProfit)} ฿</strong></span>
+          <span>ชั่วโมงขับรวม <strong>${fmtHoursShort(totHours)}</strong></span>
         </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
@@ -799,7 +832,7 @@ function renderMonthly() {
             <th>วันที่</th><th class="td-num">รายได้ Grab</th><th class="td-num">Tip</th>
             <th class="td-num">รายได้รวม</th><th class="td-num">ค่าน้ำมัน</th>
             <th class="td-num">เติมน้ำมันจริง</th><th class="td-num">เครดิต Grab</th>
-            <th class="td-num">ถอนกรุงศรี</th><th class="td-num">กำไรสุทธิ</th>
+            <th class="td-num">ถอนกรุงศรี</th><th class="td-num">ชั่วโมงขับ</th><th class="td-num">กำไรสุทธิ</th>
           </tr></thead>
           <tbody>
             ${mrs.map(r=>`<tr>
@@ -811,6 +844,7 @@ function renderMonthly() {
               <td class="td-num">${r.oilReal?fmt(r.oilReal):'<span class="td-gray">—</span>'}</td>
               <td class="td-num">${r.credit?fmt(r.credit):'<span class="td-gray">—</span>'}</td>
               <td class="td-num">${r.withdraw?fmt(r.withdraw):'<span class="td-gray">—</span>'}</td>
+              <td class="td-num">${r.hours?fmtHoursShort(r.hours):'<span class="td-gray">—</span>'}</td>
               <td class="td-num"><strong class="${profit(r)>=0?'td-green':'td-red'}">${fmt(profit(r))}</strong></td>
             </tr>`).join('')}
             <tr style="background:var(--green-light);font-weight:800;">
@@ -822,6 +856,7 @@ function renderMonthly() {
               <td class="td-num">${fmt(totOilReal)}</td>
               <td class="td-num">${fmt(totCredit)}</td>
               <td class="td-num">${fmt(totWithdraw)}</td>
+              <td class="td-num">${fmtHoursShort(totHours)}</td>
               <td class="td-num td-green">${fmt(totProfit)}</td>
             </tr>
           </tbody>
@@ -938,6 +973,7 @@ function openEdit(id) {
   editingId=id;
   tdpSetValue('e-date',r.date);
   ['grab','tip','oil','oilReal','credit','withdraw'].forEach(f=>document.getElementById('e-'+f).value=r[f]||'');
+  document.getElementById('e-hours').value = r.hours ? r.hours : '';
   document.getElementById('e-note').value=r.note||'';
   document.getElementById('editModal').classList.add('show');
 }
@@ -946,6 +982,7 @@ async function saveEdit() {
   if (isGuest()) { guestBlocked(); return; }
   const rows=loadData(); const idx=rows.findIndex(r=>r.id===editingId);
   if (idx<0) return;
+  const eHoursVal = document.getElementById('e-hours').value;
   const row={...rows[idx], date:document.getElementById('e-date').value,
     grab:parseFloat(document.getElementById('e-grab').value)||0,
     tip:parseFloat(document.getElementById('e-tip').value)||0,
@@ -953,6 +990,7 @@ async function saveEdit() {
     oilReal:parseFloat(document.getElementById('e-oilReal').value)||0,
     credit:parseFloat(document.getElementById('e-credit').value)||0,
     withdraw:parseFloat(document.getElementById('e-withdraw').value)||0,
+    hours: eHoursVal ? parseFloat(eHoursVal) : null,
     note:document.getElementById('e-note').value.trim()};
   closeModal(); showToast('💾 กำลังบันทึก...');
   await saveRow(row); renderHistory(); showToast('✅ แก้ไขแล้ว','green');
@@ -983,8 +1021,8 @@ let pendingImportData=null;
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
 function exportData() {
   const rows=getRows();
-  const ws_data=[['วันที่','รายได้ Grab (บาท)','Tip มือ (บาท)','รายได้รวม (บาท)','ค่าน้ำมัน (บาท)','เติมน้ำมันจริง (บาท)','เครดิต Grab (บาท)','ถอนเข้ากรุงศรี (บาท)','กำไรสุทธิ (บาท)','หมายเหตุ'],
-    ...rows.map(r=>[r.date,r.grab||0,r.tip||0,income(r),r.oil||0,r.oilReal||0,r.credit||0,r.withdraw||0,profit(r),r.note||''])];
+  const ws_data=[['วันที่','รายได้ Grab (บาท)','Tip มือ (บาท)','รายได้รวม (บาท)','ค่าน้ำมัน (บาท)','เติมน้ำมันจริง (บาท)','เครดิต Grab (บาท)','ถอนเข้ากรุงศรี (บาท)','ชั่วโมงขับ','กำไรสุทธิ (บาท)','หมายเหตุ'],
+    ...rows.map(r=>[r.date,r.grab||0,r.tip||0,income(r),r.oil||0,r.oilReal||0,r.credit||0,r.withdraw||0,r.hours||'',profit(r),r.note||''])];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ws_data),'บัญชีรายวัน');
   XLSX.writeFile(wb,`Grab_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -1210,6 +1248,8 @@ let appInitialized = false;
 function initApp(){
   if (appInitialized) return;
   appInitialized = true;
+  populateHoursSelect('f-hours');
+  populateHoursSelect('e-hours');
   ['f-grab','f-tip','f-oil'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
   document.getElementById('importFile').addEventListener('change', function(e){
     if (isGuest()) { guestBlocked(); e.target.value=''; return; }
@@ -1238,12 +1278,13 @@ function initApp(){
         const cOilReal=colOf(['เติมน้ำมันจริง'])>=0?colOf(['เติมน้ำมันจริง']):5;
         const cCredit=colOf(['เครดิต'])>=0?colOf(['เครดิต']):6;
         const cWithdraw=colOf(['ถอน'])>=0?colOf(['ถอน']):7;
+        const cHours=colOf(['ชั่วโมง']);
         const cNote=colOf(['หมายเหตุ','note'])>=0?colOf(['หมายเหตุ','note']):9;
         const parsed=[];
         for(let i=firstDataRow;i<raw.length;i++){
           const row=raw[i]; if(!row) continue;
           const dateStr=parseDateVal(row[0]); if(!dateStr) continue;
-          parsed.push({id:newId(),date:dateStr,grab:parseFloat(row[cGrab])||0,tip:parseFloat(row[cTip])||0,oil:parseFloat(row[cOil])||0,oilReal:parseFloat(row[cOilReal])||0,credit:parseFloat(row[cCredit])||0,withdraw:parseFloat(row[cWithdraw])||0,note:cNote>=0&&row[cNote]?String(row[cNote]).trim():''});
+          parsed.push({id:newId(),date:dateStr,grab:parseFloat(row[cGrab])||0,tip:parseFloat(row[cTip])||0,oil:parseFloat(row[cOil])||0,oilReal:parseFloat(row[cOilReal])||0,credit:parseFloat(row[cCredit])||0,withdraw:parseFloat(row[cWithdraw])||0,hours:cHours>=0&&row[cHours]?parseFloat(row[cHours])||null:null,note:cNote>=0&&row[cNote]?String(row[cNote]).trim():''});
         }
         if(!parsed.length){showToast('ไม่พบข้อมูล','red');return;}
         pendingImportData=parsed;

@@ -153,6 +153,12 @@
           <label>🏦 ถอนเข้ากรุงศรี (บาท)</label>
           <input type="number" id="f-withdraw" placeholder="0.00" step="0.01">
         </div>
+        <div class="form-group">
+          <label>⏱️ จำนวนชั่วโมงขับ</label>
+          <select id="f-hours">
+            <option value="">— ไม่ระบุ —</option>
+          </select>
+        </div>
         <div class="form-group form-row-full">
           <label>📝 หมายเหตุ</label>
           <input type="text" id="f-note" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)">
@@ -206,6 +212,7 @@
               <th class="td-num">เติมน้ำมันจริง</th>
               <th class="td-num">เครดิต Grab</th>
               <th class="td-num">ถอนกรุงศรี</th>
+              <th class="td-num">ชั่วโมงขับ</th>
               <th class="td-num">กำไรสุทธิ</th>
               <th>หมายเหตุ</th>
               <th id="historyActionsTh"></th>
@@ -327,6 +334,12 @@
       <div class="form-group"><label>⛽ เติมน้ำมันจริง</label><input type="number" id="e-oilReal" step="0.01"></div>
       <div class="form-group"><label>💳 เครดิต Grab</label><input type="number" id="e-credit" step="0.01"></div>
       <div class="form-group"><label>🏦 ถอนกรุงศรี</label><input type="number" id="e-withdraw" step="0.01"></div>
+      <div class="form-group">
+        <label>⏱️ จำนวนชั่วโมงขับ</label>
+        <select id="e-hours">
+          <option value="">— ไม่ระบุ —</option>
+        </select>
+      </div>
       <div class="form-group form-row-full"><label>📝 หมายเหตุ</label><input type="text" id="e-note"></div>
     </div>
     <div class="modal-footer">

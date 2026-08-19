@@ -224,7 +224,8 @@
   .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
   .form-group { display: flex; flex-direction: column; gap: 6px; }
   .form-group label { font-size: 0.8rem; font-weight: 700; color: var(--gray-600); letter-spacing: 0.02em; }
-  .form-group input {
+  .form-group input,
+  .form-group select {
     border: 1.5px solid var(--gray-200);
     border-radius: 8px;
     padding: 9px 13px;
@@ -233,8 +234,10 @@
     transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
     outline: none;
     background: var(--white);
+    color: var(--gray-800);
   }
-  .form-group input:focus {
+  .form-group input:focus,
+  .form-group select:focus {
     border-color: var(--green);
     box-shadow: 0 0 0 3px var(--green-glow);
     transform: translateY(-1px);
@@ -678,7 +681,7 @@
     /* forms */
     .form-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
     .form-group label { font-size: 0.76rem; }
-    .form-group input, .tdp-input { font-size: 16px; padding: 9px 11px; } /* 16px prevents iOS auto-zoom */
+    .form-group input, .form-group select, .tdp-input { font-size: 16px; padding: 9px 11px; } /* 16px prevents iOS auto-zoom */
     .preview-box { flex-direction: column; align-items: stretch; gap: 10px; }
     .preview-box button { margin-left: 0 !important; width: 100%; justify-content: center; }
 
