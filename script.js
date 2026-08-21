@@ -121,6 +121,18 @@ function saveData(rows) { saveLocal(rows); }
 function getRows() { return loadData().sort((a,b) => a.date.localeCompare(b.date)); }
 function newId()  { return Date.now() + Math.random().toString(36).slice(2,6); }
 
+function parseDateFromSheets(rawDate) {
+  if (!rawDate) return '';
+  let str = String(rawDate).trim();
+  if (str.includes('T')) {
+    const dt = new Date(str);
+    dt.setHours(dt.getHours() + 7);
+    return dt.toISOString().slice(0, 10);
+  }
+  const m = str.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : str.slice(0, 10);
+}
+
 // ─── CONFETTI ENGINE ────────────────────────────────────────────────────────
 const confettiCanvas = document.getElementById('confettiCanvas');
 const confettiCtx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
@@ -419,7 +431,7 @@ async function syncFromSheets() {
   if (res && (res.ok || res.status === 'ok') && Array.isArray(rows)) {
     const cleanData = rows.map(r => ({
       ...r,
-      date: typeof r.date === 'string' ? r.date.slice(0, 10) : r.date,
+      date: parseDateFromSheets(r.date),
       grab: parseFloat(r.grab) || 0,
       tip: parseFloat(r.tip) || 0,
       oil: parseFloat(r.oil) || 0,
