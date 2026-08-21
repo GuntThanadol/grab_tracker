@@ -9,6 +9,9 @@
 </head>
 <body>
 
+<!-- CANVAS FOR CONFETTI / PARTICLES -->
+<canvas id="confettiCanvas"></canvas>
+
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
@@ -30,9 +33,9 @@
       <div class="login-error" id="loginError"></div>
       <button class="btn btn-green login-submit" onclick="addRipple(event);doLogin()">เข้าสู่ระบบ</button>
       <div style="display:flex;align-items:center;gap:10px;margin:2px 0;">
-        <div style="flex:1;height:1px;background:var(--gray-200)"></div>
-        <span style="font-size:0.76rem;color:var(--gray-400)">หรือ</span>
-        <div style="flex:1;height:1px;background:var(--gray-200)"></div>
+        <div style="flex:1;height:1px;background:var(--border-color)"></div>
+        <span style="font-size:0.76rem;color:var(--text-muted)">หรือ</span>
+        <div style="flex:1;height:1px;background:var(--border-color)"></div>
       </div>
       <button type="button" class="btn btn-outline login-submit" onclick="addRipple(event);loginAsGuest()">👀 Guest Mode</button>
     </div>
@@ -42,10 +45,15 @@
 <div id="appRoot" style="display:none">
 
 <div class="nav">
-  <div class="nav-brand"><span class="logo-icon">🏍️</span> Grab บัญชีรายวัน</div>
-  <span id="guestBadge" style="display:none;font-size:0.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:#fff3cd;color:#a5710a;white-space:nowrap;">👀 View Only</span>
+  <div class="nav-brand">
+    <span class="logo-icon">🏍️</span>
+    <span class="brand-text">Grab บัญชีรายวัน</span>
+  </div>
+  <span id="guestBadge" style="display:none;font-size:0.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--yellow-light);color:var(--yellow-text);white-space:nowrap;">👀 View Only</span>
   <div id="syncStatus">☁️ Synced</div>
   <div class="nav-actions">
+    <button class="btn btn-outline btn-sm theme-btn" id="themeBtn" onclick="addRipple(event);cycleTheme()" title="เปลี่ยนธีมสี">🎨 <span id="themeName">ธีมสดใส</span></button>
+    <button class="btn btn-outline btn-sm sound-btn" id="soundBtn" onclick="addRipple(event);toggleSound()" title="เปิด/ปิดเสียง">🔊</button>
     <label class="btn btn-outline btn-sm" style="cursor:pointer" id="importLabel">
       📥 Import
       <input type="file" accept=".xlsx,.xls" id="importFile" style="display:none">
@@ -70,6 +78,14 @@
 
   <!-- DASHBOARD -->
   <div class="page active" id="page-dashboard">
+    <!-- Hero Banner -->
+    <div class="hero-banner" id="heroBanner">
+      <div class="hero-left">
+        <div class="hero-greeting" id="heroGreeting">สวัสดีตอนเช้า ☀️</div>
+        <div class="hero-quote" id="heroQuote">ขอให้เป็นวันที่ยอดปัง ขับขี่ปลอดภัยทุกเส้นทาง! 🏍️💨</div>
+      </div>
+    </div>
+
     <div class="stat-grid" id="statGrid"></div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;" class="two-col-grid">
@@ -108,7 +124,7 @@
         <span>📉 Trend รายได้ 3 เดือนล่าสุด</span>
         <div style="display:flex;gap:14px;font-size:0.78rem;font-weight:600;color:var(--gray-600);">
           <span><span style="display:inline-block;width:10px;height:3px;background:var(--green);border-radius:2px;vertical-align:middle;margin-right:4px"></span>รายได้รวม</span>
-          <span><span style="display:inline-block;width:10px;height:3px;background:#3b82f6;border-radius:2px;vertical-align:middle;margin-right:4px"></span>กำไรสุทธิ</span>
+          <span><span style="display:inline-block;width:10px;height:3px;background:var(--blue);border-radius:2px;vertical-align:middle;margin-right:4px"></span>กำไรสุทธิ</span>
           <span><span style="display:inline-block;width:10px;height:3px;background:var(--red);border-radius:2px;vertical-align:middle;margin-right:4px"></span>ค่าน้ำมัน</span>
         </div>
       </div>
@@ -136,14 +152,32 @@
         <div class="form-group">
           <label>👋 Tip มือ (บาท)</label>
           <input type="number" id="f-tip" placeholder="0.00" step="0.01">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="addChipValue('f-tip', 10)">+10</button>
+            <button type="button" class="chip-btn" onclick="addChipValue('f-tip', 15)">+15</button>
+            <button type="button" class="chip-btn" onclick="addChipValue('f-tip', 20)">+20</button>
+            <button type="button" class="chip-btn" onclick="addChipValue('f-tip', 30)">+30</button>
+          </div>
         </div>
         <div class="form-group">
-          <label>⛽ ค่าน้ำมัน (บาท)</label>
+          <label>⛽ ค่าน้ำมัน (ประมาณการ)</label>
           <input type="number" id="f-oil" placeholder="0.00" step="0.01">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 20)">20</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 30)">30</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 40)">40</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 50)">50</button>
+          </div>
         </div>
         <div class="form-group">
           <label>⛽ เติมน้ำมันจริง (บาท)</label>
           <input type="number" id="f-oilReal" placeholder="0.00" step="0.01">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="copyValue('f-oil', 'f-oilReal')">เท่าค่าน้ำมัน</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oilReal', 100)">100</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oilReal', 120)">120</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oilReal', 140)">140</button>
+          </div>
         </div>
         <div class="form-group">
           <label>💳 เครดิต Grab (บาท)</label>
@@ -158,10 +192,21 @@
           <select id="f-hours">
             <option value="">— ไม่ระบุ —</option>
           </select>
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="setChipValue('f-hours', '2')">2 ชม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-hours', '3')">3 ชม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-hours', '4')">4 ชม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-hours', '5')">5 ชม.</button>
+          </div>
         </div>
         <div class="form-group form-row-full">
           <label>📝 หมายเหตุ</label>
-          <input type="text" id="f-note" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)">
+          <input type="text" id="f-note" placeholder="เช่น อินเพชร 80 หรือ อินพิเศษ 50">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="appendNote('อินเพชร 80')">💎 อินเพชร 80</button>
+            <button type="button" class="chip-btn" onclick="appendNote('อินพิเศษ 50')">⭐ อินพิเศษ 50</button>
+            <button type="button" class="chip-btn" onclick="appendNote('ฝนตกหนัก')">🌧️ ฝนตก</button>
+          </div>
         </div>
       </div>
       <div class="preview-box" id="previewBox">
