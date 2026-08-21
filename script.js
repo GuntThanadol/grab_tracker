@@ -459,12 +459,18 @@ async function saveAllRemote(allRows) {
 }
 
 function setSyncStatus(st) {
-  const dot = document.getElementById('syncDot');
-  const txt = document.getElementById('syncText');
-  if (!dot || !txt) return;
-  if (st === 'online')  { dot.className = 'sync-dot online';  txt.textContent = 'Cloud Sync'; }
-  if (st === 'offline') { dot.className = 'sync-dot offline'; txt.textContent = 'ออฟไลน์'; }
-  if (st === 'syncing') { dot.className = 'sync-dot syncing'; txt.textContent = 'กำลัง sync...'; }
+  const statusEl = document.getElementById('syncStatus');
+  if (!statusEl) return;
+  if (st === 'online' || st === 'ok') {
+    statusEl.textContent = '☁️ Synced';
+    statusEl.style.opacity = '1';
+  } else if (st === 'offline' || st === 'error') {
+    statusEl.textContent = '⚠️ ออฟไลน์';
+    statusEl.style.opacity = '0.7';
+  } else if (st === 'syncing') {
+    statusEl.textContent = '🔄 กำลัง sync...';
+    statusEl.style.opacity = '0.9';
+  }
 }
 
 // ─── UTILS ───────────────────────────────────────────────────────────────────
@@ -550,8 +556,9 @@ function animateCount(el, targetVal, duration = 800, isInt = false) {
 
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
+  if (!t) return;
   t.textContent = msg; t.className = 'show ' + type;
-  setTimeout(() => t.className = '', 2800);
+  setTimeout(() => { if (t) t.className = ''; }, 2800);
 }
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
@@ -559,7 +566,8 @@ function showTab(name, btn) {
   if (name === 'entry' && isGuest()) { guestBlocked(); return; }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
+  const targetPage = document.getElementById('page-' + name);
+  if (targetPage) targetPage.classList.add('active');
   if (btn) btn.classList.add('active');
   if (name === 'dashboard') renderDashboard();
   if (name === 'history')   renderHistory();
@@ -576,8 +584,9 @@ function updatePreview() {
   const pEl   = document.getElementById('prev-profit');
   const box   = document.getElementById('previewBox');
   const hasVal = g || t || o;
-  box.classList.toggle('active-entry', !!hasVal);
+  if (box) box.classList.toggle('active-entry', !!hasVal);
   function setAnimated(el, val) {
+    if (!el) return;
     el.textContent = fmt(val) + ' บาท';
     el.classList.remove('updated');
     void el.offsetWidth;
@@ -587,7 +596,7 @@ function updatePreview() {
   setAnimated(incEl, g + t);
   const pVal = g + t - o;
   setAnimated(pEl, pVal);
-  pEl.style.color = pVal < 0 ? 'var(--red)' : 'var(--green-dark)';
+  if (pEl) pEl.style.color = pVal < 0 ? 'var(--red)' : 'var(--green-dark)';
 }
 
 // ─── SAVE ENTRY ──────────────────────────────────────────────────────────────
@@ -616,8 +625,12 @@ async function saveEntry() {
   launchConfetti({ count: 70 });
   const dt = new Date(date + 'T00:00:00');
   dt.setDate(dt.getDate() + 1);
-  ['f-grab', 'f-tip', 'f-oil', 'f-oilReal', 'f-credit', 'f-withdraw', 'f-note'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-hours').value = '';
+  ['f-grab', 'f-tip', 'f-oil', 'f-oilReal', 'f-credit', 'f-withdraw', 'f-note'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const hoursEl = document.getElementById('f-hours');
+  if (hoursEl) hoursEl.value = '';
   tdpSetValue('f-date', dt.toISOString().slice(0, 10));
   updatePreview();
   renderDashboard();
@@ -675,23 +688,25 @@ function renderDashboard() {
     { label:'📈 กำไรเฉลี่ย/วัน',  val:avgProfit,    color:'green', sub:'บาท/วันทำงาน' },
   ];
 
-  document.getElementById('statGrid').innerHTML = cards.map((c, i) =>
-    `<div class="stat-card ${c.cls || ''}" style="animation:rowIn 0.35s ${i * 0.04}s ease both;opacity:0">
-      <div class="stat-label">${c.label}</div>
-      <div class="stat-value ${c.color}" id="sv${i}">0</div>
-      <div class="stat-sub">${c.sub}</div>
-    </div>`
-  ).join('');
+  const gridEl = document.getElementById('statGrid');
+  if (gridEl) {
+    gridEl.innerHTML = cards.map((c, i) =>
+      `<div class="stat-card ${c.cls || ''}" style="animation:rowIn 0.35s ${i * 0.04}s ease both">
+        <div class="stat-label">${c.label}</div>
+        <div class="stat-value ${c.color}" id="sv${i}">0</div>
+        <div class="stat-sub">${c.sub}</div>
+      </div>`
+    ).join('');
 
-  // Animate counters
-  requestAnimationFrame(() => {
-    cards.forEach((c, i) => {
-      const el = document.getElementById('sv' + i);
-      if (!el) return;
-      if (c.isInt) { setTimeout(() => animateCount(el, c.val, 600, true), i * 40); }
-      else { setTimeout(() => animateCount(el, c.val, 700 + i * 30), i * 40); }
+    requestAnimationFrame(() => {
+      cards.forEach((c, i) => {
+        const el = document.getElementById('sv' + i);
+        if (!el) return;
+        if (c.isInt) { setTimeout(() => animateCount(el, c.val, 600, true), i * 40); }
+        else { setTimeout(() => animateCount(el, c.val, 700 + i * 30), i * 40); }
+      });
     });
-  });
+  }
 
   renderBarChart(rows);
   renderTrendChart(rows);
@@ -703,10 +718,12 @@ function renderDashboard() {
 
 // ─── BAR CHART ───────────────────────────────────────────────────────────────
 function renderBarChart(rows) {
+  const el = document.getElementById('barChart');
+  if (!el) return;
   const recent = rows.filter(isWorkDay).slice(-30);
   const maxP = Math.max(...recent.map(r => profit(r)), 1);
   if (!recent.length) {
-    document.getElementById('barChart').innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>ยังไม่มีข้อมูล</p></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>ยังไม่มีข้อมูล</p></div>';
     return;
   }
   const html = recent.map((r, i) => {
@@ -714,7 +731,7 @@ function renderBarChart(rows) {
     const pct = Math.max((p / maxP) * 100, 2);
     const [, m, d] = r.date.split('-').map(Number);
     const cls = p < 0 ? 'red' : p > maxP * 0.8 ? 'good' : '';
-    return `<div class="bar-row" style="animation:rowIn 0.3s ${i * 0.02}s ease both;opacity:0">
+    return `<div class="bar-row" style="animation:rowIn 0.3s ${i * 0.02}s ease both">
       <div class="bar-label">${d} ${TH_MONTHS_S[m - 1]}</div>
       <div class="bar-track" title="${fmtDate(r.date)}: ${fmt(p)} บาท">
         <div class="bar-fill ${cls}" id="bf${i}" style="width:0%"></div>
@@ -722,14 +739,14 @@ function renderBarChart(rows) {
       <div class="bar-val">${fmt(p)}</div>
     </div>`;
   }).join('');
-  document.getElementById('barChart').innerHTML = html;
+  el.innerHTML = html;
   requestAnimationFrame(() => {
     recent.forEach((_, i) => {
       const p = profit(recent[i]);
       const pct = Math.max((p / maxP) * 100, 2);
       setTimeout(() => {
-        const el = document.getElementById('bf' + i);
-        if (el) el.style.width = pct + '%';
+        const barEl = document.getElementById('bf' + i);
+        if (barEl) barEl.style.width = pct + '%';
       }, i * 20);
     });
   });
@@ -821,7 +838,6 @@ function renderTrendChart(rows) {
   const trendPct = meanY ? ((slope * (n - 1)) / Math.abs(meanY) * 100).toFixed(1) : 0;
   const trendLabel = slope >= 0 ? `<tspan fill="var(--green)">▲ +${trendPct}%</tspan>` : `<tspan fill="var(--red)">▼ ${trendPct}%</tspan>`;
 
-  // Hover crosshair line
   const crosshair = `<line id="tc-cross" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top + CH}" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,3" opacity="0" pointer-events="none"/>`;
 
   el.innerHTML = `<div style="position:relative">
@@ -842,9 +858,10 @@ function renderTrendChart(rows) {
 
   // Tooltip on dots
   el.querySelectorAll('.chart-dot').forEach(dot => {
-    dot.addEventListener('mouseenter', (e) => {
+    dot.addEventListener('mouseenter', () => {
       const tip = document.getElementById('chartTip');
       const svg = document.getElementById('trendSvg');
+      if (!tip || !svg) return;
       const svgRect = svg.getBoundingClientRect();
       const dotRect = dot.getBoundingClientRect();
       const x = dotRect.left - svgRect.left + dotRect.width / 2;
@@ -857,7 +874,8 @@ function renderTrendChart(rows) {
       dot.setAttribute('r', '6');
     });
     dot.addEventListener('mouseleave', () => {
-      document.getElementById('chartTip').classList.remove('show');
+      const tip = document.getElementById('chartTip');
+      if (tip) tip.classList.remove('show');
       dot.setAttribute('r', '4');
     });
   });
@@ -877,6 +895,7 @@ function renderGoal(rows) {
   const goal = parseFloat(localStorage.getItem('grab_goal')) || 0;
   const el = document.getElementById('goalContent');
   const inp = document.getElementById('goalInput');
+  if (!el) return;
   const now = new Date();
   const thisMonthPfx = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
   const monthRows = rows.filter(r => r.date.startsWith(thisMonthPfx));
@@ -891,7 +910,7 @@ function renderGoal(rows) {
       <div style="font-size:0.83rem;color:var(--text-muted);margin-top:6px">เดือนนี้: <strong style="color:var(--green)">${fmt(monthProfit)} บาท</strong> (${workDays} วัน)</div>`;
     return;
   }
-  inp.value = inp.value || goal;
+  if (inp) inp.value = inp.value || goal;
   const pct = Math.min((monthProfit / goal) * 100, 100);
   const over = monthProfit >= goal;
   const remaining = Math.max(goal - monthProfit, 0);
@@ -935,6 +954,7 @@ function renderGoal(rows) {
 // ─── WEEK COMPARE ─────────────────────────────────────────────────────────────
 function renderWeekCompare(rows) {
   const el = document.getElementById('weekCompare');
+  if (!el) return;
   const now = new Date();
   const dow = now.getDay();
   const monday = new Date(now); monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1)); monday.setHours(0, 0, 0, 0);
@@ -1064,58 +1084,46 @@ function renderDowChart(rows) {
 
 // ─── HISTORY TABLE ────────────────────────────────────────────────────────────
 function renderHistory() {
-  const rows = getRows();
-  const search = (document.getElementById('searchDate').value || '').trim();
-  const filterMonth = document.getElementById('filterMonth').value;
-  const filterType = document.getElementById('filterType').value;
+  let rows = getRows();
+  const monthFilterEl = document.getElementById('filterMonth');
+  const typeFilterEl  = document.getElementById('filterType');
+  const monthFilter   = monthFilterEl ? monthFilterEl.value : '';
+  const typeFilter    = typeFilterEl  ? typeFilterEl.value  : 'all';
 
-  let filtered = [...rows].reverse();
-  if (search) filtered = filtered.filter(r => r.date.includes(search) || (r.note && r.note.includes(search)));
-  if (filterMonth) filtered = filtered.filter(r => r.date.startsWith(filterMonth));
-  if (filterType === 'work') filtered = filtered.filter(isWorkDay);
-  if (filterType === 'off')  filtered = filtered.filter(r => !isWorkDay(r));
+  if (monthFilter) rows = rows.filter(r => r.date.startsWith(monthFilter));
+  if (typeFilter === 'work') rows = rows.filter(isWorkDay);
+  if (typeFilter === 'rest' || typeFilter === 'off') rows = rows.filter(r => !isWorkDay(r));
 
-  const totalFilteredProfit = filtered.reduce((s, r) => s + profit(r), 0);
-  const totalFilteredIncome = filtered.reduce((s, r) => s + income(r), 0);
-  const totalFilteredOil    = filtered.reduce((s, r) => s + (r.oil || 0), 0);
-  const totalFilteredHours  = filtered.reduce((s, r) => s + (r.hours || 0), 0);
-
-  const summEl = document.getElementById('historySummary');
-  if (summEl) {
-    summEl.innerHTML = `แสดง <strong>${filtered.length}</strong> วัน | รายได้ <strong>${fmt(totalFilteredIncome)}</strong> บาท | ค่าน้ำมัน <strong>${fmt(totalFilteredOil)}</strong> บาท | ชั่วโมง <strong>${fmtHours(totalFilteredHours)}</strong> | กำไรสุทธิ <strong style="color:var(--green)">${fmt(totalFilteredProfit)}</strong> บาท`;
-  }
-
+  const guest = isGuest();
+  const colCount = guest ? 11 : 12;
   const tbody = document.getElementById('historyBody');
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="11" class="empty"><div class="empty-icon">📂</div><p>ไม่พบข้อมูล</p></td></tr>`;
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="${colCount}"><div class="empty"><div class="empty-icon">📋</div><p>ไม่มีข้อมูล</p></div></td></tr>`;
     return;
   }
 
-  const guest = isGuest();
-  tbody.innerHTML = filtered.map((r, i) => {
+  tbody.innerHTML = rows.slice().reverse().map((r, i) => {
     const p = profit(r);
-    const inc = income(r);
     const isW = isWorkDay(r);
-    const pCls = p > 0 ? 'td-green' : p < 0 ? 'td-red' : 'td-gray';
-    const rowBg = isW ? '' : 'style="opacity:0.7"';
-    return `<tr ${rowBg} class="row-anim" style="animation-delay:${Math.min(i * 0.015, 0.3)}s">
+    const actionsCell = guest ? '' : `<td style="display:flex;gap:4px;padding:8px">
+        <button class="btn btn-outline btn-sm" onclick="addRipple(event);openEdit('${r.id}')" title="แก้ไข">✏️</button>
+        <button class="btn btn-red btn-sm" onclick="addRipple(event);requireAuth(()=>deleteRow('${r.id}'))" title="ลบ">🗑️</button>
+      </td>`;
+    return `<tr class="row-anim" style="animation-delay:${Math.min(i * 0.015, 0.3)}s; ${isW ? '' : 'opacity:0.75'}">
       <td class="td-date">${fmtDate(r.date)}</td>
       <td class="td-num">${r.grab ? fmt(r.grab) : '<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.tip ? fmt(r.tip) : '<span class="td-gray">—</span>'}</td>
-      <td class="td-num font-bold">${inc ? fmt(inc) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num td-green font-bold">${fmt(income(r))}</td>
       <td class="td-num td-red">${r.oil ? fmt(r.oil) : '<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.oilReal ? fmt(r.oilReal) : '<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.credit ? fmt(r.credit) : '<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.withdraw ? fmt(r.withdraw) : '<span class="td-gray">—</span>'}</td>
-      <td class="td-num">${fmtHours(r.hours)}</td>
-      <td class="td-num font-bold ${pCls}">${fmt(p)}</td>
+      <td class="td-num">${r.hours ? fmtHoursShort(r.hours) : '<span class="td-gray">—</span>'}</td>
+      <td class="td-num"><strong class="${p >= 0 ? 'td-green' : 'td-red'}">${fmt(p)}</strong></td>
       <td class="note-cell" title="${r.note || ''}">${r.note || '<span class="td-gray">—</span>'}</td>
-      ${guest ? '' : `<td>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-sm btn-outline" onclick="openEditModal('${r.id}')" title="แก้ไข">✏️</button>
-          <button class="btn btn-sm btn-outline" style="color:var(--red);border-color:var(--red-light)" onclick="deleteRowPrompt('${r.id}')" title="ลบ">🗑️</button>
-        </div>
-      </td>`}
+      ${actionsCell}
     </tr>`;
   }).join('');
 }
@@ -1124,148 +1132,233 @@ function renderHistory() {
 function renderMonthly() {
   const rows = getRows();
   const container = document.getElementById('monthlyContent');
-  if (!rows.length) {
-    container.innerHTML = '<div class="empty"><div class="empty-icon">📅</div><p>ยังไม่มีข้อมูล</p></div>';
-    return;
-  }
+  if (!container) return;
 
   const byMonth = {};
   rows.forEach(r => {
-    const mo = r.date.slice(0, 7);
-    if (!byMonth[mo]) byMonth[mo] = [];
-    byMonth[mo].push(r);
+    const m = r.date.slice(0, 7);
+    if (!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(r);
   });
 
   const months = Object.keys(byMonth).sort().reverse();
+  if (!months.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">📅</div><p>ยังไม่มีข้อมูล</p></div>`;
+    return;
+  }
 
-  container.innerHTML = months.map(mo => {
-    const mRows = byMonth[mo];
-    const [y, m] = mo.split('-').map(Number);
-    const moTitle = `${TH_MONTHS[m - 1]} ${y + 543}`;
-    const workD = mRows.filter(isWorkDay).length;
-    const tGrab = mRows.reduce((s, r) => s + (r.grab || 0), 0);
-    const tTip  = mRows.reduce((s, r) => s + (r.tip || 0), 0);
-    const tInc  = mRows.reduce((s, r) => s + income(r), 0);
-    const tOil  = mRows.reduce((s, r) => s + (r.oil || 0), 0);
-    const tOilReal = mRows.reduce((s, r) => s + (r.oilReal || 0), 0);
-    const tCred = mRows.reduce((s, r) => s + (r.credit || 0), 0);
-    const tWith = mRows.reduce((s, r) => s + (r.withdraw || 0), 0);
-    const tProf = mRows.reduce((s, r) => s + profit(r), 0);
-    const tHours= mRows.reduce((s, r) => s + (r.hours || 0), 0);
-    const avgP  = workD ? tProf / workD : 0;
+  container.innerHTML = months.map((m, mi) => {
+    const mrs = byMonth[m];
+    const workDays = mrs.filter(isWorkDay).length;
+    const totGrab = mrs.reduce((s, r) => s + (r.grab || 0), 0);
+    const totTip = mrs.reduce((s, r) => s + (r.tip || 0), 0);
+    const totIncome = mrs.reduce((s, r) => s + income(r), 0);
+    const totOil = mrs.reduce((s, r) => s + (r.oil || 0), 0);
+    const totOilReal = mrs.reduce((s, r) => s + (r.oilReal || 0), 0);
+    const totCredit = mrs.reduce((s, r) => s + (r.credit || 0), 0);
+    const totWithdraw = mrs.reduce((s, r) => s + (r.withdraw || 0), 0);
+    const totProfit = mrs.reduce((s, r) => s + profit(r), 0);
+    const totHours = mrs.reduce((s, r) => s + (r.hours || 0), 0);
+    const avgP = workDays ? totProfit / workDays : 0;
+    const [yr, mo] = m.split('-').map(Number);
+    const monthName = `${TH_MONTHS[mo - 1]} ${yr + 543}`;
 
     return `
-      <div class="card month-section">
+      <div class="month-section" style="animation:rowIn 0.4s ${mi * 0.08}s ease both">
         <div class="month-header">
-          <div class="month-title">📅 ${moTitle}</div>
+          <div class="month-title">📅 ${monthName}</div>
           <div class="month-stats">
-            <span>ทำงาน: <strong>${workD}</strong> วัน</span>
-            <span>ชั่วโมง: <strong>${fmtHours(tHours)}</strong></span>
-            <span>กำไรเฉลี่ย: <strong>${fmt(avgP)}</strong> ฿/วัน</span>
-            <span>กำไรสุทธิ: <strong style="color:var(--green)">${fmt(tProf)}</strong> ฿</span>
+            <span>ทำงาน: <strong>${workDays} วัน</strong></span>
+            <span>ชั่วโมง: <strong>${fmtHours(totHours)}</strong></span>
+            <span>กำไรเฉลี่ย: <strong>${fmt(avgP)} ฿/วัน</strong></span>
+            <span>กำไรสุทธิ: <strong style="color:var(--green)">${fmt(totProfit)} ฿</strong></span>
           </div>
         </div>
-        <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom:14px">
-          <div class="stat-card"><div class="stat-label">รายได้ Grab</div><div class="stat-value green" style="font-size:1.1rem">${fmt(tGrab)}</div></div>
-          <div class="stat-card"><div class="stat-label">Tip มือ</div><div class="stat-value yellow" style="font-size:1.1rem">${fmt(tTip)}</div></div>
-          <div class="stat-card"><div class="stat-label">รายได้รวม</div><div class="stat-value green" style="font-size:1.1rem">${fmt(tInc)}</div></div>
-          <div class="stat-card red"><div class="stat-label">ค่าน้ำมัน</div><div class="stat-value red" style="font-size:1.1rem">${fmt(tOil)}</div></div>
-          <div class="stat-card red"><div class="stat-label">เติมจริง</div><div class="stat-value red" style="font-size:1.1rem">${fmt(tOilReal)}</div></div>
-          <div class="stat-card yellow"><div class="stat-label">เครดิต</div><div class="stat-value yellow" style="font-size:1.1rem">${fmt(tCred)}</div></div>
-          <div class="stat-card blue"><div class="stat-label">ถอนกรุงศรี</div><div class="stat-value blue" style="font-size:1.1rem">${fmt(tWith)}</div></div>
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+          <div class="table-wrap">
+            <table style="font-size:0.84rem">
+              <thead>
+                <tr>
+                  <th>วันที่</th>
+                  <th class="td-num">รายได้ Grab</th>
+                  <th class="td-num">Tip</th>
+                  <th class="td-num">รายได้รวม</th>
+                  <th class="td-num">ค่าน้ำมัน</th>
+                  <th class="td-num">เติมน้ำมันจริง</th>
+                  <th class="td-num">เครดิต Grab</th>
+                  <th class="td-num">ถอนกรุงศรี</th>
+                  <th class="td-num">ชั่วโมงขับ</th>
+                  <th class="td-num">กำไรสุทธิ</th>
+                  <th>หมายเหตุ</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${mrs.map(r => `
+                  <tr>
+                    <td class="td-date">${fmtDate(r.date)}</td>
+                    <td class="td-num">${r.grab ? fmt(r.grab) : '<span class="td-gray">—</span>'}</td>
+                    <td class="td-num">${r.tip ? fmt(r.tip) : '<span class="td-gray">—</span>'}</td>
+                    <td class="td-num td-green">${fmt(income(r))}</td>
+                    <td class="td-num td-red">${r.oil ? fmt(r.oil) : '<span class="td-gray">—</span>'}</td>
+                    <td class="td-num">${r.oilReal ? fmt(r.oilReal) : '<span class="td-gray">—</span>'}</td>
+                    <td class="td-num">${r.credit ? fmt(r.credit) : '<span class="td-gray">—</span>'}</td>
+                    <td class="td-num">${r.withdraw ? fmt(r.withdraw) : '<span class="td-gray">—</span>'}</td>
+                    <td class="td-num">${r.hours ? fmtHoursShort(r.hours) : '<span class="td-gray">—</span>'}</td>
+                    <td class="td-num"><strong class="${profit(r) >= 0 ? 'td-green' : 'td-red'}">${fmt(profit(r))}</strong></td>
+                    <td class="note-cell">${r.note || '—'}</td>
+                  </tr>
+                `).join('')}
+                <tr style="background:var(--green-light);font-weight:800;">
+                  <td>รวม ${monthName}</td>
+                  <td class="td-num">${fmt(totGrab)}</td>
+                  <td class="td-num">${fmt(totTip)}</td>
+                  <td class="td-num td-green">${fmt(totIncome)}</td>
+                  <td class="td-num td-red">${fmt(totOil)}</td>
+                  <td class="td-num">${fmt(totOilReal)}</td>
+                  <td class="td-num">${fmt(totCredit)}</td>
+                  <td class="td-num">${fmt(totWithdraw)}</td>
+                  <td class="td-num">${fmtHoursShort(totHours)}</td>
+                  <td class="td-num td-green">${fmt(totProfit)}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     `;
   }).join('');
 }
 
-// ─── BONUS REPORT ────────────────────────────────────────────────────────────
+// ─── BONUS REPORT (อินพิเศษ/อินเพชร) ──────────────────────────────────────────
+function extractBonuses(note) {
+  if (!note) return [];
+  const results = [];
+  const re = /(อินเพชร|อินพิเศษ)\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/g;
+  let m;
+  while ((m = re.exec(note)) !== null) {
+    const type = m[1] === 'อินเพชร' ? 'diamond' : 'special';
+    const amount = parseFloat(m[2].replace(',', ''));
+    if (!isNaN(amount)) results.push({ type, amount });
+  }
+  return results;
+}
+
+function getBonusGroups(rows) {
+  const groups = [];
+  rows.forEach(r => {
+    const bs = extractBonuses(r.note);
+    if (!bs.length) return;
+    const diamond = bs.filter(b => b.type === 'diamond').reduce((s, b) => s + b.amount, 0);
+    const special = bs.filter(b => b.type === 'special').reduce((s, b) => s + b.amount, 0);
+    groups.push({ date: r.date, diamond, special, note: r.note, rowId: r.id });
+  });
+  return groups.sort((a, b) => a.date.localeCompare(b.date));
+}
+
 function renderBonus() {
   const rows = getRows();
-  const el = document.getElementById('bonusContent');
-  if (!el) return;
+  const groups = getBonusGroups(rows);
+  const filterTypeEl = document.getElementById('bonusFilterType');
+  const filterType = filterTypeEl ? filterTypeEl.value : 'all';
 
-  const now = new Date();
-  const thisMonthPfx = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  const monthRows = rows.filter(r => r.date.startsWith(thisMonthPfx));
+  const totalDiamond = groups.reduce((s, g) => s + g.diamond, 0);
+  const totalSpecial = groups.reduce((s, g) => s + g.special, 0);
+  const daysDiamond = groups.filter(g => g.diamond > 0).length;
+  const daysSpecial = groups.filter(g => g.special > 0).length;
+  const totalAll = totalDiamond + totalSpecial;
 
-  const totalTip = monthRows.reduce((s, r) => s + (r.tip || 0), 0);
-  const totalGrab = monthRows.reduce((s, r) => s + (r.grab || 0), 0);
-  const workDays = monthRows.filter(isWorkDay).length;
+  const summaryCards = [
+    { label: '💎 อินเพชรรวม', val: totalDiamond, cls: 'blue', color: 'blue', sub: `${daysDiamond} วัน` },
+    { label: '⭐ อินพิเศษรวม', val: totalSpecial, cls: 'yellow', color: 'yellow', sub: `${daysSpecial} วัน` },
+    { label: '💰 รวมทั้งหมด', val: totalAll, cls: '', color: 'green', sub: `${groups.length} วัน` },
+  ];
 
-  el.innerHTML = `
-    <div class="bonus-summary-grid">
-      <div class="stat-card">
-        <div class="stat-label">🎁 Tip รวมเดือนนี้</div>
-        <div class="stat-value green">${fmt(totalTip)}</div>
-        <div class="stat-sub">บาท</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">⭐ รายได้ต่อวันเฉลี่ย</div>
-        <div class="stat-value yellow">${workDays ? fmt(totalGrab / workDays) : '0.00'}</div>
-        <div class="stat-sub">บาท/วัน</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">🏆 วันวิ่งงานสะสม</div>
-        <div class="stat-value green">${workDays}</div>
-        <div class="stat-sub">วัน</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">✨ ข้อมูล Tip รายวัน (เดือนนี้)</div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>วันที่</th>
-              <th>รายได้ Grab</th>
-              <th>Tip มือ</th>
-              <th>รวม</th>
-              <th>หมายเหตุ</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${monthRows.filter(r => (r.tip || 0) > 0).map(r => `
-              <tr>
-                <td class="td-date">${fmtDate(r.date)}</td>
-                <td class="td-num">${fmt(r.grab)}</td>
-                <td class="td-num font-bold" style="color:var(--yellow-text)">+${fmt(r.tip)} ฿</td>
-                <td class="td-num td-green font-bold">${fmt(income(r))} ฿</td>
-                <td class="note-cell">${r.note || '—'}</td>
-              </tr>
-            `).join('') || '<tr><td colspan="5" class="empty"><p>ยังไม่มีรายการ Tip ในเดือนนี้</p></td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
+  const summaryEl = document.getElementById('bonusSummary');
+  if (summaryEl) {
+    summaryEl.innerHTML = summaryCards.map((c, i) => `
+      <div class="stat-card ${c.cls}" style="animation:rowIn 0.35s ${i * 0.05}s ease both">
+        <div class="stat-label">${c.label}</div>
+        <div class="stat-value ${c.color}" id="bsv${i}">0</div>
+        <div class="stat-sub">${c.sub}</div>
+      </div>`).join('');
+    requestAnimationFrame(() => {
+      summaryCards.forEach((c, i) => {
+        const el = document.getElementById('bsv' + i);
+        if (el) setTimeout(() => animateCount(el, c.val, 700 + i * 30), i * 40);
+      });
+    });
+  }
+
+  let filtered = groups;
+  if (filterType === 'diamond') filtered = groups.filter(g => g.diamond > 0);
+  if (filterType === 'special') filtered = groups.filter(g => g.special > 0);
+  filtered = filtered.slice().reverse();
+
+  const tbody = document.getElementById('bonusBody');
+  if (!tbody) return;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">💎</div><p>ยังไม่มีวันที่ได้อินพิเศษ/อินเพชร<br>พิมพ์คำว่า "อินเพชร 80" หรือ "อินพิเศษ 50" ในช่องหมายเหตุ</p></div></td></tr>`;
+    return;
+  }
+
+  const showDiamond = filterType !== 'special';
+  const showSpecial = filterType !== 'diamond';
+
+  tbody.innerHTML = filtered.map((g, i) => {
+    let badges = '';
+    if (showDiamond && g.diamond > 0) badges += `<span class="bonus-type-badge diamond">💎 อินเพชร</span> `;
+    if (showSpecial && g.special > 0) badges += `<span class="bonus-type-badge special">⭐ อินพิเศษ</span> `;
+
+    const dAmt = showDiamond ? g.diamond : 0;
+    const sAmt = showSpecial ? g.special : 0;
+
+    let amountHtml;
+    if (dAmt > 0 && sAmt > 0) {
+      amountHtml = `<div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">
+        <span style="color:#1d6fd1;font-weight:800">💎 ${fmt(dAmt)}</span>
+        <span style="color:#a5710a;font-weight:800">⭐ ${fmt(sAmt)}</span>
+        <span class="td-green" style="font-size:0.78rem;font-weight:900;border-top:1px solid var(--border-color);padding-top:2px;margin-top:1px">รวม ${fmt(dAmt + sAmt)}</span>
+      </div>`;
+    } else {
+      amountHtml = `<strong class="td-green">${fmt(dAmt + sAmt)}</strong>`;
+    }
+
+    return `<tr class="row-anim" style="animation-delay:${Math.min(i * 0.02, 0.3)}s">
+      <td class="td-date">${fmtDate(g.date)}</td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:5px">${badges}</div></td>
+      <td class="td-num">${amountHtml}</td>
+      <td class="note-cell">${g.note}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ─── EDIT MODAL ──────────────────────────────────────────────────────────────
-function openEditModal(id) {
+function openEdit(id) {
   if (isGuest()) { guestBlocked(); return; }
-  requireAuth(() => {
-    const rows = loadData();
-    const r = rows.find(x => x.id === id);
-    if (!r) return;
-    editingId = id;
-    tdpSetValue('e-date', r.date);
-    document.getElementById('e-grab').value     = r.grab || '';
-    document.getElementById('e-tip').value      = r.tip || '';
-    document.getElementById('e-oil').value      = r.oil || '';
-    document.getElementById('e-oilReal').value  = r.oilReal || '';
-    document.getElementById('e-credit').value   = r.credit || '';
-    document.getElementById('e-withdraw').value = r.withdraw || '';
-    document.getElementById('e-hours').value    = (r.hours !== null && r.hours !== undefined) ? r.hours : '';
-    document.getElementById('e-note').value      = r.note || '';
-    document.getElementById('editModal').classList.add('show');
-  });
+  const rows = loadData();
+  const r = rows.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  tdpSetValue('e-date', r.date);
+  document.getElementById('e-grab').value     = r.grab || '';
+  document.getElementById('e-tip').value      = r.tip || '';
+  document.getElementById('e-oil').value      = r.oil || '';
+  document.getElementById('e-oilReal').value  = r.oilReal || '';
+  document.getElementById('e-credit').value   = r.credit || '';
+  document.getElementById('e-withdraw').value = r.withdraw || '';
+  document.getElementById('e-hours').value    = (r.hours !== null && r.hours !== undefined) ? r.hours : '';
+  document.getElementById('e-note').value      = r.note || '';
+  document.getElementById('editModal').classList.add('show');
 }
+const openEditModal = openEdit;
 
-function closeEditModal() {
+function closeModal() {
   document.getElementById('editModal').classList.remove('show');
   editingId = null;
 }
+const closeEditModal = closeModal;
 
 async function saveEdit() {
   if (!editingId || isGuest()) return;
@@ -1283,25 +1376,24 @@ async function saveEdit() {
     hours:    hoursVal ? parseFloat(hoursVal) : null,
     note: document.getElementById('e-note').value.trim(),
   };
-  closeEditModal();
+  closeModal();
   showToast('💾 กำลังบันทึกการแก้ไข...');
   await saveRow(row);
   renderDashboard();
   renderHistory();
+  renderMonthly();
+  renderBonus();
   showToast('✅ แก้ไขสำเร็จ', 'green');
 }
 
-function deleteRowPrompt(id) {
+function deleteRow(id) {
   if (isGuest()) { guestBlocked(); return; }
-  requireAuth(async () => {
-    if (!confirm('ต้องการลบข้อมูลวันนี้ใช่หรือไม่?')) return;
-    showToast('🗑️ กำลังลบ...');
-    await deleteRowRemote(id);
-    renderDashboard();
-    renderHistory();
-    showToast('🗑️ ลบข้อมูลแล้ว');
-  });
+  pinAction = { type: 'deleteRow', id }; pinBuffer = ''; updatePinDots();
+  document.getElementById('pinMsg').textContent = '';
+  document.getElementById('pinTitle').textContent = '🗑️ ยืนยันการลบรายการ';
+  document.getElementById('pinModal').classList.add('show');
 }
+const deleteRowPrompt = deleteRow;
 
 // ─── IMPORT EXCEL ─────────────────────────────────────────────────────────────
 function excelSerialToDateStr(serial) {
@@ -1339,19 +1431,21 @@ const TDP = {};
 function tdpOpen(fieldId) {
   document.querySelectorAll('.tdp-pop.show').forEach(p => { if (p.id !== fieldId + '-pop') p.classList.remove('show'); });
   const pop = document.getElementById(fieldId + '-pop');
+  if (!pop) return;
   if (pop.classList.contains('show')) { pop.classList.remove('show'); return; }
   const val = document.getElementById(fieldId).value;
   const now = new Date(); let y = now.getFullYear(), m = now.getMonth();
   if (val) { const d = new Date(val + 'T00:00:00'); y = d.getFullYear(); m = d.getMonth(); }
   TDP[fieldId] = { year: y, month: m, mode: 'day' };
   tdpRender(fieldId); pop.classList.add('show');
-  document.getElementById(fieldId + '-btn').classList.add('open');
+  const btn = document.getElementById(fieldId + '-btn');
+  if (btn) btn.classList.add('open');
   setTimeout(() => {
     function outside(e) {
-      const btn = document.getElementById(fieldId + '-btn');
+      const b = document.getElementById(fieldId + '-btn');
       const popEl = document.getElementById(fieldId + '-pop');
-      if (btn && !btn.contains(e.target) && popEl && !popEl.contains(e.target)) {
-        popEl.classList.remove('show'); btn.classList.remove('open');
+      if (b && !b.contains(e.target) && popEl && !popEl.contains(e.target)) {
+        popEl.classList.remove('show'); b.classList.remove('open');
         document.removeEventListener('mousedown', outside);
       }
     }
@@ -1362,6 +1456,7 @@ function tdpOpen(fieldId) {
 function tdpRender(fieldId) {
   const state = TDP[fieldId];
   const pop = document.getElementById(fieldId + '-pop');
+  if (!pop) return;
   const selectedVal = document.getElementById(fieldId).value;
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -1409,24 +1504,31 @@ function tdpSelect(fieldId, dateStr) {
   document.getElementById(fieldId).value = dateStr;
   const [y, m, d] = dateStr.split('-').map(Number);
   const btn = document.getElementById(fieldId + '-btn');
-  btn.textContent = `${d} ${TH_MONTHS[m - 1]} ${y + 543}`;
-  btn.classList.remove('placeholder', 'open');
-  document.getElementById(fieldId + '-pop').classList.remove('show');
+  if (btn) {
+    btn.textContent = `${d} ${TH_MONTHS[m - 1]} ${y + 543}`;
+    btn.classList.remove('placeholder', 'open');
+  }
+  const pop = document.getElementById(fieldId + '-pop');
+  if (pop) pop.classList.remove('show');
   if (fieldId === 'f-date') updatePreview();
 }
 function tdpSetValue(fieldId, dateStr) {
   if (!dateStr) return;
-  document.getElementById(fieldId).value = dateStr;
+  const el = document.getElementById(fieldId);
+  if (el) el.value = dateStr;
   const [y, m, d] = dateStr.split('-').map(Number);
   const btn = document.getElementById(fieldId + '-btn');
-  btn.textContent = `${d} ${TH_MONTHS[m - 1]} ${y + 543}`;
-  btn.classList.remove('placeholder');
+  if (btn) {
+    btn.textContent = `${d} ${TH_MONTHS[m - 1]} ${y + 543}`;
+    btn.classList.remove('placeholder');
+  }
 }
 
 // ─── MONTH PICKER ─────────────────────────────────────────────────────────────
 function tdpOpenMonth(fieldId) {
   document.querySelectorAll('.tdp-pop.show').forEach(p => p.classList.remove('show'));
   const pop = document.getElementById(fieldId + '-pop');
+  if (!pop) return;
   pop.onmousedown = e => e.stopPropagation();
   const val = document.getElementById(fieldId).value;
   const now = new Date(); let y = now.getFullYear(), m = now.getMonth();
@@ -1448,6 +1550,7 @@ function tdpOpenMonth(fieldId) {
 function tdpRenderMonth(fieldId) {
   const state = TDP[fieldId];
   const pop = document.getElementById(fieldId + '-pop');
+  if (!pop) return;
   const selVal = document.getElementById(fieldId).value;
   const items = TH_MONTHS_S.map((mn, i) => {
     const v = `${state.year}-${String(i + 1).padStart(2, '0')}`;
@@ -1463,16 +1566,23 @@ function tdpSelectMonth(fieldId, val, monthIdx) {
   document.getElementById(fieldId).value = val;
   const [y] = val.split('-');
   const btn = document.getElementById(fieldId + '-btn');
-  btn.textContent = `${TH_MONTHS_S[monthIdx]} ${parseInt(y) + 543}`;
-  btn.classList.remove('placeholder', 'open');
-  document.getElementById(fieldId + '-pop').classList.remove('show');
+  if (btn) {
+    btn.textContent = `${TH_MONTHS_S[monthIdx]} ${parseInt(y) + 543}`;
+    btn.classList.remove('placeholder', 'open');
+  }
+  const pop = document.getElementById(fieldId + '-pop');
+  if (pop) pop.classList.remove('show');
   renderHistory();
 }
 function clearMonthFilter() {
   document.getElementById('filterMonth').value = '';
   const btn = document.getElementById('filterMonth-btn');
-  btn.textContent = 'ทุกเดือน'; btn.classList.add('placeholder');
-  document.getElementById('filterType').value = 'all';
+  if (btn) {
+    btn.textContent = 'ทุกเดือน';
+    btn.classList.add('placeholder');
+  }
+  const fType = document.getElementById('filterType');
+  if (fType) fType.value = 'all';
   renderHistory();
 }
 
@@ -1523,7 +1633,19 @@ function pinKey(k) {
           localStorage.removeItem(STORAGE_KEY);
           renderDashboard();
           renderHistory();
+          renderMonthly();
+          renderBonus();
           showToast('🗑️ ล้างข้อมูลแล้ว');
+        });
+        pinAction = null;
+      } else if (pinAction?.type === 'deleteRow') {
+        showToast('🗑️ กำลังลบ...');
+        deleteRowRemote(pinAction.id).then(() => {
+          renderDashboard();
+          renderHistory();
+          renderMonthly();
+          renderBonus();
+          showToast('🗑️ ลบแล้ว');
         });
         pinAction = null;
       }
@@ -1551,7 +1673,12 @@ function updatePinDots() {
 // ─── MISC ─────────────────────────────────────────────────────────────────────
 async function manualSync() {
   showToast('🔄 กำลัง sync...');
-  await syncFromSheets(); renderDashboard(); renderHistory(); showToast('✅ Sync สำเร็จ', 'green');
+  await syncFromSheets();
+  renderDashboard();
+  renderHistory();
+  renderMonthly();
+  renderBonus();
+  showToast('✅ Sync สำเร็จ', 'green');
 }
 function toggleLock() {
   if (isGuest()) { guestBlocked(); return; }
@@ -1574,7 +1701,10 @@ function initApp() {
   appInitialized = true;
   populateHoursSelect('f-hours');
   populateHoursSelect('e-hours');
-  ['f-grab', 'f-tip', 'f-oil'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+  ['f-grab', 'f-tip', 'f-oil'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePreview);
+  });
   document.getElementById('importFile').addEventListener('change', function(e) {
     if (isGuest()) { guestBlocked(); e.target.value = ''; return; }
     const file = e.target.files[0]; if (!file) return; e.target.value = '';
@@ -1632,7 +1762,16 @@ function initApp() {
   tdpSetValue('f-date', new Date().toISOString().slice(0, 10));
   updateAuthUI();
   renderDashboard();
-  syncFromSheets().then(() => { renderDashboard(); renderHistory(); applyRoleUI(); });
+  renderHistory();
+  renderMonthly();
+  renderBonus();
+  syncFromSheets().then(() => {
+    renderDashboard();
+    renderHistory();
+    renderMonthly();
+    renderBonus();
+    applyRoleUI();
+  });
 }
 
 async function doImport(replaceAll) {
@@ -1650,6 +1789,9 @@ async function doImport(replaceAll) {
   showToast(`⏳ กำลัง sync ${base.length} วัน...`);
   await saveAllRemote(base);
   renderDashboard();
+  renderHistory();
+  renderMonthly();
+  renderBonus();
   showToast(replaceAll ? `✅ Import สำเร็จ: ${added} วัน` : `✅ Import: ${added} วัน (ข้าม ${skipped} ซ้ำ)`, 'green');
 }
 
