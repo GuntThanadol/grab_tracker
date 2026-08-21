@@ -411,21 +411,33 @@ async function apiCall(action, payload = {}) {
 }
 
 async function syncFromSheets() {
-  if (isSyncing) return;
+  if (isSyncing) return false;
   isSyncing = true;
   setSyncStatus('syncing');
   const res = await apiCall('getAll');
-  if (res && res.status === 'ok' && Array.isArray(res.data)) {
-    const cleanData = res.data.map(r => ({
+  const rows = res && (res.rows || res.data);
+  if (res && (res.ok || res.status === 'ok') && Array.isArray(rows)) {
+    const cleanData = rows.map(r => ({
       ...r,
-      hours: (r.hours !== undefined && r.hours !== null && r.hours !== '') ? parseFloat(r.hours) : null
+      date: typeof r.date === 'string' ? r.date.slice(0, 10) : r.date,
+      grab: parseFloat(r.grab) || 0,
+      tip: parseFloat(r.tip) || 0,
+      oil: parseFloat(r.oil) || 0,
+      oilReal: parseFloat(r.oilReal) || 0,
+      credit: parseFloat(r.credit) || 0,
+      withdraw: parseFloat(r.withdraw) || 0,
+      hours: (r.hours !== undefined && r.hours !== null && r.hours !== '') ? parseFloat(r.hours) : null,
+      note: r.note ? String(r.note).trim() : ''
     }));
     saveLocal(cleanData);
     setSyncStatus('online');
+    isSyncing = false;
+    return true;
   } else {
     setSyncStatus('offline');
+    isSyncing = false;
+    return false;
   }
-  isSyncing = false;
 }
 
 async function saveRow(row) {
@@ -436,8 +448,11 @@ async function saveRow(row) {
   saveLocal(rows);
   setSyncStatus('syncing');
   const res = await apiCall('upsert', { row });
-  if (res && res.status === 'ok') setSyncStatus('online');
-  else setSyncStatus('offline');
+  if (res && (res.ok || res.status === 'ok')) {
+    setSyncStatus('online');
+  } else {
+    setSyncStatus('offline');
+  }
 }
 
 async function deleteRowRemote(id) {
@@ -445,8 +460,11 @@ async function deleteRowRemote(id) {
   saveLocal(rows);
   setSyncStatus('syncing');
   const res = await apiCall('delete', { id });
-  if (res && res.status === 'ok') setSyncStatus('online');
-  else setSyncStatus('offline');
+  if (res && (res.ok || res.status === 'ok')) {
+    setSyncStatus('online');
+  } else {
+    setSyncStatus('offline');
+  }
   return res;
 }
 
@@ -454,22 +472,25 @@ async function saveAllRemote(allRows) {
   saveLocal(allRows);
   setSyncStatus('syncing');
   const res = await apiCall('saveAll', { rows: allRows });
-  if (res && res.status === 'ok') setSyncStatus('online');
-  else setSyncStatus('offline');
+  if (res && (res.ok || res.status === 'ok')) {
+    setSyncStatus('online');
+  } else {
+    setSyncStatus('offline');
+  }
 }
 
 function setSyncStatus(st) {
   const statusEl = document.getElementById('syncStatus');
   if (!statusEl) return;
   if (st === 'online' || st === 'ok') {
+    statusEl.className = '';
     statusEl.textContent = '☁️ Synced';
-    statusEl.style.opacity = '1';
   } else if (st === 'offline' || st === 'error') {
+    statusEl.className = 'error';
     statusEl.textContent = '⚠️ ออฟไลน์';
-    statusEl.style.opacity = '0.7';
   } else if (st === 'syncing') {
+    statusEl.className = 'syncing';
     statusEl.textContent = '🔄 กำลัง sync...';
-    statusEl.style.opacity = '0.9';
   }
 }
 
@@ -518,7 +539,7 @@ function fmtHoursLabel(val) {
 
 function fmtDate(dateStr) {
   if (!dateStr) return '—';
-  const [y, m, d] = dateStr.split('-').map(Number);
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
   return `${d} ${TH_MONTHS_S[m - 1]} ${y + 543}`;
 }
 
@@ -634,6 +655,9 @@ async function saveEntry() {
   tdpSetValue('f-date', dt.toISOString().slice(0, 10));
   updatePreview();
   renderDashboard();
+  renderHistory();
+  renderMonthly();
+  renderBonus();
   showToast('✅ บันทึกแล้ว', 'green');
 }
 
@@ -1673,12 +1697,16 @@ function updatePinDots() {
 // ─── MISC ─────────────────────────────────────────────────────────────────────
 async function manualSync() {
   showToast('🔄 กำลัง sync...');
-  await syncFromSheets();
+  const success = await syncFromSheets();
   renderDashboard();
   renderHistory();
   renderMonthly();
   renderBonus();
-  showToast('✅ Sync สำเร็จ', 'green');
+  if (success) {
+    showToast('✅ Sync สำเร็จ', 'green');
+  } else {
+    showToast('⚠️ Sync ไม่สำเร็จ (ออฟไลน์)', 'red');
+  }
 }
 function toggleLock() {
   if (isGuest()) { guestBlocked(); return; }
