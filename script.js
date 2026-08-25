@@ -112,6 +112,7 @@ function applyRoleUI() {
 // ─── DATA ───────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'grab_tracker_v1';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxJs_MWuY6IjX5tMyx10Tk20d0iz6x2nozHr9MmZYNvPAGKUrGp4EfJdOEmRqrpNCM6/exec';
+const API_KEY = 'guntgrabsecret';
 let editingId = null;
 let isSyncing = false;
 
@@ -411,9 +412,14 @@ function scrollToTop() {
 // ─── GOOGLE SHEETS API ───────────────────────────────────────────────────────
 async function apiCall(action, payload = {}) {
   try {
+    if (action === 'getAll') {
+      const res = await fetch(`${API_URL}?action=getAll`, { redirect: 'follow' });
+      return await res.json();
+    }
     const res = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ action, ...payload })
+      redirect: 'follow',
+      body: JSON.stringify({ action, key: API_KEY, ...payload })
     });
     return await res.json();
   } catch (err) {
@@ -454,16 +460,18 @@ async function syncFromSheets() {
 
 async function saveRow(row) {
   const rows = loadData();
-  const idx = rows.findIndex(r => r.date === row.date);
+  const idx = rows.findIndex(r => r.id === row.id || r.date === row.date);
   if (idx >= 0) rows[idx] = row;
   else rows.push(row);
   saveLocal(rows);
   setSyncStatus('syncing');
-  const res = await apiCall('upsert', { row });
-  if (res && (res.ok || res.status === 'ok')) {
+  const res = await apiCall('save', { row });
+  if (res && res.ok) {
     setSyncStatus('online');
+    return true;
   } else {
     setSyncStatus('offline');
+    return false;
   }
 }
 
@@ -472,22 +480,25 @@ async function deleteRowRemote(id) {
   saveLocal(rows);
   setSyncStatus('syncing');
   const res = await apiCall('delete', { id });
-  if (res && (res.ok || res.status === 'ok')) {
+  if (res && res.ok) {
     setSyncStatus('online');
+    return true;
   } else {
     setSyncStatus('offline');
+    return false;
   }
-  return res;
 }
 
 async function saveAllRemote(allRows) {
   saveLocal(allRows);
   setSyncStatus('syncing');
   const res = await apiCall('saveAll', { rows: allRows });
-  if (res && (res.ok || res.status === 'ok')) {
+  if (res && res.ok) {
     setSyncStatus('online');
+    return true;
   } else {
     setSyncStatus('offline');
+    return false;
   }
 }
 
@@ -653,24 +664,28 @@ async function saveEntry() {
     note: document.getElementById('f-note').value.trim(),
   };
   showToast('💾 กำลังบันทึก...');
-  await saveRow(row);
-  playCoin();
-  launchConfetti({ count: 70 });
-  const dt = new Date(date + 'T00:00:00');
-  dt.setDate(dt.getDate() + 1);
-  ['f-grab', 'f-tip', 'f-oil', 'f-oilReal', 'f-credit', 'f-withdraw', 'f-note'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  const hoursEl = document.getElementById('f-hours');
-  if (hoursEl) hoursEl.value = '';
-  tdpSetValue('f-date', dt.toISOString().slice(0, 10));
-  updatePreview();
-  renderDashboard();
-  renderHistory();
-  renderMonthly();
-  renderBonus();
-  showToast('✅ บันทึกแล้ว', 'green');
+  const success = await saveRow(row);
+  if (success) {
+    playCoin();
+    launchConfetti({ count: 70 });
+    const dt = new Date(date + 'T00:00:00');
+    dt.setDate(dt.getDate() + 1);
+    ['f-grab', 'f-tip', 'f-oil', 'f-oilReal', 'f-credit', 'f-withdraw', 'f-note'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const hoursEl = document.getElementById('f-hours');
+    if (hoursEl) hoursEl.value = '';
+    tdpSetValue('f-date', dt.toISOString().slice(0, 10));
+    updatePreview();
+    renderDashboard();
+    renderHistory();
+    renderMonthly();
+    renderBonus();
+    showToast('✅ บันทึกแล้ว', 'green');
+  } else {
+    showToast('⚠️ ไม่สามารถบันทึกข้อมูลไปยัง Sheets ได้', 'red');
+  }
 }
 
 // ─── DYNAMIC GREETING ───────────────────────────────────────────────────────
@@ -1414,12 +1429,16 @@ async function saveEdit() {
   };
   closeModal();
   showToast('💾 กำลังบันทึกการแก้ไข...');
-  await saveRow(row);
-  renderDashboard();
-  renderHistory();
-  renderMonthly();
-  renderBonus();
-  showToast('✅ แก้ไขสำเร็จ', 'green');
+  const success = await saveRow(row);
+  if (success) {
+    renderDashboard();
+    renderHistory();
+    renderMonthly();
+    renderBonus();
+    showToast('✅ แก้ไขสำเร็จ', 'green');
+  } else {
+    showToast('⚠️ ไม่สามารถบันทึกการแก้ไขไปยัง Sheets ได้', 'red');
+  }
 }
 
 function deleteRow(id) {
