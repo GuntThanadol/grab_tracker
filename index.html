@@ -12,32 +12,50 @@
 <!-- CANVAS FOR CONFETTI / PARTICLES -->
 <canvas id="confettiCanvas"></canvas>
 
-<!-- LOGIN SCREEN -->
+<!-- LOGIN SCREEN WITH PULL-CORD LAMP -->
 <div class="login-screen" id="loginScreen">
-  <div class="login-card">
-    <div class="login-logo">🏍️</div>
-    <div class="login-title">Grab บัญชีรายวัน</div>
-    <div class="login-sub">เข้าสู่ระบบเพื่อจัดการบัญชีของคุณ</div>
-    <div class="login-form">
-      <div class="form-group">
-        <label>👤 ชื่อผู้ใช้</label>
-        <input type="text" id="login-user" autocomplete="username" placeholder="ชื่อผู้ใช้" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
-      </div>
-      <div class="form-group">
-        <label>🔑 รหัสผ่าน</label>
-        <div class="login-pass-wrap">
-          <input type="password" id="login-pass" autocomplete="current-password" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')doLogin()">
-          <button type="button" class="login-eye" onclick="toggleLoginPass()" id="loginEyeBtn" tabindex="-1">👁️</button>
+  <!-- Interactive Lamp Fixture -->
+  <div class="lamp-container">
+    <div class="lamp-cord"></div>
+    <div class="lamp-shade">
+      <div class="lamp-bulb" id="lampBulb"></div>
+    </div>
+    <!-- Pull String Switch -->
+    <div class="pull-chain" id="pullChain" onclick="toggleLampLight()" title="💡">
+      <div class="chain-line"></div>
+      <div class="chain-handle"></div>
+    </div>
+    <!-- Light Beam Spotlight -->
+    <div class="lamp-beam" id="lampBeam"></div>
+  </div>
+
+  <!-- Login Card inside Illuminated Area -->
+  <div class="login-card-wrapper" id="loginCardWrapper">
+    <div class="login-card">
+      <div class="login-logo">🏍️</div>
+      <div class="login-title">Grab บัญชีรายวัน</div>
+      <div class="login-sub">เข้าสู่ระบบเพื่อจัดการบัญชีของคุณ</div>
+      <div class="login-form">
+        <div class="form-group">
+          <label>👤 ชื่อผู้ใช้</label>
+          <input type="text" id="login-user" autocomplete="username" placeholder="ชื่อผู้ใช้" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
         </div>
+        <div class="form-group">
+          <label>🔑 รหัสผ่าน</label>
+          <div class="login-pass-wrap">
+            <input type="password" id="login-pass" autocomplete="current-password" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')doLogin()">
+            <button type="button" class="login-eye" onclick="toggleLoginPass()" id="loginEyeBtn" tabindex="-1">👁️</button>
+          </div>
+        </div>
+        <div class="login-error" id="loginError"></div>
+        <button class="btn btn-green login-submit" onclick="addRipple(event);doLogin()">เข้าสู่ระบบ</button>
+        <div style="display:flex;align-items:center;gap:10px;margin:2px 0;">
+          <div style="flex:1;height:1px;background:var(--border-color)"></div>
+          <span style="font-size:0.76rem;color:var(--text-muted)">หรือ</span>
+          <div style="flex:1;height:1px;background:var(--border-color)"></div>
+        </div>
+        <button type="button" class="btn btn-outline login-submit" onclick="addRipple(event);loginAsGuest()">👀 Guest Mode</button>
       </div>
-      <div class="login-error" id="loginError"></div>
-      <button class="btn btn-green login-submit" onclick="addRipple(event);doLogin()">เข้าสู่ระบบ</button>
-      <div style="display:flex;align-items:center;gap:10px;margin:2px 0;">
-        <div style="flex:1;height:1px;background:var(--border-color)"></div>
-        <span style="font-size:0.76rem;color:var(--text-muted)">หรือ</span>
-        <div style="flex:1;height:1px;background:var(--border-color)"></div>
-      </div>
-      <button type="button" class="btn btn-outline login-submit" onclick="addRipple(event);loginAsGuest()">👀 Guest Mode</button>
     </div>
   </div>
 </div>

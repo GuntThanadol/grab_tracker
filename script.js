@@ -33,10 +33,39 @@ function showApp() {
   applyRoleUI();
 }
 
+let isLampOn = false;
+
+function toggleLampLight() {
+  const chain = document.getElementById('pullChain');
+  const screen = document.getElementById('loginScreen');
+  if (!chain || !screen) return;
+
+  chain.classList.add('pulled');
+  setTimeout(() => chain.classList.remove('pulled'), 200);
+
+  isLampOn = !isLampOn;
+  playSwitchSound(isLampOn);
+
+  if (isLampOn) {
+    screen.classList.add('light-on');
+    setTimeout(() => {
+      const u = document.getElementById('login-user');
+      if (u) u.focus();
+    }, 450);
+  } else {
+    screen.classList.remove('light-on');
+  }
+}
+
 function showLogin() {
-  document.getElementById('loginScreen').classList.remove('hide');
-  document.getElementById('appRoot').style.display = 'none';
-  setTimeout(() => { const u = document.getElementById('login-user'); if (u) u.focus(); }, 50);
+  const screen = document.getElementById('loginScreen');
+  if (screen) {
+    screen.classList.remove('hide');
+    isLampOn = false;
+    screen.classList.remove('light-on');
+  }
+  const appRoot = document.getElementById('appRoot');
+  if (appRoot) appRoot.style.display = 'none';
 }
 
 async function doLogin() {
@@ -286,6 +315,38 @@ function playChipClick() {
     gain.connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.08);
+  } catch(e) {}
+}
+
+function playSwitchSound(stateOn) {
+  if (!isSoundEnabled()) return;
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(stateOn ? 1900 : 1300, now);
+    osc.frequency.exponentialRampToValueAtTime(350, now + 0.035);
+    gain.gain.setValueAtTime(0.28, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.035);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(stateOn ? 840 : 540, now + 0.03);
+    gain2.gain.setValueAtTime(0.22, now + 0.03);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.03);
+    osc2.stop(now + 0.12);
   } catch(e) {}
 }
 
