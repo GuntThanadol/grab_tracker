@@ -182,117 +182,110 @@ body {
 /* ── LOGIN SCREEN WITH PULL-CORD LAMP ── */
 .login-screen {
   position: fixed; inset: 0; z-index: 1000;
-  display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(circle at 50% 12%, #141b16 0%, #060907 70%, #020403 100%);
-  padding: 20px;
-  overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  background: radial-gradient(circle at 50% 10%, #111a14 0%, #080c09 50%, #020403 100%);
+  padding: 0 20px 40px;
+  overflow-y: auto; overflow-x: hidden;
   transition: background 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .login-screen.light-on {
-  background: radial-gradient(circle at 50% 15%, #004d22 0%, #032512 45%, #05140b 100%);
+  background: radial-gradient(circle at 50% 15%, #08381c 0%, #052412 40%, #031309 85%, #010804 100%);
 }
 .login-screen.hide { display: none; }
 
-/* ── LAMP FIXTURE ── */
-.lamp-container {
-  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 500px; height: 100%;
-  pointer-events: none; z-index: 10;
-  display: flex; flex-direction: column; align-items: center;
-}
-.lamp-cord {
-  width: 3px; height: 45px;
-  background: linear-gradient(to right, #333, #666, #333);
-}
-.lamp-shade {
-  width: 130px; height: 50px;
-  background: linear-gradient(135deg, #18281d 0%, #00873c 45%, #092013 100%);
-  border-radius: 65px 65px 8px 8px;
+/* ── LAMP SYSTEM ── */
+.lamp-system {
   position: relative;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.8), inset 0 2px 4px rgba(255,255,255,0.2);
-  border-bottom: 3px solid #00b14f;
-  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+  width: 100%; max-width: 440px;
+  height: 150px;
+  display: flex; justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+  margin-top: 0;
+  flex-shrink: 0;
 }
-.login-screen.light-on .lamp-shade {
-  border-bottom-color: #00e066;
-  box-shadow: 0 4px 22px rgba(0,0,0,0.6), 0 0 25px rgba(0,224,102,0.4);
+.lamp-svg {
+  width: 240px; height: 140px;
+  display: block;
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.7));
 }
-.lamp-bulb {
-  width: 38px; height: 38px;
-  background: #1c221e;
-  border-radius: 50%;
-  position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
-  border: 1px solid rgba(255,255,255,0.1);
+
+.lamp-bulb-element {
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.login-screen.light-on .lamp-bulb {
-  background: #fffdf0;
-  border-color: #fff;
-  box-shadow: 0 0 25px 12px rgba(255, 245, 160, 0.95), 0 0 60px 25px rgba(0, 224, 102, 0.6);
+.lamp-inner-cavity {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.login-screen.light-on .lamp-bulb-element {
+  fill: #fffbe8 !important;
+  filter: drop-shadow(0 0 14px #fffdf0) drop-shadow(0 0 30px rgba(0, 224, 102, 0.95)) drop-shadow(0 0 65px rgba(0, 224, 102, 0.6));
+}
+.login-screen.light-on .lamp-inner-cavity {
+  fill: #ffe88a !important;
+  filter: drop-shadow(0 0 10px rgba(255, 235, 140, 0.9));
 }
 
 /* ── PULL CHAIN SWITCH ── */
-.pull-chain {
-  position: absolute; top: 48px; left: calc(50% + 42px);
+.pull-chain-switch {
+  position: absolute; top: 78px; left: calc(50% + 52px);
+  width: 32px; height: 150px;
   pointer-events: auto; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center;
-  z-index: 25; user-select: none;
+  z-index: 30; user-select: none;
+  transform-origin: 16px 0px;
   animation: chainSway 3.8s ease-in-out infinite;
-  transform-origin: top center;
   transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.pull-chain:hover .chain-handle {
-  transform: scale(1.12);
-  filter: brightness(1.2);
+.pull-chain-switch:hover .pull-chain-svg {
+  filter: brightness(1.3) drop-shadow(0 0 10px rgba(255, 230, 150, 0.8));
 }
-.pull-chain.pulled {
+.pull-chain-switch.pulled {
   animation: none;
-  transform: translateY(30px) scaleY(1.15) !important;
-}
-.chain-line {
-  width: 2px; height: 95px;
-  background: repeating-linear-gradient(to bottom, #d4af37 0px, #d4af37 3px, #7a6018 3px, #7a6018 6px);
-  box-shadow: 0 0 5px rgba(212, 175, 55, 0.4);
-}
-.chain-handle {
-  width: 15px; height: 26px;
-  background: radial-gradient(circle at 35% 35%, #fff6ba, #d4af37 60%, #735306 100%);
-  border-radius: 7px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.6), 0 0 14px rgba(212, 175, 55, 0.7);
-  transition: transform 0.2s, filter 0.2s;
+  transform: translateY(32px) scaleY(1.15) !important;
 }
 @keyframes chainSway {
   0%, 100% { transform: rotate(0deg); }
-  30% { transform: rotate(3deg); }
-  70% { transform: rotate(-2.5deg); }
+  30% { transform: rotate(3.5deg); }
+  70% { transform: rotate(-3deg); }
 }
 
-/* ── SPOTLIGHT BEAM ── */
-.lamp-beam {
-  position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
-  width: 0; height: 0;
-  border-left: 280px solid transparent;
-  border-right: 280px solid transparent;
-  border-bottom: 700px solid rgba(255, 255, 230, 0.08);
-  filter: blur(28px);
+/* ── VOLUMETRIC SPOTLIGHT CONE ── */
+.lamp-light-cone {
+  position: absolute; top: 96px; left: 50%; transform: translateX(-50%);
+  width: 760px; height: 950px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 250, 220, 0.36) 0%, rgba(0, 224, 102, 0.18) 35%, rgba(0, 177, 79, 0.04) 65%, transparent 80%);
+  clip-path: polygon(43% 0%, 57% 0%, 100% 100%, 0% 100%);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.5s ease;
+  filter: blur(22px);
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 5;
 }
-.login-screen.light-on .lamp-beam {
+.login-screen.light-on .lamp-light-cone {
   opacity: 1;
+  animation: lightFlicker 0.32s ease-out;
+}
+
+@keyframes lightFlicker {
+  0% { opacity: 0; }
+  20% { opacity: 0.8; }
+  35% { opacity: 0.25; }
+  50% { opacity: 1; }
+  70% { opacity: 0.75; }
+  100% { opacity: 1; }
 }
 
 /* ── LOGIN CARD WRAPPER & REVEAL ── */
 .login-card-wrapper {
-  position: relative; z-index: 15;
+  position: relative; z-index: 25;
   width: 100%; max-width: 410px;
-  margin-top: 75px;
+  margin-top: 10px;
+  margin-bottom: 30px;
   display: flex; justify-content: center; align-items: center;
   opacity: 0;
-  transform: scale(0.92) translateY(30px);
+  transform: scale(0.92) translateY(25px);
   pointer-events: none;
-  filter: blur(10px);
+  filter: blur(12px);
   transition: all 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .login-screen.light-on .login-card-wrapper {
@@ -306,11 +299,11 @@ body {
   background: var(--bg-card);
   color: var(--text-main);
   border-radius: 24px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 35px rgba(0, 177, 79, 0.25);
-  padding: 36px 32px 28px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.65), 0 0 45px rgba(0, 224, 102, 0.2);
+  padding: 34px 30px 28px;
   width: 100%;
   text-align: center;
-  border: 1px solid var(--border-color);
+  border: 1.5px solid rgba(0, 224, 102, 0.3);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }

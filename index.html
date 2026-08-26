@@ -14,19 +14,70 @@
 
 <!-- LOGIN SCREEN WITH PULL-CORD LAMP -->
 <div class="login-screen" id="loginScreen">
-  <!-- Interactive Lamp Fixture -->
-  <div class="lamp-container">
-    <div class="lamp-cord"></div>
-    <div class="lamp-shade">
-      <div class="lamp-bulb" id="lampBulb"></div>
+  <!-- Interactive Pendant Lamp & Spotlight -->
+  <div class="lamp-system">
+    <svg class="lamp-svg" viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="cordGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#1f2937"/>
+          <stop offset="50%" stop-color="#4b5563"/>
+          <stop offset="100%" stop-color="#111827"/>
+        </linearGradient>
+        <linearGradient id="shadeOuter" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00662d"/>
+          <stop offset="35%" stop-color="#00b14f"/>
+          <stop offset="70%" stop-color="#008037"/>
+          <stop offset="100%" stop-color="#003d19"/>
+        </linearGradient>
+        <linearGradient id="brassTrim" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#997a15"/>
+          <stop offset="40%" stop-color="#ffe699"/>
+          <stop offset="70%" stop-color="#d4af37"/>
+          <stop offset="100%" stop-color="#735905"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Ceiling Cord -->
+      <line x1="120" y1="0" x2="120" y2="48" stroke="url(#cordGrad)" stroke-width="3.5" stroke-linecap="round"/>
+      
+      <!-- Top Brass Collar -->
+      <rect x="114" y="44" width="12" height="8" rx="2" fill="url(#brassTrim)" stroke="#594404" stroke-width="0.5"/>
+      
+      <!-- Lamp Shade Body -->
+      <path d="M72,96 C72,62 94,52 120,52 C146,52 168,62 168,96 Z" fill="url(#shadeOuter)" stroke="#002b12" stroke-width="1.5"/>
+      <path d="M76,96 C76,66 96,56 120,56 C144,56 164,66 164,96" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+      
+      <!-- Brass Rim -->
+      <ellipse cx="120" cy="96" rx="48" ry="10" fill="url(#brassTrim)" stroke="#594404" stroke-width="0.8"/>
+      
+      <!-- Inner Shade Cavity -->
+      <ellipse cx="120" cy="96" rx="44" ry="7.5" class="lamp-inner-cavity" fill="#121815"/>
+      
+      <!-- Light Bulb -->
+      <circle cx="120" cy="99" r="15" class="lamp-bulb-element" fill="#242c26"/>
+    </svg>
+
+    <!-- Hanging Pull Chain Switch -->
+    <div class="pull-chain-switch" id="pullChain" onclick="toggleLampLight()" title="ดึงเพื่อเปิด/ปิดไฟ">
+      <svg class="pull-chain-svg" viewBox="0 0 32 150" width="32" height="150" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="handleGrad" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="30%" stop-color="#ffe699"/>
+            <stop offset="70%" stop-color="#d4af37"/>
+            <stop offset="100%" stop-color="#664d00"/>
+          </radialGradient>
+        </defs>
+        <!-- Bead Chain -->
+        <line x1="16" y1="0" x2="16" y2="110" stroke="#d4af37" stroke-width="2" stroke-dasharray="2.5,4" stroke-linecap="round"/>
+        <!-- Brass Pull Handle / Bell Knob -->
+        <path d="M12,110 C12,106 20,106 20,110 L22,132 C22,138 10,138 10,132 Z" fill="url(#handleGrad)" stroke="#594404" stroke-width="1"/>
+        <ellipse cx="16" cy="133" rx="6" ry="3" fill="#ffe699" opacity="0.8"/>
+      </svg>
     </div>
-    <!-- Pull String Switch -->
-    <div class="pull-chain" id="pullChain" onclick="toggleLampLight()" title="💡">
-      <div class="chain-line"></div>
-      <div class="chain-handle"></div>
-    </div>
-    <!-- Light Beam Spotlight -->
-    <div class="lamp-beam" id="lampBeam"></div>
+
+    <!-- Volumetric Cone of Light -->
+    <div class="lamp-light-cone" id="lampBeam"></div>
   </div>
 
   <!-- Login Card inside Illuminated Area -->
