@@ -38,7 +38,7 @@ let isLampOn = false;
 let isDraggingChain = false;
 let chainStartY = 0;
 let chainCurrentDeltaY = 0;
-const CHAIN_TRIGGER_THRESHOLD = 28; // px to trigger lamp switch
+const CHAIN_TRIGGER_THRESHOLD = 25; // px required drag distance to trigger lamp switch
 const CHAIN_MAX_PULL = 70; // px max stretch
 
 function initPullChain() {
@@ -67,7 +67,8 @@ function initPullChain() {
     try { chain.releasePointerCapture(e.pointerId); } catch(err) {}
     chain.classList.remove('dragging');
 
-    if (chainCurrentDeltaY >= CHAIN_TRIGGER_THRESHOLD || chainCurrentDeltaY <= 4) {
+    // Only switch light if dragged down past threshold
+    if (chainCurrentDeltaY >= CHAIN_TRIGGER_THRESHOLD) {
       toggleLampLight();
     }
 
