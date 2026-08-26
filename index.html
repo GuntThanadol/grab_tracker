@@ -57,9 +57,9 @@
       <circle cx="120" cy="99" r="15" class="lamp-bulb-element" fill="#242c26"/>
     </svg>
 
-    <!-- Hanging Pull Chain Switch -->
-    <div class="pull-chain-switch" id="pullChain" onclick="toggleLampLight()" title="ดึงเพื่อเปิด/ปิดไฟ">
-      <svg class="pull-chain-svg" viewBox="0 0 32 150" width="32" height="150" xmlns="http://www.w3.org/2000/svg">
+    <!-- Hanging Pull Chain Switch (Drag & Release) -->
+    <div class="pull-chain-switch" id="pullChain" title="ดึงสายเพื่อเปิด/ปิดไฟ">
+      <svg class="pull-chain-svg" id="chainSvg" viewBox="0 0 36 200" width="36" height="200" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="handleGrad" cx="35%" cy="30%" r="70%">
             <stop offset="0%" stop-color="#ffffff"/>
@@ -69,10 +69,12 @@
           </radialGradient>
         </defs>
         <!-- Bead Chain -->
-        <line x1="16" y1="0" x2="16" y2="110" stroke="#d4af37" stroke-width="2" stroke-dasharray="2.5,4" stroke-linecap="round"/>
+        <line id="chainLine" x1="18" y1="0" x2="18" y2="105" stroke="#d4af37" stroke-width="2.5" stroke-dasharray="2.5,4" stroke-linecap="round"/>
         <!-- Brass Pull Handle / Bell Knob -->
-        <path d="M12,110 C12,106 20,106 20,110 L22,132 C22,138 10,138 10,132 Z" fill="url(#handleGrad)" stroke="#594404" stroke-width="1"/>
-        <ellipse cx="16" cy="133" rx="6" ry="3" fill="#ffe699" opacity="0.8"/>
+        <g id="chainKnobGroup" transform="translate(0, 0)">
+          <path d="M14,105 C14,101 22,101 22,105 L24,130 C24,137 12,137 12,130 Z" fill="url(#handleGrad)" stroke="#594404" stroke-width="1"/>
+          <ellipse cx="18" cy="131" rx="6" ry="3.5" fill="#ffe699" opacity="0.8"/>
+        </g>
       </svg>
     </div>
 
@@ -101,11 +103,11 @@
         <div class="login-error" id="loginError"></div>
         <button class="btn btn-green login-submit" onclick="addRipple(event);doLogin()">เข้าสู่ระบบ</button>
         <div style="display:flex;align-items:center;gap:10px;margin:2px 0;">
-          <div style="flex:1;height:1px;background:var(--border-color)"></div>
-          <span style="font-size:0.76rem;color:var(--text-muted)">หรือ</span>
-          <div style="flex:1;height:1px;background:var(--border-color)"></div>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+          <span style="font-size:0.76rem;color:#a7f3d0;opacity:0.8">หรือ</span>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
         </div>
-        <button type="button" class="btn btn-outline login-submit" onclick="addRipple(event);loginAsGuest()">👀 Guest Mode</button>
+        <button type="button" class="btn btn-outline login-submit login-guest-btn" onclick="addRipple(event);loginAsGuest()">👀 Guest Mode</button>
       </div>
     </div>
   </div>

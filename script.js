@@ -33,15 +33,99 @@ function showApp() {
   applyRoleUI();
 }
 
+// ─── PULL CHAIN DRAG & RELEASE INTERACTION ──────────────────────────────────
 let isLampOn = false;
+let isDraggingChain = false;
+let chainStartY = 0;
+let chainCurrentDeltaY = 0;
+const CHAIN_TRIGGER_THRESHOLD = 28; // px to trigger lamp switch
+const CHAIN_MAX_PULL = 70; // px max stretch
+
+function initPullChain() {
+  const chain = document.getElementById('pullChain');
+  if (!chain || chain.dataset.initialized) return;
+  chain.dataset.initialized = 'true';
+
+  function onPointerDown(e) {
+    isDraggingChain = true;
+    chainStartY = e.clientY;
+    chainCurrentDeltaY = 0;
+    try { chain.setPointerCapture(e.pointerId); } catch(err) {}
+    chain.classList.add('dragging');
+  }
+
+  function onPointerMove(e) {
+    if (!isDraggingChain) return;
+    const dy = Math.max(0, e.clientY - chainStartY);
+    chainCurrentDeltaY = Math.min(CHAIN_MAX_PULL, dy * 0.85);
+    updateChainVisual(chainCurrentDeltaY);
+  }
+
+  function onPointerUp(e) {
+    if (!isDraggingChain) return;
+    isDraggingChain = false;
+    try { chain.releasePointerCapture(e.pointerId); } catch(err) {}
+    chain.classList.remove('dragging');
+
+    if (chainCurrentDeltaY >= CHAIN_TRIGGER_THRESHOLD || chainCurrentDeltaY <= 4) {
+      toggleLampLight();
+    }
+
+    animateChainRecoil(chainCurrentDeltaY);
+    chainCurrentDeltaY = 0;
+  }
+
+  function onPointerCancel(e) {
+    if (!isDraggingChain) return;
+    isDraggingChain = false;
+    try { chain.releasePointerCapture(e.pointerId); } catch(err) {}
+    chain.classList.remove('dragging');
+    animateChainRecoil(chainCurrentDeltaY);
+    chainCurrentDeltaY = 0;
+  }
+
+  chain.addEventListener('pointerdown', onPointerDown);
+  chain.addEventListener('pointermove', onPointerMove);
+  chain.addEventListener('pointerup', onPointerUp);
+  chain.addEventListener('pointercancel', onPointerCancel);
+}
+
+function updateChainVisual(dy) {
+  const line = document.getElementById('chainLine');
+  const knob = document.getElementById('chainKnobGroup');
+  if (line) line.setAttribute('y2', 105 + dy);
+  if (knob) knob.setAttribute('transform', `translate(0, ${dy})`);
+}
+
+function animateChainRecoil(startDy) {
+  if (startDy <= 0) {
+    updateChainVisual(0);
+    return;
+  }
+  const startTime = performance.now();
+  const duration = 380; // ms spring oscillation
+
+  function springStep(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(1, elapsed / duration);
+    const decay = Math.exp(-6.5 * t);
+    const oscillation = Math.cos(t * Math.PI * 4);
+    const currentDy = startDy * decay * oscillation;
+
+    updateChainVisual(currentDy);
+
+    if (t < 1) {
+      requestAnimationFrame(springStep);
+    } else {
+      updateChainVisual(0);
+    }
+  }
+  requestAnimationFrame(springStep);
+}
 
 function toggleLampLight() {
-  const chain = document.getElementById('pullChain');
   const screen = document.getElementById('loginScreen');
-  if (!chain || !screen) return;
-
-  chain.classList.add('pulled');
-  setTimeout(() => chain.classList.remove('pulled'), 200);
+  if (!screen) return;
 
   isLampOn = !isLampOn;
   playSwitchSound(isLampOn);
@@ -63,6 +147,8 @@ function showLogin() {
     screen.classList.remove('hide');
     isLampOn = false;
     screen.classList.remove('light-on');
+    initPullChain();
+    updateChainVisual(0);
   }
   const appRoot = document.getElementById('appRoot');
   if (appRoot) appRoot.style.display = 'none';
