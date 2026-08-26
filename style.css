@@ -343,29 +343,50 @@ body {
   font-size: 0.85rem; color: #d1fae5;
   letter-spacing: 0.01em;
 }
-.login-form input {
-  border: 1.5px solid rgba(0, 224, 102, 0.25);
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-size: 0.95rem;
-  font-family: inherit;
-  width: 100%;
-  outline: none;
-  background: rgba(0, 18, 9, 0.55);
-  color: #ffffff;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+.login-screen .login-form input,
+.login-screen .form-group input {
+  border: 1.5px solid rgba(0, 224, 102, 0.3) !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  font-size: 0.98rem !important;
+  font-family: inherit !important;
+  width: 100% !important;
+  outline: none !important;
+  background: rgba(3, 20, 10, 0.75) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #00e066 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s !important;
 }
-.login-form input::placeholder {
-  color: rgba(167, 243, 208, 0.4);
+.login-screen .login-form input::placeholder,
+.login-screen .form-group input::placeholder {
+  color: rgba(167, 243, 208, 0.45) !important;
+  -webkit-text-fill-color: rgba(167, 243, 208, 0.45) !important;
 }
-.login-form input:focus {
-  border-color: #00e066;
-  background: rgba(0, 24, 12, 0.75);
-  box-shadow: 0 0 0 3px rgba(0, 224, 102, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+.login-screen .login-form input:focus,
+.login-screen .form-group input:focus {
+  border-color: #00e066 !important;
+  background: rgba(0, 30, 15, 0.9) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(0, 224, 102, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.4) !important;
 }
+
+/* Chrome Autofill & Password Manager Overrides */
+.login-screen .login-form input:-webkit-autofill,
+.login-screen .login-form input:-webkit-autofill:hover,
+.login-screen .login-form input:-webkit-autofill:focus,
+.login-screen .login-form input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #061f12 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff !important;
+  caret-color: #00e066 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .login-pass-wrap { position: relative; }
-.login-pass-wrap input { padding-right: 42px; }
+.login-pass-wrap input { padding-right: 42px !important; }
 .login-eye {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
   background: none; border: none; cursor: pointer; font-size: 1.1rem;
