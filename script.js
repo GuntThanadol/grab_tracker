@@ -915,40 +915,316 @@ function renderDashboard() {
   renderDowChart(rows);
 }
 
-// ─── BAR CHART ───────────────────────────────────────────────────────────────
+// ─── BAR CHART (30 DAYS NET PROFIT COLUMN CHART) ───────────────────────────
 function renderBarChart(rows) {
   const el = document.getElementById('barChart');
   if (!el) return;
+
   const recent = rows.filter(isWorkDay).slice(-30);
-  const maxP = Math.max(...recent.map(r => profit(r)), 1);
   if (!recent.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>ยังไม่มีข้อมูล</p></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>ยังไม่มีข้อมูลกำไรสุทธิ</p></div>';
     return;
   }
-  const html = recent.map((r, i) => {
-    const p = profit(r);
-    const pct = Math.max((p / maxP) * 100, 2);
-    const [, m, d] = r.date.split('-').map(Number);
-    const cls = p < 0 ? 'red' : p > maxP * 0.8 ? 'good' : '';
-    return `<div class="bar-row" style="animation:rowIn 0.3s ${i * 0.02}s ease both">
-      <div class="bar-label">${d} ${TH_MONTHS_S[m - 1]}</div>
-      <div class="bar-track" title="${fmtDate(r.date)}: ${fmt(p)} บาท">
-        <div class="bar-fill ${cls}" id="bf${i}" style="width:0%"></div>
+
+  // Summary statistics
+  const profits = recent.map(r => profit(r));
+  const totalP = profits.reduce((a, b) => a + b, 0);
+  const avgP = Math.round(totalP / recent.length);
+  const maxP = Math.max(...profits);
+  const minP = Math.min(...profits, 0);
+  const peakIdx = profits.indexOf(maxP);
+  const peakRow = recent[peakIdx];
+
+  const totalHours = recent.reduce((sum, r) => sum + (r.hours || 0), 0);
+  const avgHourlyRate = totalHours > 0 ? Math.round(totalP / totalHours) : 0;
+
+  // Header Summary Stats Chips
+  const statsHtml = `
+    <div class="chart-summary-grid">
+      <div class="chart-stat-chip">
+        <div class="stat-chip-label">💰 กำไรรวม 30 วัน</div>
+        <div class="stat-chip-val text-green">${fmt(totalP)} ฿</div>
       </div>
-      <div class="bar-val">${fmt(p)}</div>
-    </div>`;
+      <div class="chart-stat-chip">
+        <div class="stat-chip-label">📈 เฉลี่ยต่อวัน</div>
+        <div class="stat-chip-val">${fmt(avgP)} ฿/วัน</div>
+      </div>
+      <div class="chart-stat-chip">
+        <div class="stat-chip-label">🏆 วันพีคสุด (${peakRow ? peakRow.date.slice(5) : ''})</div>
+        <div class="stat-chip-val text-gold">${fmt(maxP)} ฿</div>
+      </div>
+      <div class="chart-stat-chip">
+        <div class="stat-chip-label">⚡ เฉลี่ยต่อ ชม.</div>
+        <div class="stat-chip-val">${fmt(avgHourlyRate)} ฿/ชม.</div>
+      </div>
+    </div>
+  `;
+
+  // Chart layout calculations
+  const n = recent.length;
+  const W = Math.max(el.clientWidth || 750, 480);
+  const H = 260;
+  const PAD = { top: 34, right: 20, bottom: 44, left: 55 };
+  const CW = W - PAD.left - PAD.right;
+  const CH = H - PAD.top - PAD.bottom;
+
+  // Value scale
+  const upperLimit = Math.max(maxP * 1.15, avgP * 1.35, 100);
+  const lowerLimit = Math.min(minP < 0 ? minP * 1.15 : 0, 0);
+  const range = (upperLimit - lowerLimit) || 1;
+
+  function yp(v) {
+    return PAD.top + CH - ((v - lowerLimit) / range) * CH;
+  }
+
+  const zeroY = yp(0);
+  const avgY = yp(avgP);
+
+  // Column geometry
+  const colSlotW = CW / n;
+  const colW = Math.max(7, Math.min(22, colSlotW * 0.72));
+
+  // Y-axis ticks & grid lines
+  const tickCount = 4;
+  const ticks = Array.from({ length: tickCount + 1 }, (_, i) => lowerLimit + (range / tickCount) * i);
+  const yAxisSvg = ticks.map(v => {
+    const y = yp(v).toFixed(1);
+    return `
+      <line x1="${PAD.left}" y1="${y}" x2="${PAD.left + CW}" y2="${y}" stroke="var(--border-color)" stroke-width="1" stroke-dasharray="2,2" opacity="0.6"/>
+      <text x="${PAD.left - 8}" y="${parseFloat(y) + 3.5}" text-anchor="end" font-size="10" fill="var(--text-muted)" font-weight="600">${Math.round(v)}</text>
+    `;
   }).join('');
-  el.innerHTML = html;
-  requestAnimationFrame(() => {
-    recent.forEach((_, i) => {
-      const p = profit(recent[i]);
-      const pct = Math.max((p / maxP) * 100, 2);
-      setTimeout(() => {
-        const barEl = document.getElementById('bf' + i);
-        if (barEl) barEl.style.width = pct + '%';
-      }, i * 20);
-    });
+
+  // Average reference line
+  const avgLineSvg = `
+    <line x1="${PAD.left}" y1="${avgY.toFixed(1)}" x2="${PAD.left + CW}" y2="${avgY.toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.85"/>
+    <rect x="${PAD.left + CW - 96}" y="${(avgY - 18).toFixed(1)}" width="96" height="16" rx="4" fill="#f59e0b" opacity="0.16"/>
+    <text x="${PAD.left + CW - 6}" y="${(avgY - 6).toFixed(1)}" text-anchor="end" font-size="9.5" fill="#d97706" font-weight="700">เฉลี่ย ${fmt(avgP)}฿</text>
+  `;
+
+  // Bars and labels
+  const barsSvg = recent.map((r, i) => {
+    const p = profit(r);
+    const inc = income(r);
+    const xCenter = PAD.left + i * colSlotW + colSlotW / 2;
+    const x = xCenter - colW / 2;
+
+    let barY, barH, gradId;
+    const isPeak = (i === peakIdx && maxP > 0);
+    const isAboveAvg = p >= avgP;
+
+    if (p >= 0) {
+      barY = yp(p);
+      barH = Math.max(zeroY - barY, 2);
+      gradId = isPeak ? 'gradPeak' : (isAboveAvg ? 'gradHigh' : 'gradNorm');
+    } else {
+      barY = zeroY;
+      barH = Math.max(yp(p) - zeroY, 2);
+      gradId = 'gradNeg';
+    }
+
+    const [, , d] = r.date.split('-').map(Number);
+    const dt = parseDateFromSheets(r.date);
+    const dayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+    const dayName = dt ? dayNames[dt.getDay()] : '';
+
+    // X-Axis labels (smart spacing for readability)
+    const step = n > 22 ? 2 : 1;
+    const showLabel = (i % step === 0) || i === n - 1;
+    const xLabelSvg = showLabel ? `
+      <text x="${xCenter.toFixed(1)}" y="${H - PAD.bottom + 14}" text-anchor="middle" font-size="9.5" fill="var(--text-muted)" font-weight="600">${d}</text>
+      <text x="${xCenter.toFixed(1)}" y="${H - PAD.bottom + 26}" text-anchor="middle" font-size="8" fill="var(--text-subtle)">${dayName}</text>
+    ` : '';
+
+    // Peak Star Badge
+    const peakStarSvg = isPeak ? `
+      <g transform="translate(${xCenter.toFixed(1)}, ${(barY - 14).toFixed(1)})">
+        <circle cx="0" cy="0" r="7.5" fill="#f59e0b" filter="drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4))"/>
+        <text x="0" y="3.5" text-anchor="middle" font-size="9" fill="#ffffff" font-weight="900">★</text>
+      </g>
+    ` : '';
+
+    const rateHr = r.hours > 0 ? Math.round(p / r.hours) : 0;
+    const oilPct = inc > 0 ? Math.round(((r.oil || 0) / inc) * 100) : 0;
+
+    return `
+      <g class="col-bar-group" data-idx="${i}" data-date="${r.date}" data-profit="${p}" data-income="${inc}" data-grab="${r.grab || 0}" data-tip="${r.tip || 0}" data-oil="${r.oil || 0}" data-oilpct="${oilPct}" data-hours="${r.hours || 0}" data-rate="${rateHr}" data-note="${encodeURIComponent(r.note || '')}">
+        <rect class="col-bar-hover-zone" x="${(xCenter - colSlotW / 2).toFixed(1)}" y="${PAD.top}" width="${colSlotW.toFixed(1)}" height="${CH}" fill="transparent" style="cursor:pointer"/>
+        <rect class="col-bar-rect" id="cbar${i}" x="${x.toFixed(1)}" y="${barY.toFixed(1)}" width="${colW.toFixed(1)}" height="${barH.toFixed(1)}" rx="4" ry="4" fill="url(#${gradId})" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.12))" style="transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor:pointer"/>
+        ${peakStarSvg}
+        ${xLabelSvg}
+      </g>
+    `;
+  }).join('');
+
+  // SVG Definitions with Gradients
+  const defsSvg = `
+    <defs>
+      <linearGradient id="gradPeak" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#fbbf24"/>
+        <stop offset="50%" stop-color="#f59e0b"/>
+        <stop offset="100%" stop-color="#00b14f"/>
+      </linearGradient>
+      <linearGradient id="gradHigh" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#00e066"/>
+        <stop offset="100%" stop-color="#008a3e"/>
+      </linearGradient>
+      <linearGradient id="gradNorm" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#2dd4bf"/>
+        <stop offset="100%" stop-color="#0f766e"/>
+      </linearGradient>
+      <linearGradient id="gradNeg" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#f87171"/>
+        <stop offset="100%" stop-color="#dc2626"/>
+      </linearGradient>
+    </defs>
+  `;
+
+  el.innerHTML = `
+    ${statsHtml}
+    <div class="col-chart-container" style="position:relative;width:100%;overflow-x:auto;">
+      <div class="col-chart-tooltip" id="colChartTip"></div>
+      <svg id="colBarSvg" width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;overflow:visible;">
+        ${defsSvg}
+        ${yAxisSvg}
+        ${avgLineSvg}
+        ${barsSvg}
+      </svg>
+    </div>
+  `;
+
+  // Attach hover & touch tooltip handler
+  initColChartTooltip(recent);
+}
+
+function initColChartTooltip(recent) {
+  const svg = document.getElementById('colBarSvg');
+  const tip = document.getElementById('colChartTip');
+  if (!svg || !tip) return;
+
+  const groups = svg.querySelectorAll('.col-bar-group');
+  const TH_DAY_NAMES = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+
+  groups.forEach(g => {
+    function show() {
+      const idx = Number(g.dataset.idx);
+      const r = recent[idx];
+      if (!r) return;
+
+      const p = Number(g.dataset.profit);
+      const inc = Number(g.dataset.income);
+      const grab = Number(g.dataset.grab);
+      const tipVal = Number(g.dataset.tip);
+      const oil = Number(g.dataset.oil);
+      const oilpct = g.dataset.oilpct;
+      const hours = Number(g.dataset.hours);
+      const rate = Number(g.dataset.rate);
+      const note = decodeURIComponent(g.dataset.note || '');
+
+      const dt = parseDateFromSheets(r.date);
+      const dayFull = dt ? `${TH_DAY_NAMES[dt.getDay()]}ที่ ${dt.getDate()} ${TH_MONTHS_S[dt.getMonth()]} ${dt.getFullYear() + 543}` : fmtDate(r.date);
+
+      const isPos = p >= 0;
+      const profitColor = isPos ? 'var(--green)' : 'var(--red)';
+
+      tip.innerHTML = `
+        <div class="tip-header">
+          <span class="tip-date">📅 ${dayFull}</span>
+          <span class="tip-badge" style="background:${isPos ? 'var(--green-light)' : 'var(--red-light)'};color:${profitColor}">
+            ${isPos ? 'กำไร' : 'ขาดทุน'}
+          </span>
+        </div>
+        <div class="tip-body">
+          <div class="tip-profit-row">
+            <span>กำไรสุทธิ</span>
+            <strong style="color:${profitColor};font-size:1.15rem">${isPos ? '+' : ''}${fmt(p)} ฿</strong>
+          </div>
+          <div class="tip-divider"></div>
+          <div class="tip-grid">
+            <div class="tip-item">
+              <span class="tip-k">🛵 รายได้รวม</span>
+              <strong class="tip-v">${fmt(inc)} ฿</strong>
+            </div>
+            <div class="tip-item">
+              <span class="tip-k">⛽ ค่าน้ำมัน</span>
+              <strong class="tip-v text-red">${fmt(oil)} ฿ <small style="font-weight:normal;color:var(--text-subtle)">(${oilpct}%)</small></strong>
+            </div>
+            <div class="tip-item">
+              <span class="tip-k">⏱️ วิ่งงาน</span>
+              <strong class="tip-v">${fmtHours(hours)} ชม.</strong>
+            </div>
+            <div class="tip-item">
+              <span class="tip-k">⚡ เฉลี่ย/ชม.</span>
+              <strong class="tip-v text-gold">${fmt(rate)} ฿/ชม.</strong>
+            </div>
+          </div>
+          ${(grab > 0 || tipVal > 0) ? `
+            <div class="tip-sub-breakdown">
+              <span>(Grab: ${fmt(grab)} ฿ ${tipVal > 0 ? `+ ทิป: ${fmt(tipVal)} ฿` : ''})</span>
+            </div>
+          ` : ''}
+          ${note ? `<div class="tip-note">📝 ${note.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+        </div>
+      `;
+
+      // Highlight active bar
+      groups.forEach(other => {
+        const rect = other.querySelector('.col-bar-rect');
+        if (rect) rect.style.opacity = (other === g) ? '1' : '0.4';
+      });
+      const activeRect = g.querySelector('.col-bar-rect');
+      if (activeRect) {
+        activeRect.style.filter = 'drop-shadow(0 0 8px rgba(0, 224, 102, 0.8)) brightness(1.2)';
+      }
+
+      // Position tooltip
+      const rect = g.getBoundingClientRect();
+      const containerRect = svg.parentElement.getBoundingClientRect();
+      const leftPos = rect.left - containerRect.left + rect.width / 2;
+      const tipWidth = 230;
+
+      let clampedLeft = leftPos - tipWidth / 2;
+      if (clampedLeft < 10) clampedLeft = 10;
+      if (clampedLeft + tipWidth > containerRect.width - 10) {
+        clampedLeft = containerRect.width - tipWidth - 10;
+      }
+
+      tip.style.left = clampedLeft + 'px';
+      tip.style.top = '10px';
+      tip.classList.add('show');
+    }
+
+    function hide() {
+      tip.classList.remove('show');
+      groups.forEach(other => {
+        const rect = other.querySelector('.col-bar-rect');
+        if (rect) {
+          rect.style.opacity = '1';
+          rect.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.12))';
+        }
+      });
+    }
+
+    g.addEventListener('mouseenter', show);
+    g.addEventListener('mouseleave', hide);
+    g.addEventListener('touchstart', (e) => {
+      show();
+      e.stopPropagation();
+    }, { passive: true });
   });
+
+  document.addEventListener('touchstart', (e) => {
+    if (!svg.contains(e.target)) {
+      tip.classList.remove('show');
+      groups.forEach(other => {
+        const rect = other.querySelector('.col-bar-rect');
+        if (rect) {
+          rect.style.opacity = '1';
+          rect.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.12))';
+        }
+      });
+    }
+  }, { passive: true });
 }
 
 // ─── TREND CHART (interactive tooltip) ──────────────────────────────────────

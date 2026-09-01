@@ -186,7 +186,14 @@
     </div>
 
     <div class="card">
-      <div class="card-title">📈 กำไรสุทธิ 30 วันล่าสุด</div>
+      <div class="card-title" style="justify-content:space-between;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span>📈 กำไรสุทธิ 30 วันล่าสุด</span>
+        <div style="display:flex;gap:12px;font-size:0.75rem;font-weight:600;color:var(--text-muted);flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#00e066;border-radius:2px;vertical-align:middle;margin-right:4px"></span>เหนือกราฟเฉลี่ย</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#2dd4bf;border-radius:2px;vertical-align:middle;margin-right:4px"></span>ต่ำกว่าค่าเฉลี่ย</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>วันพีคสุด ★</span>
+        </div>
+      </div>
       <div class="chart-wrap" id="barChart"></div>
     </div>
 
