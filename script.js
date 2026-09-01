@@ -1023,10 +1023,11 @@ function renderBarChart(rows) {
       gradId = 'gradNeg';
     }
 
-    const [, , d] = r.date.split('-').map(Number);
-    const dt = parseDateFromSheets(r.date);
+    const dateStr = parseDateFromSheets(r.date);
+    const [y, m, d] = (dateStr || '').split('-').map(Number);
+    const dateObj = (y && m && d) ? new Date(y, m - 1, d) : null;
     const dayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
-    const dayName = dt ? dayNames[dt.getDay()] : '';
+    const dayName = dateObj ? dayNames[dateObj.getDay()] : '';
 
     // X-Axis labels (smart spacing for readability)
     const step = n > 22 ? 2 : 1;
@@ -1121,8 +1122,10 @@ function initColChartTooltip(recent) {
       const rate = Number(g.dataset.rate);
       const note = decodeURIComponent(g.dataset.note || '');
 
-      const dt = parseDateFromSheets(r.date);
-      const dayFull = dt ? `${TH_DAY_NAMES[dt.getDay()]}ที่ ${dt.getDate()} ${TH_MONTHS_S[dt.getMonth()]} ${dt.getFullYear() + 543}` : fmtDate(r.date);
+      const dateStr = parseDateFromSheets(r.date);
+      const [y, m, d] = (dateStr || '').split('-').map(Number);
+      const dateObj = (y && m && d) ? new Date(y, m - 1, d) : null;
+      const dayFull = dateObj ? `${TH_DAY_NAMES[dateObj.getDay()]}ที่ ${d} ${TH_MONTHS_S[m - 1]} ${y + 543}` : fmtDate(r.date);
 
       const isPos = p >= 0;
       const profitColor = isPos ? 'var(--green)' : 'var(--red)';
