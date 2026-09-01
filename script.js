@@ -995,11 +995,15 @@ function renderBarChart(rows) {
     `;
   }).join('');
 
-  // Average reference line
+  // Average reference line & badge
   const avgLineSvg = `
-    <line x1="${PAD.left}" y1="${avgY.toFixed(1)}" x2="${PAD.left + CW}" y2="${avgY.toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.85"/>
-    <rect x="${PAD.left + CW - 96}" y="${(avgY - 18).toFixed(1)}" width="96" height="16" rx="4" fill="#f59e0b" opacity="0.16"/>
-    <text x="${PAD.left + CW - 6}" y="${(avgY - 6).toFixed(1)}" text-anchor="end" font-size="9.5" fill="#d97706" font-weight="700">เฉลี่ย ${fmt(avgP)}฿</text>
+    <line x1="${PAD.left}" y1="${avgY.toFixed(1)}" x2="${PAD.left + CW}" y2="${avgY.toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.9"/>
+  `;
+  const avgBadgeSvg = `
+    <g class="avg-badge-group" transform="translate(${(PAD.left + CW - 100).toFixed(1)}, ${(avgY - 10).toFixed(1)})" pointer-events="none">
+      <rect x="0" y="-8" width="98" height="18" rx="9" fill="var(--bg-card)" stroke="#f59e0b" stroke-width="1.2" filter="drop-shadow(0 2px 5px rgba(0,0,0,0.25))"/>
+      <text x="49" y="4" text-anchor="middle" font-size="9.5" fill="#d97706" font-weight="800">เฉลี่ย ${fmt(avgP)}฿</text>
+    </g>
   `;
 
   // Bars and labels
@@ -1090,11 +1094,12 @@ function renderBarChart(rows) {
         ${yAxisSvg}
         ${avgLineSvg}
         ${barsSvg}
+        ${avgBadgeSvg}
       </svg>
     </div>
   `;
 
-  // Attach hover & touch tooltip handler
+  // Attach click/tap tooltip handler
   initColChartTooltip(recent);
 }
 
@@ -1105,129 +1110,134 @@ function initColChartTooltip(recent) {
 
   const groups = svg.querySelectorAll('.col-bar-group');
   const TH_DAY_NAMES = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+  let activeIdx = null;
 
-  groups.forEach(g => {
-    function show() {
-      const idx = Number(g.dataset.idx);
-      const r = recent[idx];
-      if (!r) return;
+  function hideTip() {
+    activeIdx = null;
+    tip.classList.remove('show');
+    groups.forEach(other => {
+      const rect = other.querySelector('.col-bar-rect');
+      if (rect) {
+        rect.style.opacity = '1';
+        rect.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.12))';
+      }
+    });
+  }
 
-      const p = Number(g.dataset.profit);
-      const inc = Number(g.dataset.income);
-      const grab = Number(g.dataset.grab);
-      const tipVal = Number(g.dataset.tip);
-      const oil = Number(g.dataset.oil);
-      const oilpct = g.dataset.oilpct;
-      const hours = Number(g.dataset.hours);
-      const rate = Number(g.dataset.rate);
-      const note = decodeURIComponent(g.dataset.note || '');
+  function showTip(g) {
+    const idx = Number(g.dataset.idx);
+    const r = recent[idx];
+    if (!r) return;
 
-      const dateStr = parseDateFromSheets(r.date);
-      const [y, m, d] = (dateStr || '').split('-').map(Number);
-      const dateObj = (y && m && d) ? new Date(y, m - 1, d) : null;
-      const dayFull = dateObj ? `${TH_DAY_NAMES[dateObj.getDay()]}ที่ ${d} ${TH_MONTHS_S[m - 1]} ${y + 543}` : fmtDate(r.date);
+    if (activeIdx === idx && tip.classList.contains('show')) {
+      hideTip();
+      return;
+    }
+    activeIdx = idx;
 
-      const isPos = p >= 0;
-      const profitColor = isPos ? 'var(--green)' : 'var(--red)';
+    const p = Number(g.dataset.profit);
+    const inc = Number(g.dataset.income);
+    const grab = Number(g.dataset.grab);
+    const tipVal = Number(g.dataset.tip);
+    const oil = Number(g.dataset.oil);
+    const oilpct = g.dataset.oilpct;
+    const hours = Number(g.dataset.hours);
+    const rate = Number(g.dataset.rate);
+    const note = decodeURIComponent(g.dataset.note || '');
 
-      tip.innerHTML = `
-        <div class="tip-header">
-          <span class="tip-date">📅 ${dayFull}</span>
+    const dateStr = parseDateFromSheets(r.date);
+    const [y, m, d] = (dateStr || '').split('-').map(Number);
+    const dateObj = (y && m && d) ? new Date(y, m - 1, d) : null;
+    const dayFull = dateObj ? `${TH_DAY_NAMES[dateObj.getDay()]}ที่ ${d} ${TH_MONTHS_S[m - 1]} ${y + 543}` : fmtDate(r.date);
+
+    const isPos = p >= 0;
+    const profitColor = isPos ? 'var(--green)' : 'var(--red)';
+
+    tip.innerHTML = `
+      <div class="tip-header">
+        <span class="tip-date">📅 ${dayFull}</span>
+        <div style="display:flex;align-items:center;gap:6px">
           <span class="tip-badge" style="background:${isPos ? 'var(--green-light)' : 'var(--red-light)'};color:${profitColor}">
             ${isPos ? 'กำไร' : 'ขาดทุน'}
           </span>
+          <button type="button" class="tip-close-btn" title="ปิด">✕</button>
         </div>
-        <div class="tip-body">
-          <div class="tip-profit-row">
-            <span>กำไรสุทธิ</span>
-            <strong style="color:${profitColor};font-size:1.15rem">${isPos ? '+' : ''}${fmt(p)} ฿</strong>
-          </div>
-          <div class="tip-divider"></div>
-          <div class="tip-grid">
-            <div class="tip-item">
-              <span class="tip-k">🛵 รายได้รวม</span>
-              <strong class="tip-v">${fmt(inc)} ฿</strong>
-            </div>
-            <div class="tip-item">
-              <span class="tip-k">⛽ ค่าน้ำมัน</span>
-              <strong class="tip-v text-red">${fmt(oil)} ฿ <small style="font-weight:normal;color:var(--text-subtle)">(${oilpct}%)</small></strong>
-            </div>
-            <div class="tip-item">
-              <span class="tip-k">⏱️ วิ่งงาน</span>
-              <strong class="tip-v">${fmtHours(hours)} ชม.</strong>
-            </div>
-            <div class="tip-item">
-              <span class="tip-k">⚡ เฉลี่ย/ชม.</span>
-              <strong class="tip-v text-gold">${fmt(rate)} ฿/ชม.</strong>
-            </div>
-          </div>
-          ${(grab > 0 || tipVal > 0) ? `
-            <div class="tip-sub-breakdown">
-              <span>(Grab: ${fmt(grab)} ฿ ${tipVal > 0 ? `+ ทิป: ${fmt(tipVal)} ฿` : ''})</span>
-            </div>
-          ` : ''}
-          ${note ? `<div class="tip-note">📝 ${note.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+      </div>
+      <div class="tip-body">
+        <div class="tip-profit-row">
+          <span>กำไรสุทธิ</span>
+          <strong style="color:${profitColor};font-size:1.15rem">${isPos ? '+' : ''}${fmt(p)} ฿</strong>
         </div>
-      `;
+        <div class="tip-divider"></div>
+        <div class="tip-grid">
+          <div class="tip-item">
+            <span class="tip-k">🛵 รายได้รวม</span>
+            <strong class="tip-v">${fmt(inc)} ฿</strong>
+          </div>
+          <div class="tip-item">
+            <span class="tip-k">⛽ ค่าน้ำมัน</span>
+            <strong class="tip-v text-red">${fmt(oil)} ฿ <small style="font-weight:normal;color:var(--text-subtle)">(${oilpct}%)</small></strong>
+          </div>
+          <div class="tip-item">
+            <span class="tip-k">⏱️ วิ่งงาน</span>
+            <strong class="tip-v">${fmtHours(hours)} ชม.</strong>
+          </div>
+          <div class="tip-item">
+            <span class="tip-k">⚡ เฉลี่ย/ชม.</span>
+            <strong class="tip-v text-gold">${fmt(rate)} ฿/ชม.</strong>
+          </div>
+        </div>
+        ${(grab > 0 || tipVal > 0) ? `
+          <div class="tip-sub-breakdown">
+            <span>(Grab: ${fmt(grab)} ฿ ${tipVal > 0 ? `+ ทิป: ${fmt(tipVal)} ฿` : ''})</span>
+          </div>
+        ` : ''}
+        ${note ? `<div class="tip-note">📝 ${note.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+      </div>
+    `;
 
-      // Highlight active bar
-      groups.forEach(other => {
-        const rect = other.querySelector('.col-bar-rect');
-        if (rect) rect.style.opacity = (other === g) ? '1' : '0.4';
-      });
-      const activeRect = g.querySelector('.col-bar-rect');
-      if (activeRect) {
-        activeRect.style.filter = 'drop-shadow(0 0 8px rgba(0, 224, 102, 0.8)) brightness(1.2)';
-      }
+    const closeBtn = tip.querySelector('.tip-close-btn');
+    if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); hideTip(); };
 
-      // Position tooltip
-      const rect = g.getBoundingClientRect();
-      const containerRect = svg.parentElement.getBoundingClientRect();
-      const leftPos = rect.left - containerRect.left + rect.width / 2;
-      const tipWidth = 230;
-
-      let clampedLeft = leftPos - tipWidth / 2;
-      if (clampedLeft < 10) clampedLeft = 10;
-      if (clampedLeft + tipWidth > containerRect.width - 10) {
-        clampedLeft = containerRect.width - tipWidth - 10;
-      }
-
-      tip.style.left = clampedLeft + 'px';
-      tip.style.top = '10px';
-      tip.classList.add('show');
+    // Highlight active bar
+    groups.forEach(other => {
+      const rect = other.querySelector('.col-bar-rect');
+      if (rect) rect.style.opacity = (other === g) ? '1' : '0.35';
+    });
+    const activeRect = g.querySelector('.col-bar-rect');
+    if (activeRect) {
+      activeRect.style.filter = 'drop-shadow(0 0 10px rgba(0, 224, 102, 0.9)) brightness(1.25)';
     }
 
-    function hide() {
-      tip.classList.remove('show');
-      groups.forEach(other => {
-        const rect = other.querySelector('.col-bar-rect');
-        if (rect) {
-          rect.style.opacity = '1';
-          rect.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.12))';
-        }
-      });
+    // Position tooltip
+    const rect = g.getBoundingClientRect();
+    const containerRect = svg.parentElement.getBoundingClientRect();
+    const leftPos = rect.left - containerRect.left + rect.width / 2;
+    const tipWidth = 230;
+
+    let clampedLeft = leftPos - tipWidth / 2;
+    if (clampedLeft < 8) clampedLeft = 8;
+    if (clampedLeft + tipWidth > containerRect.width - 8) {
+      clampedLeft = containerRect.width - tipWidth - 8;
     }
 
-    g.addEventListener('mouseenter', show);
-    g.addEventListener('mouseleave', hide);
-    g.addEventListener('touchstart', (e) => {
-      show();
+    tip.style.left = clampedLeft + 'px';
+    tip.style.top = '10px';
+    tip.classList.add('show');
+  }
+
+  groups.forEach(g => {
+    g.onclick = (e) => {
       e.stopPropagation();
-    }, { passive: true });
+      showTip(g);
+    };
   });
 
-  document.addEventListener('touchstart', (e) => {
-    if (!svg.contains(e.target)) {
-      tip.classList.remove('show');
-      groups.forEach(other => {
-        const rect = other.querySelector('.col-bar-rect');
-        if (rect) {
-          rect.style.opacity = '1';
-          rect.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.12))';
-        }
-      });
+  document.addEventListener('click', (e) => {
+    if (!svg.contains(e.target) && !tip.contains(e.target)) {
+      hideTip();
     }
-  }, { passive: true });
+  });
 }
 
 // ─── TREND CHART (interactive tooltip) ──────────────────────────────────────

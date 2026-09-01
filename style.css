@@ -978,7 +978,23 @@ tr:hover td { background: var(--green-light); }
 }
 .col-chart-tooltip.show {
   opacity: 1;
+  pointer-events: auto;
   transform: scale(1) translateY(0);
+}
+.tip-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+.tip-close-btn:hover {
+  background: var(--bg-card-subtle);
+  color: var(--text-main);
 }
 .tip-header {
   display: flex;
