@@ -1331,9 +1331,10 @@ function renderTrendChart(rows) {
   `;
 
   // SVG Chart Geometry
+  // SVG Chart Geometry
   const W = Math.max(el.clientWidth || 750, 500);
-  const H = 270;
-  const PAD = { top: 25, right: 24, bottom: 45, left: 55 };
+  const H = 285;
+  const PAD = { top: 38, right: 24, bottom: 45, left: 55 };
   const CW = W - PAD.left - PAD.right, CH = H - PAD.top - PAD.bottom;
 
   // Active series values
@@ -1365,33 +1366,62 @@ function renderTrendChart(rows) {
   const zeroY = yp(0).toFixed(1);
   const zeroLineSvg = minV < 0 ? `<line x1="${PAD.left}" y1="${zeroY}" x2="${PAD.left + CW}" y2="${zeroY}" stroke="var(--red)" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>` : '';
 
-  // Month phase background columns & dividers
-  let lastMonth = '';
-  const monthDividersSvg = recent.map((r, i) => {
+  // Distinct Month Background Bands & Divider Pillars
+  let monthGroups = [];
+  recent.forEach((r, i) => {
     const dateStr = parseDateFromSheets(r.date);
-    const mo = dateStr.slice(0, 7);
-    if (!mo || mo === lastMonth) return '';
-    lastMonth = mo;
-    const [, m] = mo.split('-').map(Number);
-    const x = xp(i).toFixed(1);
+    const mo = (dateStr || '').slice(0, 7);
+    if (!monthGroups.length || monthGroups[monthGroups.length - 1].monthKey !== mo) {
+      const [, m, y] = (mo || '').split('-').map(Number);
+      const thYearShort = y ? String(y + 543).slice(-2) : '';
+      monthGroups.push({
+        monthKey: mo,
+        monthName: `${TH_MONTHS_S[m - 1] || mo} '${thYearShort}`,
+        startIdx: i,
+        endIdx: i
+      });
+    } else {
+      monthGroups[monthGroups.length - 1].endIdx = i;
+    }
+  });
+
+  const monthBandsSvg = monthGroups.map((mg, mi) => {
+    const startX = mg.startIdx === 0 ? PAD.left : xp(mg.startIdx);
+    const endX = mg.endIdx === n - 1 ? PAD.left + CW : xp(mg.endIdx);
+    const bandW = Math.max(endX - startX, 2);
+    const isAlt = (mi % 2 === 1);
+    const bgFill = isAlt ? 'fill="var(--bg-card)" fill-opacity="0.45"' : 'fill="transparent"';
+
+    const dividerLine = (mg.startIdx > 0) ? `
+      <line x1="${startX.toFixed(1)}" y1="${PAD.top}" x2="${startX.toFixed(1)}" y2="${PAD.top + CH}" stroke="var(--green)" stroke-width="2" stroke-dasharray="4,3" opacity="0.9"/>
+    ` : '';
+
+    const midX = (startX + bandW / 2).toFixed(1);
+    const badgeSvg = `
+      <g transform="translate(${midX}, ${(PAD.top - 22).toFixed(1)})" pointer-events="none">
+        <rect x="-40" y="0" width="80" height="20" rx="10" fill="var(--bg-card)" stroke="var(--green)" stroke-width="1.5" filter="drop-shadow(0 2px 5px rgba(0,0,0,0.22))"/>
+        <text x="0" y="13.5" text-anchor="middle" font-size="10" fill="var(--text-main)" font-weight="900">🗓️ ${mg.monthName}</text>
+      </g>
+    `;
+
     return `
-      <line x1="${x}" y1="${PAD.top}" x2="${x}" y2="${PAD.top + CH}" stroke="var(--border-color)" stroke-width="1.2" stroke-dasharray="3,3" opacity="0.8"/>
-      <rect x="${parseFloat(x) + 4}" y="${PAD.top + 2}" width="54" height="18" rx="4" fill="var(--bg-card)" stroke="var(--border-color)" stroke-width="1" opacity="0.9"/>
-      <text x="${parseFloat(x) + 31}" y="${PAD.top + 14}" text-anchor="middle" font-size="9.5" fill="var(--text-main)" font-weight="800">${TH_MONTHS_S[m - 1]}</text>
+      <rect x="${startX.toFixed(1)}" y="${PAD.top}" width="${bandW.toFixed(1)}" height="${CH}" ${bgFill} pointer-events="none"/>
+      ${dividerLine}
+      ${badgeSvg}
     `;
   }).join('');
 
   // Path & Area builders
   function makeSmoothPath(vals, color, dashed = false) {
     const d = vals.map((v, i) => (i === 0 ? 'M' : 'L') + xp(i).toFixed(1) + ',' + yp(v).toFixed(1)).join(' ');
-    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"${dashed ? ' stroke-dasharray="5,4"' : ''} filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))"/>`;
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"${dashed ? ' stroke-dasharray="5,4"' : ''} filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))" pointer-events="none"/>`;
   }
 
   function makeArea(vals, gradId) {
     const base = yp(Math.max(minV, 0));
     const d = vals.map((v, i) => (i === 0 ? 'M' : 'L') + xp(i).toFixed(1) + ',' + yp(v).toFixed(1)).join(' ')
       + ` L${xp(n - 1).toFixed(1)},${base} L${PAD.left},${base} Z`;
-    return `<path d="${d}" fill="url(#${gradId})" opacity="0.18"/>`;
+    return `<path d="${d}" fill="url(#${gradId})" opacity="0.18" pointer-events="none"/>`;
   }
 
   // Trendline
@@ -1399,7 +1429,7 @@ function renderTrendChart(rows) {
   if (trendSeriesVisibility.trendline) {
     const ty0 = yp(intercept).toFixed(1), ty1 = yp(intercept + slope * (n - 1)).toFixed(1);
     const trendColor = isTrendUp ? '#00b14f' : '#ef4444';
-    trendLineSvg = `<line x1="${PAD.left}" y1="${ty0}" x2="${PAD.left + CW}" y2="${ty1}" stroke="${trendColor}" stroke-width="1.8" stroke-dasharray="6,4" opacity="0.8"/>`;
+    trendLineSvg = `<line x1="${PAD.left}" y1="${ty0}" x2="${PAD.left + CW}" y2="${ty1}" stroke="${trendColor}" stroke-width="1.8" stroke-dasharray="6,4" opacity="0.8" pointer-events="none"/>`;
   }
 
   // Active Series Paths
@@ -1420,26 +1450,23 @@ function renderTrendChart(rows) {
     if (i % step !== 0 && i !== n - 1) return '';
     const dateStr = parseDateFromSheets(r.date);
     const [, m, d] = (dateStr || '').split('-').map(Number);
-    return `<text x="${xp(i).toFixed(1)}" y="${H - PAD.bottom + 16}" text-anchor="middle" font-size="9.5" fill="var(--text-muted)" font-weight="600">${d}/${m}</text>`;
+    return `<text x="${xp(i).toFixed(1)}" y="${H - PAD.bottom + 16}" text-anchor="middle" font-size="9.5" fill="var(--text-muted)" font-weight="600" pointer-events="none">${d}/${m}</text>`;
   }).join('');
 
-  // Interactive vertical column zones for easy clicking
+  // Interactive vertical column zones for each day
   const colSlotW = CW / n;
   const verticalZonesSvg = recent.map((r, i) => {
     const x = xp(i);
     const p = profit(r);
     const inc = income(r);
     const oil = r.oil || 0;
-    const oilPct = inc > 0 ? Math.round((oil / inc) * 100) : 0;
-    const rateHr = r.hours > 0 ? Math.round(p / r.hours) : 0;
 
     return `
-      <g class="trend-day-group" data-idx="${i}" data-date="${r.date}" data-profit="${p}" data-income="${inc}" data-grab="${r.grab || 0}" data-tip="${r.tip || 0}" data-oil="${oil}" data-oilpct="${oilPct}" data-hours="${r.hours || 0}" data-rate="${rateHr}" data-note="${encodeURIComponent(r.note || '')}">
-        <rect x="${(x - colSlotW / 2).toFixed(1)}" y="${PAD.top}" width="${colSlotW.toFixed(1)}" height="${CH}" fill="transparent" style="cursor:pointer"/>
-        <line class="trend-guide-line" x1="${x.toFixed(1)}" y1="${PAD.top}" x2="${x.toFixed(1)}" y2="${PAD.top + CH}" stroke="var(--text-muted)" stroke-width="1.2" stroke-dasharray="3,3" opacity="0" pointer-events="none"/>
-        <circle class="trend-dot-inc" cx="${x.toFixed(1)}" cy="${yp(inc).toFixed(1)}" r="4.5" fill="var(--green)" stroke="#ffffff" stroke-width="1.5" opacity="0" pointer-events="none"/>
-        <circle class="trend-dot-prof" cx="${x.toFixed(1)}" cy="${yp(p).toFixed(1)}" r="4.5" fill="#3b82f6" stroke="#ffffff" stroke-width="1.5" opacity="0" pointer-events="none"/>
-        <circle class="trend-dot-oil" cx="${x.toFixed(1)}" cy="${yp(oil).toFixed(1)}" r="4.5" fill="var(--red)" stroke="#ffffff" stroke-width="1.5" opacity="0" pointer-events="none"/>
+      <g class="trend-day-group" data-idx="${i}">
+        <line class="trend-guide-line" x1="${x.toFixed(1)}" y1="${PAD.top}" x2="${x.toFixed(1)}" y2="${PAD.top + CH}" stroke="var(--green)" stroke-width="1.6" stroke-dasharray="3,3" opacity="0" pointer-events="none"/>
+        <circle class="trend-dot-inc" cx="${x.toFixed(1)}" cy="${yp(inc).toFixed(1)}" r="5.5" fill="var(--green)" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 0 6px rgba(0,224,102,0.8))" opacity="0" pointer-events="none"/>
+        <circle class="trend-dot-prof" cx="${x.toFixed(1)}" cy="${yp(p).toFixed(1)}" r="5.5" fill="#3b82f6" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 0 6px rgba(59,130,246,0.8))" opacity="0" pointer-events="none"/>
+        <circle class="trend-dot-oil" cx="${x.toFixed(1)}" cy="${yp(oil).toFixed(1)}" r="5.5" fill="var(--red)" stroke="#ffffff" stroke-width="2" filter="drop-shadow(0 0 6px rgba(239,68,68,0.8))" opacity="0" pointer-events="none"/>
       </g>
     `;
   }).join('');
@@ -1463,11 +1490,11 @@ function renderTrendChart(rows) {
     ${filterPillsHtml}
     <div class="trend-chart-container" style="position:relative;width:100%;overflow-x:auto;">
       <div class="col-chart-tooltip" id="trendChartTip"></div>
-      <svg id="trendSvg" width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;overflow:visible;">
+      <svg id="trendSvg" width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;overflow:visible;cursor:crosshair;">
         ${defsSvg}
+        ${monthBandsSvg}
         ${yAxisSvg}
         ${zeroLineSvg}
-        ${monthDividersSvg}
         ${trendLineSvg}
         ${pathsSvg}
         ${xLabelsSvg}
@@ -1476,10 +1503,10 @@ function renderTrendChart(rows) {
     </div>
   `;
 
-  initTrendChartClick(recent);
+  initTrendChartClick(recent, xp, yp, PAD, CW, CH, W, H);
 }
 
-function initTrendChartClick(recent) {
+function initTrendChartClick(recent, xp, yp, PAD, CW, CH, W, H) {
   const svg = document.getElementById('trendSvg');
   const tip = document.getElementById('trendChartTip');
   if (!svg || !tip) return;
@@ -1487,6 +1514,7 @@ function initTrendChartClick(recent) {
   const groups = svg.querySelectorAll('.trend-day-group');
   const TH_DAY_NAMES = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
   let activeIdx = null;
+  const n = recent.length;
 
   function hideTip() {
     activeIdx = null;
@@ -1503,8 +1531,8 @@ function initTrendChartClick(recent) {
     });
   }
 
-  function showTip(g) {
-    const idx = Number(g.dataset.idx);
+  function selectDayByIdx(idx) {
+    if (idx < 0 || idx >= n) return;
     const r = recent[idx];
     if (!r) return;
 
@@ -1514,15 +1542,15 @@ function initTrendChartClick(recent) {
     }
     activeIdx = idx;
 
-    const p = Number(g.dataset.profit);
-    const inc = Number(g.dataset.income);
-    const grab = Number(g.dataset.grab);
-    const tipVal = Number(g.dataset.tip);
-    const oil = Number(g.dataset.oil);
-    const oilpct = g.dataset.oilpct;
-    const hours = Number(g.dataset.hours);
-    const rate = Number(g.dataset.rate);
-    const note = decodeURIComponent(g.dataset.note || '');
+    const p = profit(r);
+    const inc = income(r);
+    const grab = r.grab || 0;
+    const tipVal = r.tip || 0;
+    const oil = r.oil || 0;
+    const oilpct = inc > 0 ? Math.round((oil / inc) * 100) : 0;
+    const hours = r.hours || 0;
+    const rate = hours > 0 ? Math.round(p / hours) : 0;
+    const note = r.note || '';
 
     const dateStr = parseDateFromSheets(r.date);
     const [y, m, d] = (dateStr || '').split('-').map(Number);
@@ -1574,25 +1602,26 @@ function initTrendChartClick(recent) {
     if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); hideTip(); };
 
     // Highlight vertical guide and series dots
-    groups.forEach(other => {
+    groups.forEach((other, i) => {
       const line = other.querySelector('.trend-guide-line');
       const dotInc = other.querySelector('.trend-dot-inc');
       const dotProf = other.querySelector('.trend-dot-prof');
       const dotOil = other.querySelector('.trend-dot-oil');
-      const isCurrent = (other === g);
+      const isCurrent = (i === idx);
       if (line) line.style.opacity = isCurrent ? '1' : '0';
       if (dotInc) dotInc.style.opacity = isCurrent && trendSeriesVisibility.income ? '1' : '0';
       if (dotProf) dotProf.style.opacity = isCurrent && trendSeriesVisibility.profit ? '1' : '0';
       if (dotOil) dotOil.style.opacity = isCurrent && trendSeriesVisibility.oil ? '1' : '0';
     });
 
-    // Tooltip position
-    const rect = g.getBoundingClientRect();
+    // Tooltip position calculation
+    const svgRect = svg.getBoundingClientRect();
     const containerRect = svg.parentElement.getBoundingClientRect();
-    const leftPos = rect.left - containerRect.left + rect.width / 2;
+    const scaleX = svgRect.width / W;
+    const posXInContainer = (xp(idx) * scaleX) + (svgRect.left - containerRect.left);
     const tipWidth = 240;
 
-    let clampedLeft = leftPos - tipWidth / 2;
+    let clampedLeft = posXInContainer - tipWidth / 2;
     if (clampedLeft < 8) clampedLeft = 8;
     if (clampedLeft + tipWidth > containerRect.width - 8) {
       clampedLeft = containerRect.width - tipWidth - 8;
@@ -1603,11 +1632,27 @@ function initTrendChartClick(recent) {
     tip.classList.add('show');
   }
 
-  groups.forEach(g => {
-    g.onclick = (e) => {
-      e.stopPropagation();
-      showTip(g);
-    };
+  // Click / Touch anywhere on the SVG to snap to the closest day effortlessly
+  function handleSvgClick(e) {
+    const svgRect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
+    const clickX = (clientX - svgRect.left) * (W / svgRect.width);
+
+    let closestIdx = 0;
+    let minDiff = Infinity;
+    for (let i = 0; i < n; i++) {
+      const diff = Math.abs(xp(i) - clickX);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = i;
+      }
+    }
+    selectDayByIdx(closestIdx);
+  }
+
+  svg.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleSvgClick(e);
   });
 
   document.addEventListener('click', (e) => {
