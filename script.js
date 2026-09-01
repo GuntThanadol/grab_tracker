@@ -1239,78 +1239,45 @@ function initColChartTooltip(recent) {
 }
 
 // ─── TREND CHART (interactive tooltip) ──────────────────────────────────────
+// ─── TREND CHART (3 MONTHS DETAILED INTERACTIVE MULTI-SERIES CHART) ─────────
+let trendSeriesVisibility = {
+  income: true,
+  profit: true,
+  oil: true,
+  trendline: true
+};
+
+function toggleTrendSeries(seriesKey) {
+  trendSeriesVisibility[seriesKey] = !trendSeriesVisibility[seriesKey];
+  renderTrendChart(getRows());
+}
+
 function renderTrendChart(rows) {
   const el = document.getElementById('trendChart');
   if (!el) return;
+
   const now = new Date();
   const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
   const recent = rows.filter(r => r.date >= cutoffStr && isWorkDay(r));
 
   if (recent.length < 2) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📉</div><p>ต้องการข้อมูลอย่างน้อย 2 วัน</p></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📉</div><p>ต้องการข้อมูลอย่างน้อย 2 วันสำหรับดูกราฟ Trend</p></div>';
     return;
   }
 
-  const W = Math.max(el.clientWidth || 700, 400);
-  const H = 250;
-  const PAD = { top: 20, right: 16, bottom: 44, left: 62 };
-  const CW = W - PAD.left - PAD.right, CH = H - PAD.top - PAD.bottom;
-  const n = recent.length;
+  // 3-Month Summary Calculations
   const incomes = recent.map(r => income(r));
   const profits = recent.map(r => profit(r));
   const oils    = recent.map(r => r.oil || 0);
-  const allVals = [...incomes, ...profits, ...oils];
-  const minV = Math.min(...allVals, 0), maxV = Math.max(...allVals, 1);
-  const range = maxV - minV || 1;
 
-  function xp(i) { return PAD.left + (i / (n - 1)) * CW; }
-  function yp(v) { return PAD.top + CH - ((v - minV) / range) * CH; }
+  const totalInc = incomes.reduce((a, b) => a + b, 0);
+  const totalProf = profits.reduce((a, b) => a + b, 0);
+  const totalOil = oils.reduce((a, b) => a + b, 0);
+  const oilPct = totalInc > 0 ? ((totalOil / totalInc) * 100).toFixed(1) : 0;
 
-  function makePath(vals, color, dashed = false) {
-    const d = vals.map((v, i) => (i === 0 ? 'M' : 'L') + xp(i).toFixed(1) + ',' + yp(v).toFixed(1)).join(' ');
-    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"${dashed ? ' stroke-dasharray="5,4"' : ''} opacity="0.9"/>`;
-  }
-  function makeArea(vals, color) {
-    const base = yp(Math.max(minV, 0));
-    const d = vals.map((v, i) => (i === 0 ? 'M' : 'L') + xp(i).toFixed(1) + ',' + yp(v).toFixed(1)).join(' ')
-      + `L${xp(n - 1).toFixed(1)},${base} L${PAD.left},${base} Z`;
-    return `<path d="${d}" fill="${color}" opacity="0.06"/>`;
-  }
-  function makeDots(vals, color) {
-    return vals.map((v, i) => `<circle class="chart-dot" cx="${xp(i).toFixed(1)}" cy="${yp(v).toFixed(1)}" r="4" fill="${color}" stroke="white" stroke-width="1.5" style="cursor:pointer" data-date="${recent[i].date}" data-val="${v.toFixed(0)}" data-color="${color}">
-      <title>${fmtDate(recent[i].date)}: ${fmt(v)} บาท</title>
-    </circle>`).join('');
-  }
-
-  const zeroY = yp(0).toFixed(1);
-  const zeroLine = minV < 0 ? `<line x1="${PAD.left}" y1="${zeroY}" x2="${PAD.left + CW}" y2="${zeroY}" stroke="#fca5a5" stroke-width="1" stroke-dasharray="4,3"/>` : '';
-  const tickCount = 5;
-  const ticks = Array.from({ length: tickCount + 1 }, (_, i) => minV + (range / tickCount) * i);
-  const yAxis = ticks.map(v => {
-    const y = yp(v).toFixed(1);
-    return `<line x1="${PAD.left - 4}" y1="${y}" x2="${PAD.left + CW}" y2="${y}" stroke="#f3f4f6" stroke-width="1"/>
-    <text x="${PAD.left - 8}" y="${parseFloat(y) + 4}" text-anchor="end" font-size="10" fill="#9ca3af">${Math.round(v)}</text>`;
-  }).join('');
-
-  const step = Math.max(1, Math.floor(n / 10));
-  const xLabels = recent.map((r, i) => {
-    if (i % step !== 0 && i !== n - 1) return '';
-    const [, m, d] = r.date.split('-').map(Number);
-    return `<text x="${xp(i).toFixed(1)}" y="${H - PAD.bottom + 16}" text-anchor="middle" font-size="10" fill="#9ca3af">${d}/${m}</text>`;
-  }).join('');
-
-  let lastMonth = '';
-  const monthLabels = recent.map((r, i) => {
-    const mo = r.date.slice(0, 7);
-    if (mo === lastMonth) return '';
-    lastMonth = mo;
-    const [, m] = mo.split('-').map(Number);
-    return `<line x1="${xp(i).toFixed(1)}" y1="${PAD.top}" x2="${xp(i).toFixed(1)}" y2="${PAD.top + CH}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="2,3"/>
-    <text x="${parseFloat(xp(i).toFixed(1)) + 4}" y="${PAD.top + 13}" font-size="10" fill="#6b7280" font-weight="600">${TH_MONTHS_S[m - 1]}</text>`;
-  }).join('');
-
-  // Trend line
+  // Linear Regression Trend calculation
+  const n = recent.length;
   const xs = profits.map((_, i) => i);
   const meanX = xs.reduce((a, b) => a + b, 0) / n;
   const meanY = profits.reduce((a, b) => a + b, 0) / n;
@@ -1318,52 +1285,335 @@ function renderTrendChart(rows) {
   const den = xs.reduce((s, x) => s + (x - meanX) ** 2, 0);
   const slope = den ? num / den : 0;
   const intercept = meanY - slope * meanX;
-  const trendColor = slope >= 0 ? 'var(--green)' : 'var(--red)';
-  const ty0 = yp(intercept).toFixed(1), ty1 = yp(intercept + slope * (n - 1)).toFixed(1);
-  const trendLine = `<line x1="${PAD.left}" y1="${ty0}" x2="${PAD.left + CW}" y2="${ty1}" stroke="${trendColor}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5"/>`;
   const trendPct = meanY ? ((slope * (n - 1)) / Math.abs(meanY) * 100).toFixed(1) : 0;
-  const trendLabel = slope >= 0 ? `<tspan fill="var(--green)">▲ +${trendPct}%</tspan>` : `<tspan fill="var(--red)">▼ ${trendPct}%</tspan>`;
+  const isTrendUp = slope >= 0;
 
-  const crosshair = `<line id="tc-cross" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top + CH}" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,3" opacity="0" pointer-events="none"/>`;
+  // Header Summary Stats Grid
+  const statsHtml = `
+    <div class="chart-summary-grid">
+      <div class="chart-stat-chip">
+        <div class="stat-chip-label">💰 รายได้รวม 3 เดือน</div>
+        <div class="stat-chip-val text-green">${fmt(totalInc)} ฿</div>
+      </div>
+      <div class="chart-stat-chip">
+        <div class="stat-chip-label">💵 กำไรสุทธิรวม</div>
+        <div class="stat-chip-val text-blue">${fmt(totalProf)} ฿</div>
+      </div>
+      <div class="chart-stat-chip">
+        <div class="stat-chip-label">⛽ ค่าน้ำมันรวม</div>
+        <div class="stat-chip-val text-red">${fmt(totalOil)} ฿ <small style="font-size:0.7rem;color:var(--text-muted)">(${oilPct}%)</small></div>
+      </div>
+      <div class="chart-stat-chip">
+        <div class="stat-chip-label">📈 อัตราเติบโต (Trend)</div>
+        <div class="stat-chip-val ${isTrendUp ? 'text-green' : 'text-red'}">
+          ${isTrendUp ? '▲ +' : '▼ '}${trendPct}%
+        </div>
+      </div>
+    </div>
+  `;
 
-  el.innerHTML = `<div style="position:relative">
-    <div class="chart-tooltip" id="chartTip"></div>
-    <svg id="trendSvg" width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;overflow:visible;cursor:crosshair">
-      ${yAxis}${zeroLine}${monthLabels}
-      ${makeArea(incomes, '#00b14f')}${makeArea(profits, '#3b82f6')}
-      ${trendLine}
-      ${makePath(incomes, '#00b14f')}${makePath(profits, '#3b82f6')}${makePath(oils, '#e53e3e', true)}
-      ${crosshair}
-      ${makeDots(incomes, '#00b14f')}${makeDots(profits, '#3b82f6')}
-      ${xLabels}
-      <text x="${PAD.left}" y="${H - 2}" font-size="11" fill="#6b7280">Trend ${trendLabel} (กำไรสุทธิ 3 เดือน)</text>
-      <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + CH}" stroke="#e5e7eb" stroke-width="1"/>
-      <line x1="${PAD.left}" y1="${PAD.top + CH}" x2="${PAD.left + CW}" y2="${PAD.top + CH}" stroke="#e5e7eb" stroke-width="1"/>
-    </svg>
-  </div>`;
+  // Series Filter Toggle Pills
+  const filterPillsHtml = `
+    <div class="trend-filter-bar">
+      <button type="button" class="trend-pill ${trendSeriesVisibility.income ? 'active income' : ''}" onclick="toggleTrendSeries('income')">
+        <span class="pill-dot green"></span> รายได้รวม
+      </button>
+      <button type="button" class="trend-pill ${trendSeriesVisibility.profit ? 'active profit' : ''}" onclick="toggleTrendSeries('profit')">
+        <span class="pill-dot blue"></span> กำไรสุทธิ
+      </button>
+      <button type="button" class="trend-pill ${trendSeriesVisibility.oil ? 'active oil' : ''}" onclick="toggleTrendSeries('oil')">
+        <span class="pill-dot red"></span> ค่าน้ำมัน
+      </button>
+      <button type="button" class="trend-pill ${trendSeriesVisibility.trendline ? 'active trendline' : ''}" onclick="toggleTrendSeries('trendline')">
+        <span class="pill-dot gold"></span> เส้นแนวโน้ม
+      </button>
+    </div>
+  `;
 
-  // Tooltip on dots
-  el.querySelectorAll('.chart-dot').forEach(dot => {
-    dot.addEventListener('mouseenter', () => {
-      const tip = document.getElementById('chartTip');
-      const svg = document.getElementById('trendSvg');
-      if (!tip || !svg) return;
-      const svgRect = svg.getBoundingClientRect();
-      const dotRect = dot.getBoundingClientRect();
-      const x = dotRect.left - svgRect.left + dotRect.width / 2;
-      const y = dotRect.top  - svgRect.top  - 38;
-      const [, m, d] = dot.dataset.date.split('-').map(Number);
-      tip.innerHTML = `<span style="color:${dot.dataset.color}">●</span> ${d} ${TH_MONTHS_S[m - 1]}: <strong>${Number(dot.dataset.val).toLocaleString('th-TH', { minimumFractionDigits: 0 })} ฿</strong>`;
-      tip.style.left = (x - tip.offsetWidth / 2) + 'px';
-      tip.style.top  = y + 'px';
-      tip.classList.add('show');
-      dot.setAttribute('r', '6');
+  // SVG Chart Geometry
+  const W = Math.max(el.clientWidth || 750, 500);
+  const H = 270;
+  const PAD = { top: 25, right: 24, bottom: 45, left: 55 };
+  const CW = W - PAD.left - PAD.right, CH = H - PAD.top - PAD.bottom;
+
+  // Active series values
+  let activeVals = [];
+  if (trendSeriesVisibility.income) activeVals.push(...incomes);
+  if (trendSeriesVisibility.profit) activeVals.push(...profits);
+  if (trendSeriesVisibility.oil) activeVals.push(...oils);
+  if (!activeVals.length) activeVals = [0, 100];
+
+  const minV = Math.min(...activeVals, 0);
+  const maxV = Math.max(...activeVals, 1);
+  const range = (maxV - minV) || 1;
+
+  function xp(i) { return PAD.left + (i / (n - 1)) * CW; }
+  function yp(v) { return PAD.top + CH - ((v - minV) / range) * CH; }
+
+  // Y-axis grid lines
+  const tickCount = 4;
+  const ticks = Array.from({ length: tickCount + 1 }, (_, i) => minV + (range / tickCount) * i);
+  const yAxisSvg = ticks.map(v => {
+    const y = yp(v).toFixed(1);
+    return `
+      <line x1="${PAD.left}" y1="${y}" x2="${PAD.left + CW}" y2="${y}" stroke="var(--border-color)" stroke-width="1" stroke-dasharray="2,2" opacity="0.6"/>
+      <text x="${PAD.left - 8}" y="${parseFloat(y) + 3.5}" text-anchor="end" font-size="10" fill="var(--text-muted)" font-weight="600">${Math.round(v)}</text>
+    `;
+  }).join('');
+
+  // Zero line if negative
+  const zeroY = yp(0).toFixed(1);
+  const zeroLineSvg = minV < 0 ? `<line x1="${PAD.left}" y1="${zeroY}" x2="${PAD.left + CW}" y2="${zeroY}" stroke="var(--red)" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>` : '';
+
+  // Month phase background columns & dividers
+  let lastMonth = '';
+  const monthDividersSvg = recent.map((r, i) => {
+    const dateStr = parseDateFromSheets(r.date);
+    const mo = dateStr.slice(0, 7);
+    if (!mo || mo === lastMonth) return '';
+    lastMonth = mo;
+    const [, m] = mo.split('-').map(Number);
+    const x = xp(i).toFixed(1);
+    return `
+      <line x1="${x}" y1="${PAD.top}" x2="${x}" y2="${PAD.top + CH}" stroke="var(--border-color)" stroke-width="1.2" stroke-dasharray="3,3" opacity="0.8"/>
+      <rect x="${parseFloat(x) + 4}" y="${PAD.top + 2}" width="54" height="18" rx="4" fill="var(--bg-card)" stroke="var(--border-color)" stroke-width="1" opacity="0.9"/>
+      <text x="${parseFloat(x) + 31}" y="${PAD.top + 14}" text-anchor="middle" font-size="9.5" fill="var(--text-main)" font-weight="800">${TH_MONTHS_S[m - 1]}</text>
+    `;
+  }).join('');
+
+  // Path & Area builders
+  function makeSmoothPath(vals, color, dashed = false) {
+    const d = vals.map((v, i) => (i === 0 ? 'M' : 'L') + xp(i).toFixed(1) + ',' + yp(v).toFixed(1)).join(' ');
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"${dashed ? ' stroke-dasharray="5,4"' : ''} filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))"/>`;
+  }
+
+  function makeArea(vals, gradId) {
+    const base = yp(Math.max(minV, 0));
+    const d = vals.map((v, i) => (i === 0 ? 'M' : 'L') + xp(i).toFixed(1) + ',' + yp(v).toFixed(1)).join(' ')
+      + ` L${xp(n - 1).toFixed(1)},${base} L${PAD.left},${base} Z`;
+    return `<path d="${d}" fill="url(#${gradId})" opacity="0.18"/>`;
+  }
+
+  // Trendline
+  let trendLineSvg = '';
+  if (trendSeriesVisibility.trendline) {
+    const ty0 = yp(intercept).toFixed(1), ty1 = yp(intercept + slope * (n - 1)).toFixed(1);
+    const trendColor = isTrendUp ? '#00b14f' : '#ef4444';
+    trendLineSvg = `<line x1="${PAD.left}" y1="${ty0}" x2="${PAD.left + CW}" y2="${ty1}" stroke="${trendColor}" stroke-width="1.8" stroke-dasharray="6,4" opacity="0.8"/>`;
+  }
+
+  // Active Series Paths
+  let pathsSvg = '';
+  if (trendSeriesVisibility.income) {
+    pathsSvg += makeArea(incomes, 'trendIncArea') + makeSmoothPath(incomes, 'var(--green)');
+  }
+  if (trendSeriesVisibility.profit) {
+    pathsSvg += makeArea(profits, 'trendProfArea') + makeSmoothPath(profits, '#3b82f6');
+  }
+  if (trendSeriesVisibility.oil) {
+    pathsSvg += makeSmoothPath(oils, 'var(--red)', true);
+  }
+
+  // X-Axis date labels
+  const step = Math.max(1, Math.floor(n / 10));
+  const xLabelsSvg = recent.map((r, i) => {
+    if (i % step !== 0 && i !== n - 1) return '';
+    const dateStr = parseDateFromSheets(r.date);
+    const [, m, d] = (dateStr || '').split('-').map(Number);
+    return `<text x="${xp(i).toFixed(1)}" y="${H - PAD.bottom + 16}" text-anchor="middle" font-size="9.5" fill="var(--text-muted)" font-weight="600">${d}/${m}</text>`;
+  }).join('');
+
+  // Interactive vertical column zones for easy clicking
+  const colSlotW = CW / n;
+  const verticalZonesSvg = recent.map((r, i) => {
+    const x = xp(i);
+    const p = profit(r);
+    const inc = income(r);
+    const oil = r.oil || 0;
+    const oilPct = inc > 0 ? Math.round((oil / inc) * 100) : 0;
+    const rateHr = r.hours > 0 ? Math.round(p / r.hours) : 0;
+
+    return `
+      <g class="trend-day-group" data-idx="${i}" data-date="${r.date}" data-profit="${p}" data-income="${inc}" data-grab="${r.grab || 0}" data-tip="${r.tip || 0}" data-oil="${oil}" data-oilpct="${oilPct}" data-hours="${r.hours || 0}" data-rate="${rateHr}" data-note="${encodeURIComponent(r.note || '')}">
+        <rect x="${(x - colSlotW / 2).toFixed(1)}" y="${PAD.top}" width="${colSlotW.toFixed(1)}" height="${CH}" fill="transparent" style="cursor:pointer"/>
+        <line class="trend-guide-line" x1="${x.toFixed(1)}" y1="${PAD.top}" x2="${x.toFixed(1)}" y2="${PAD.top + CH}" stroke="var(--text-muted)" stroke-width="1.2" stroke-dasharray="3,3" opacity="0" pointer-events="none"/>
+        <circle class="trend-dot-inc" cx="${x.toFixed(1)}" cy="${yp(inc).toFixed(1)}" r="4.5" fill="var(--green)" stroke="#ffffff" stroke-width="1.5" opacity="0" pointer-events="none"/>
+        <circle class="trend-dot-prof" cx="${x.toFixed(1)}" cy="${yp(p).toFixed(1)}" r="4.5" fill="#3b82f6" stroke="#ffffff" stroke-width="1.5" opacity="0" pointer-events="none"/>
+        <circle class="trend-dot-oil" cx="${x.toFixed(1)}" cy="${yp(oil).toFixed(1)}" r="4.5" fill="var(--red)" stroke="#ffffff" stroke-width="1.5" opacity="0" pointer-events="none"/>
+      </g>
+    `;
+  }).join('');
+
+  // SVG Definitions with Gradients
+  const defsSvg = `
+    <defs>
+      <linearGradient id="trendIncArea" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#00e066" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#00b14f" stop-opacity="0.0"/>
+      </linearGradient>
+      <linearGradient id="trendProfArea" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
+      </linearGradient>
+    </defs>
+  `;
+
+  el.innerHTML = `
+    ${statsHtml}
+    ${filterPillsHtml}
+    <div class="trend-chart-container" style="position:relative;width:100%;overflow-x:auto;">
+      <div class="col-chart-tooltip" id="trendChartTip"></div>
+      <svg id="trendSvg" width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;overflow:visible;">
+        ${defsSvg}
+        ${yAxisSvg}
+        ${zeroLineSvg}
+        ${monthDividersSvg}
+        ${trendLineSvg}
+        ${pathsSvg}
+        ${xLabelsSvg}
+        ${verticalZonesSvg}
+      </svg>
+    </div>
+  `;
+
+  initTrendChartClick(recent);
+}
+
+function initTrendChartClick(recent) {
+  const svg = document.getElementById('trendSvg');
+  const tip = document.getElementById('trendChartTip');
+  if (!svg || !tip) return;
+
+  const groups = svg.querySelectorAll('.trend-day-group');
+  const TH_DAY_NAMES = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+  let activeIdx = null;
+
+  function hideTip() {
+    activeIdx = null;
+    tip.classList.remove('show');
+    groups.forEach(other => {
+      const line = other.querySelector('.trend-guide-line');
+      const dotInc = other.querySelector('.trend-dot-inc');
+      const dotProf = other.querySelector('.trend-dot-prof');
+      const dotOil = other.querySelector('.trend-dot-oil');
+      if (line) line.style.opacity = '0';
+      if (dotInc) dotInc.style.opacity = '0';
+      if (dotProf) dotProf.style.opacity = '0';
+      if (dotOil) dotOil.style.opacity = '0';
     });
-    dot.addEventListener('mouseleave', () => {
-      const tip = document.getElementById('chartTip');
-      if (tip) tip.classList.remove('show');
-      dot.setAttribute('r', '4');
+  }
+
+  function showTip(g) {
+    const idx = Number(g.dataset.idx);
+    const r = recent[idx];
+    if (!r) return;
+
+    if (activeIdx === idx && tip.classList.contains('show')) {
+      hideTip();
+      return;
+    }
+    activeIdx = idx;
+
+    const p = Number(g.dataset.profit);
+    const inc = Number(g.dataset.income);
+    const grab = Number(g.dataset.grab);
+    const tipVal = Number(g.dataset.tip);
+    const oil = Number(g.dataset.oil);
+    const oilpct = g.dataset.oilpct;
+    const hours = Number(g.dataset.hours);
+    const rate = Number(g.dataset.rate);
+    const note = decodeURIComponent(g.dataset.note || '');
+
+    const dateStr = parseDateFromSheets(r.date);
+    const [y, m, d] = (dateStr || '').split('-').map(Number);
+    const dateObj = (y && m && d) ? new Date(y, m - 1, d) : null;
+    const dayFull = dateObj ? `${TH_DAY_NAMES[dateObj.getDay()]}ที่ ${d} ${TH_MONTHS_S[m - 1]} ${y + 543}` : fmtDate(r.date);
+
+    const isPos = p >= 0;
+    const profitColor = isPos ? 'var(--green)' : 'var(--red)';
+
+    tip.innerHTML = `
+      <div class="tip-header">
+        <span class="tip-date">📅 ${dayFull}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="tip-badge" style="background:${isPos ? 'var(--green-light)' : 'var(--red-light)'};color:${profitColor}">
+            ${isPos ? 'กำไร' : 'ขาดทุน'}
+          </span>
+          <button type="button" class="tip-close-btn" title="ปิด">✕</button>
+        </div>
+      </div>
+      <div class="tip-body">
+        <div class="tip-grid">
+          <div class="tip-item">
+            <span class="tip-k">🟢 รายได้รวม</span>
+            <strong class="tip-v text-green">${fmt(inc)} ฿</strong>
+          </div>
+          <div class="tip-item">
+            <span class="tip-k">🔵 กำไรสุทธิ</span>
+            <strong class="tip-v text-blue">${isPos ? '+' : ''}${fmt(p)} ฿</strong>
+          </div>
+          <div class="tip-item">
+            <span class="tip-k">🔴 ค่าน้ำมัน</span>
+            <strong class="tip-v text-red">${fmt(oil)} ฿ <small style="font-weight:normal;color:var(--text-subtle)">(${oilpct}%)</small></strong>
+          </div>
+          <div class="tip-item">
+            <span class="tip-k">⏱️ วิ่งงาน / เรท</span>
+            <strong class="tip-v">${fmtHours(hours)} <small style="color:var(--text-muted)">(${fmt(rate)}฿/ชม.)</small></strong>
+          </div>
+        </div>
+        ${(grab > 0 || tipVal > 0) ? `
+          <div class="tip-sub-breakdown" style="margin-top:6px">
+            <span>(Grab: ${fmt(grab)} ฿ ${tipVal > 0 ? `+ ทิป: ${fmt(tipVal)} ฿` : ''})</span>
+          </div>
+        ` : ''}
+        ${note ? `<div class="tip-note">📝 ${note.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+      </div>
+    `;
+
+    const closeBtn = tip.querySelector('.tip-close-btn');
+    if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); hideTip(); };
+
+    // Highlight vertical guide and series dots
+    groups.forEach(other => {
+      const line = other.querySelector('.trend-guide-line');
+      const dotInc = other.querySelector('.trend-dot-inc');
+      const dotProf = other.querySelector('.trend-dot-prof');
+      const dotOil = other.querySelector('.trend-dot-oil');
+      const isCurrent = (other === g);
+      if (line) line.style.opacity = isCurrent ? '1' : '0';
+      if (dotInc) dotInc.style.opacity = isCurrent && trendSeriesVisibility.income ? '1' : '0';
+      if (dotProf) dotProf.style.opacity = isCurrent && trendSeriesVisibility.profit ? '1' : '0';
+      if (dotOil) dotOil.style.opacity = isCurrent && trendSeriesVisibility.oil ? '1' : '0';
     });
+
+    // Tooltip position
+    const rect = g.getBoundingClientRect();
+    const containerRect = svg.parentElement.getBoundingClientRect();
+    const leftPos = rect.left - containerRect.left + rect.width / 2;
+    const tipWidth = 240;
+
+    let clampedLeft = leftPos - tipWidth / 2;
+    if (clampedLeft < 8) clampedLeft = 8;
+    if (clampedLeft + tipWidth > containerRect.width - 8) {
+      clampedLeft = containerRect.width - tipWidth - 8;
+    }
+
+    tip.style.left = clampedLeft + 'px';
+    tip.style.top = '10px';
+    tip.classList.add('show');
+  }
+
+  groups.forEach(g => {
+    g.onclick = (e) => {
+      e.stopPropagation();
+      showTip(g);
+    };
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!svg.contains(e.target) && !tip.contains(e.target)) {
+      hideTip();
+    }
   });
 }
 

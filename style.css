@@ -1065,6 +1065,68 @@ tr:hover td { background: var(--green-light); }
   border-left: 2px solid var(--green);
 }
 
+/* ── TREND CHART & FILTER PILLS ── */
+.trend-filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.trend-pill {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  user-select: none;
+}
+.trend-pill:hover {
+  background: var(--bg-input);
+  transform: translateY(-1px);
+  border-color: var(--text-muted);
+}
+.trend-pill.active {
+  color: var(--text-main);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+.trend-pill.active.income { border-color: var(--green); }
+.trend-pill.active.profit { border-color: #3b82f6; }
+.trend-pill.active.oil { border-color: var(--red); }
+.trend-pill.active.trendline { border-color: #f59e0b; }
+
+.pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+.trend-pill.active .pill-dot { opacity: 1; }
+.pill-dot.green { background: var(--green); }
+.pill-dot.blue { background: #3b82f6; }
+.pill-dot.red { background: var(--red); }
+.pill-dot.gold { background: #f59e0b; }
+
+.trend-chart-container {
+  position: relative;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 10px 6px 4px;
+}
+.text-blue { color: #3b82f6 !important; }
+
 /* ── THAI DATE PICKER ── */
 .tdp-wrap { position: relative; }
 .tdp-input {
