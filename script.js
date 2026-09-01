@@ -1033,13 +1033,11 @@ function renderBarChart(rows) {
     const dayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
     const dayName = dateObj ? dayNames[dateObj.getDay()] : '';
 
-    // X-Axis labels (smart spacing for readability)
-    const step = n > 22 ? 2 : 1;
-    const showLabel = (i % step === 0) || i === n - 1;
-    const xLabelSvg = showLabel ? `
-      <text x="${xCenter.toFixed(1)}" y="${H - PAD.bottom + 14}" text-anchor="middle" font-size="9.5" fill="var(--text-muted)" font-weight="600">${d}</text>
-      <text x="${xCenter.toFixed(1)}" y="${H - PAD.bottom + 26}" text-anchor="middle" font-size="8" fill="var(--text-subtle)">${dayName}</text>
-    ` : '';
+    // X-Axis labels for every single bar
+    const xLabelSvg = `
+      <text x="${xCenter.toFixed(1)}" y="${H - PAD.bottom + 14}" text-anchor="middle" font-size="9" fill="var(--text-muted)" font-weight="600">${d}</text>
+      <text x="${xCenter.toFixed(1)}" y="${H - PAD.bottom + 25}" text-anchor="middle" font-size="7.5" fill="var(--text-subtle)">${dayName}</text>
+    `;
 
     // Peak Star Badge
     const peakStarSvg = isPeak ? `
@@ -1180,7 +1178,7 @@ function initColChartTooltip(recent) {
           </div>
           <div class="tip-item">
             <span class="tip-k">⏱️ วิ่งงาน</span>
-            <strong class="tip-v">${fmtHours(hours)} ชม.</strong>
+            <strong class="tip-v">${fmtHours(hours)}</strong>
           </div>
           <div class="tip-item">
             <span class="tip-k">⚡ เฉลี่ย/ชม.</span>
