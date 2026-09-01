@@ -1370,12 +1370,12 @@ function renderTrendChart(rows) {
   let monthGroups = [];
   recent.forEach((r, i) => {
     const dateStr = parseDateFromSheets(r.date);
+    const mo = (dateStr || '').slice(0, 7);
     if (!monthGroups.length || monthGroups[monthGroups.length - 1].monthKey !== mo) {
-      const [y, m] = (mo || '').split('-').map(Number);
-      const thYearShort = y ? ` ${String(y + 543).slice(-2)}` : '';
+      const [, m] = (mo || '').split('-').map(Number);
       monthGroups.push({
         monthKey: mo,
-        monthName: `${TH_MONTHS_S[m - 1] || mo}${thYearShort}`,
+        monthName: TH_MONTHS_S[m - 1] || mo,
         startIdx: i,
         endIdx: i
       });
