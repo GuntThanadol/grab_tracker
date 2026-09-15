@@ -587,19 +587,28 @@ async function syncFromSheets() {
   const res = await apiCall('getAll');
   const rows = res && (res.rows || res.data);
   if (res && (res.ok || res.status === 'ok') && Array.isArray(rows)) {
-    const cleanData = rows.map(r => ({
-      ...r,
-      date: parseDateFromSheets(r.date),
-      grab: parseFloat(r.grab) || 0,
-      tip: parseFloat(r.tip) || 0,
-      oil: parseFloat(r.oil) || 0,
-      oilReal: parseFloat(r.oilReal) || 0,
-      distance: (r.distance !== undefined && r.distance !== null && r.distance !== '') ? parseFloat(r.distance) : null,
-      credit: parseFloat(r.credit) || 0,
-      withdraw: parseFloat(r.withdraw) || 0,
-      hours: (r.hours !== undefined && r.hours !== null && r.hours !== '') ? parseFloat(r.hours) : null,
-      note: r.note ? String(r.note).trim() : ''
-    }));
+    const cleanData = rows.map(r => {
+      const oilVal = parseFloat(r.oil) || 0;
+      let dist = (r.distance !== undefined && r.distance !== null && r.distance !== '' && !isNaN(Number(r.distance)) && Number(r.distance) > 0)
+        ? parseFloat(Number(r.distance).toFixed(1))
+        : null;
+      if (dist === null && oilVal > 0) {
+        dist = getRowDistance({ ...r, oil: oilVal });
+      }
+      return {
+        ...r,
+        date: parseDateFromSheets(r.date),
+        grab: parseFloat(r.grab) || 0,
+        tip: parseFloat(r.tip) || 0,
+        oil: oilVal,
+        oilReal: parseFloat(r.oilReal) || 0,
+        distance: dist,
+        credit: parseFloat(r.credit) || 0,
+        withdraw: parseFloat(r.withdraw) || 0,
+        hours: (r.hours !== undefined && r.hours !== null && r.hours !== '') ? parseFloat(r.hours) : null,
+        note: r.note ? String(r.note).trim() : ''
+      };
+    });
     saveLocal(cleanData);
     setSyncStatus('online');
     isSyncing = false;
@@ -788,6 +797,22 @@ function getCurrentFuelPrice() {
   return Number(cfg.lastFetchedPrice) || 39.09;
 }
 
+function getRowDistance(r) {
+  if (!r) return null;
+  if (r.distance !== undefined && r.distance !== null && r.distance !== '' && !isNaN(Number(r.distance)) && Number(r.distance) > 0) {
+    return parseFloat(Number(r.distance).toFixed(1));
+  }
+  const oilVal = parseFloat(r.oil) || 0;
+  if (oilVal > 0) {
+    const cfg = getFuelConfig();
+    const rate = cfg.rateKmPerL || 71.4;
+    const price = getCurrentFuelPrice() || 39.09;
+    return parseFloat(((oilVal / price) * rate).toFixed(1));
+  }
+  return null;
+}
+
+
 let isFetchingFuel = false;
 async function fetchLiveOilPrices(force = false) {
   if (isFetchingFuel) return;
@@ -857,7 +882,7 @@ function updateFuelUI() {
   handleRealOilInput('f-oilReal', 'f-oilReal-calc');
 }
 
-function handleDistanceInput(distId, oilId, tagId) {
+function handleDistanceInput(distId, oilId, tagId, updateOilInput = true) {
   const distEl = document.getElementById(distId);
   const oilEl = document.getElementById(oilId);
   const tagEl = document.getElementById(tagId);
@@ -875,8 +900,10 @@ function handleDistanceInput(distId, oilId, tagId) {
   const liters = km / rate;
   const estCost = liters * price;
 
-  oilEl.value = estCost.toFixed(2);
-  if (distId === 'f-distance') updatePreview();
+  if (updateOilInput) {
+    oilEl.value = estCost.toFixed(2);
+    if (distId === 'f-distance') updatePreview();
+  }
 
   tagEl.style.display = '';
   tagEl.innerHTML = `💡 วิ่ง <strong>${km.toFixed(1)} กม.</strong> = ใช้น้ำมัน <strong>${liters.toFixed(2)} ลิตร</strong> (ประมาณ <strong>${estCost.toFixed(2)} บาท</strong> @ ${price.toFixed(2)} บ./ลิตร)`;
@@ -1062,7 +1089,7 @@ function renderDashboard() {
   const totalProfit  = rows.reduce((s, r) => s + profit(r), 0);
   const avgProfit    = workRows.length ? totalProfit / workRows.length : 0;
   const avgIncome    = workRows.length ? totalIncome / workRows.length : 0;
-  const totalDistance= rows.reduce((s, r) => s + (r.distance || 0), 0);
+  const totalDistance= rows.reduce((s, r) => s + (getRowDistance(r) || 0), 0);
   const costPerKm    = totalDistance > 0 ? (totalOil / totalDistance) : 0;
   const revPerKm     = totalDistance > 0 ? (totalIncome / totalDistance) : 0;
 
@@ -2086,8 +2113,9 @@ function renderHistory() {
         <button class="btn btn-outline btn-sm" onclick="addRipple(event);requireAuth(()=>openEdit('${r.id}'))" title="แก้ไข">✏️</button>
         <button class="btn btn-red btn-sm" onclick="addRipple(event);requireAuth(()=>deleteRow('${r.id}'))" title="ลบ">🗑️</button>
       </td>`;
-    const distCell = (r.distance !== undefined && r.distance !== null && r.distance > 0)
-      ? `${parseFloat(r.distance).toFixed(1)} <span class="td-gray">กม.</span>`
+    const effDist = getRowDistance(r);
+    const distCell = (effDist !== undefined && effDist !== null && effDist > 0)
+      ? `${parseFloat(effDist).toFixed(1)} <span class="td-gray">กม.</span>`
       : '<span class="td-gray">—</span>';
     return `<tr class="row-anim" style="animation-delay:${Math.min(i * 0.015, 0.3)}s; ${isW ? '' : 'opacity:0.75'}">
       <td class="td-date">${fmtDate(r.date)}</td>
@@ -2324,14 +2352,15 @@ function openEdit(id) {
   tdpSetValue('e-date', r.date);
   document.getElementById('e-grab').value     = r.grab || '';
   document.getElementById('e-tip').value      = r.tip || '';
-  document.getElementById('e-distance').value = (r.distance !== null && r.distance !== undefined) ? r.distance : '';
+  const curDist = getRowDistance(r);
+  document.getElementById('e-distance').value = (curDist !== null && curDist !== undefined) ? curDist : '';
   document.getElementById('e-oil').value      = r.oil || '';
   document.getElementById('e-oilReal').value  = r.oilReal || '';
   document.getElementById('e-credit').value   = r.credit || '';
   document.getElementById('e-withdraw').value = r.withdraw || '';
   document.getElementById('e-hours').value    = (r.hours !== null && r.hours !== undefined) ? r.hours : '';
   document.getElementById('e-note').value      = r.note || '';
-  handleDistanceInput('e-distance', 'e-oil', 'e-dist-calc');
+  handleDistanceInput('e-distance', 'e-oil', 'e-dist-calc', false);
   handleRealOilInput('e-oilReal', 'e-oilReal-calc');
   document.getElementById('editModal').classList.add('show');
   setTimeout(() => {
@@ -2408,7 +2437,7 @@ let pendingImportData = null;
 function exportData() {
   const rows = getRows();
   const ws_data = [['วันที่', 'รายได้ Grab (บาท)', 'Tip มือ (บาท)', 'รายได้รวม (บาท)', 'ระยะทาง (กม.)', 'ค่าน้ำมัน (บาท)', 'เติมน้ำมันจริง (บาท)', 'เครดิต Grab (บาท)', 'ถอนเข้ากรุงศรี (บาท)', 'ชั่วโมงขับ', 'กำไรสุทธิ (บาท)', 'หมายเหตุ'],
-    ...rows.map(r => [r.date, r.grab || 0, r.tip || 0, income(r), r.distance || '', r.oil || 0, r.oilReal || 0, r.credit || 0, r.withdraw || 0, r.hours || '', profit(r), r.note || ''])];
+    ...rows.map(r => [r.date, r.grab || 0, r.tip || 0, income(r), getRowDistance(r) || '', r.oil || 0, r.oilReal || 0, r.credit || 0, r.withdraw || 0, r.hours || '', profit(r), r.note || ''])];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws_data), 'บัญชีรายวัน');
   XLSX.writeFile(wb, `Grab_${new Date().toISOString().slice(0, 10)}.xlsx`);
