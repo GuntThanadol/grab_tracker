@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🏍️ Grab บัญชีรายวัน</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="style.css?v=20260915_2030">
+<link rel="stylesheet" href="style.css?v=20260915_2145">
 </head>
 <body>
 
@@ -206,7 +206,30 @@
   <!-- ENTRY -->
   <div class="page" id="page-entry">
     <div class="card">
-      <div class="card-title">➕ เพิ่มข้อมูลรายวัน</div>
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span>➕ เพิ่มข้อมูลรายวัน</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="openFuelModal()" style="font-size:0.8rem;padding:4px 10px;" title="ตั้งค่าราคาน้ำมันและรุ่นรถ">⚙️ ตั้งค่าน้ำมัน</button>
+      </div>
+
+      <!-- LIVE FUEL PRICE BANNER -->
+      <div class="fuel-price-banner" id="fuelPriceBanner">
+        <div class="fuel-banner-left">
+          <div class="fuel-banner-icon">⛽</div>
+          <div class="fuel-banner-text">
+            <div class="fuel-banner-head">
+              <span id="fuelStationName">บางจาก</span> • <span id="fuelTypeName">แก๊สโซฮอล์ 95</span>
+              <span class="fuel-price-badge" id="fuelPriceVal">... ฿/ลิตร</span>
+            </div>
+            <div class="fuel-banner-sub">
+              🏍️ Honda Wave 125i • อัตราประหยัด <strong id="fuelRateDisplay">71.4</strong> กม./ลิตร • <span id="fuelDateDisplay">อัปเดตวันนี้</span>
+            </div>
+          </div>
+        </div>
+        <div class="fuel-banner-right">
+          <button type="button" class="btn btn-outline btn-sm" onclick="fetchLiveOilPrices(true)" title="ดึงราคาน้ำมันล่าสุด">🔄 รีเฟรช</button>
+        </div>
+      </div>
+
       <div class="form-grid">
         <div class="form-group">
           <label>📅 วันที่</label>
@@ -231,6 +254,18 @@
           </div>
         </div>
         <div class="form-group">
+          <label>🛵 ระยะทางวิ่งงานวันนี้ (กม.)</label>
+          <input type="number" id="f-distance" placeholder="เช่น 85.5" step="0.1">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 40)">40 กม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 60)">60 กม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 80)">80 กม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 100)">100 กม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 120)">120 กม.</button>
+          </div>
+          <div class="fuel-calc-tag" id="f-dist-calc" style="display:none"></div>
+        </div>
+        <div class="form-group">
           <label>⛽ ค่าน้ำมัน (ประมาณการ)</label>
           <input type="number" id="f-oil" placeholder="0.00" step="0.01">
           <div class="quick-chips">
@@ -239,6 +274,7 @@
             <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 40)">40</button>
             <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 50)">50</button>
           </div>
+          <div class="fuel-calc-tag" id="f-oil-calc" style="display:none"></div>
         </div>
         <div class="form-group">
           <label>⛽ เติมน้ำมันจริง (บาท)</label>
@@ -249,6 +285,7 @@
             <button type="button" class="chip-btn" onclick="setChipValue('f-oilReal', 120)">120</button>
             <button type="button" class="chip-btn" onclick="setChipValue('f-oilReal', 140)">140</button>
           </div>
+          <div class="fuel-calc-tag" id="f-oilReal-calc" style="display:none"></div>
         </div>
         <div class="form-group">
           <label>💳 เครดิต Grab (บาท)</label>
@@ -324,6 +361,7 @@
               <th class="td-num">รายได้ Grab</th>
               <th class="td-num">Tip</th>
               <th class="td-num">รายได้รวม</th>
+              <th class="td-num">ระยะทาง (กม.)</th>
               <th class="td-num">ค่าน้ำมัน</th>
               <th class="td-num">เติมน้ำมันจริง</th>
               <th class="td-num">เครดิต Grab</th>
@@ -447,8 +485,9 @@
       </div>
       <div class="form-group"><label>💚 รายได้ Grab</label><input type="number" id="e-grab" step="0.01"></div>
       <div class="form-group"><label>👋 Tip มือ</label><input type="number" id="e-tip" step="0.01"></div>
-      <div class="form-group"><label>⛽ ค่าน้ำมัน</label><input type="number" id="e-oil" step="0.01"></div>
-      <div class="form-group"><label>⛽ เติมน้ำมันจริง</label><input type="number" id="e-oilReal" step="0.01"></div>
+      <div class="form-group"><label>🛵 ระยะทางวิ่งงาน (กม.)</label><input type="number" id="e-distance" step="0.1"><div class="fuel-calc-tag" id="e-dist-calc" style="display:none"></div></div>
+      <div class="form-group"><label>⛽ ค่าน้ำมัน</label><input type="number" id="e-oil" step="0.01"><div class="fuel-calc-tag" id="e-oil-calc" style="display:none"></div></div>
+      <div class="form-group"><label>⛽ เติมน้ำมันจริง</label><input type="number" id="e-oilReal" step="0.01"><div class="fuel-calc-tag" id="e-oilReal-calc" style="display:none"></div></div>
       <div class="form-group"><label>💳 เครดิต Grab</label><input type="number" id="e-credit" step="0.01"></div>
       <div class="form-group"><label>🏦 ถอนกรุงศรี</label><input type="number" id="e-withdraw" step="0.01"></div>
       <div class="form-group">
@@ -466,11 +505,53 @@
   </div>
 </div>
 
+<!-- FUEL SETTINGS MODAL -->
+<div class="modal-overlay" id="fuelModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">⛽ ตั้งค่าน้ำมันและรุ่นรถ</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin:16px 0;">
+      <div class="form-group">
+        <label>ปั๊มน้ำมันหลัก</label>
+        <select id="cfg-fuel-brand" onchange="onFuelBrandOrTypeChange()">
+          <option value="bcp">บางจาก (Bangchak) - ค่าเริ่มต้น</option>
+          <option value="ptt">ปตท. (PTT)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ชนิดน้ำมันที่เติมประจำ</label>
+        <select id="cfg-fuel-type" onchange="onFuelBrandOrTypeChange()">
+          <option value="gasohol_95">แก๊สโซฮอล์ 95 S EVO (แนะนำสำหรับ Wave 125i)</option>
+          <option value="gasohol_91">แก๊สโซฮอล์ 91 S EVO</option>
+          <option value="gasohol_e20">แก๊สโซฮอล์ E20 S EVO</option>
+          <option value="disel">ดีเซล</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ราคาน้ำมันขายปลีกวันนี้ (บาท/ลิตร)</label>
+        <div style="display:flex;gap:8px;">
+          <input type="number" id="cfg-fuel-price" step="0.01" style="flex:1" placeholder="39.09">
+          <button type="button" class="btn btn-outline btn-sm" onclick="fetchLiveOilPrices(true)" title="ดึงราคาล่าสุดจาก API">🔄 ดึงราคา</button>
+        </div>
+        <small style="color:var(--text-muted);font-size:0.78rem" id="cfg-fuel-status">กำลังเชื่อมต่อราคาน้ำมัน...</small>
+      </div>
+      <div class="form-group">
+        <label>อัตราสิ้นเปลืองของรถ (กิโลเมตร / ลิตร)</label>
+        <input type="number" id="cfg-fuel-rate" step="0.1" value="71.4">
+        <small style="color:var(--text-muted);font-size:0.78rem">🛵 Honda Wave 125i (2026): มาตรฐาน <strong>71.4 กม./ลิตร</strong></small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeFuelModal()">ยกเลิก</button>
+      <button class="btn btn-green" onclick="saveFuelSettings()">💾 บันทึกการตั้งค่า</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 <button id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="กลับขึ้นบน">↑</button>
 
 </div>
 
-<script src="script.js?v=20260915_2030"></script>
+<script src="script.js?v=20260915_2145"></script>
 </body>
 </html>

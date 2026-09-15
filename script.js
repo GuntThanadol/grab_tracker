@@ -594,6 +594,7 @@ async function syncFromSheets() {
       tip: parseFloat(r.tip) || 0,
       oil: parseFloat(r.oil) || 0,
       oilReal: parseFloat(r.oilReal) || 0,
+      distance: (r.distance !== undefined && r.distance !== null && r.distance !== '') ? parseFloat(r.distance) : null,
       credit: parseFloat(r.credit) || 0,
       withdraw: parseFloat(r.withdraw) || 0,
       hours: (r.hours !== undefined && r.hours !== null && r.hours !== '') ? parseFloat(r.hours) : null,
@@ -757,6 +758,186 @@ function showToast(msg, type = '') {
   setTimeout(() => { if (t) t.className = ''; }, 2800);
 }
 
+// ─── LIVE FUEL TRACKER & SMART CALCULATOR ────────────────────────────────────
+const FUEL_CONFIG_KEY = 'grab_fuel_config';
+const DEFAULT_FUEL_CONFIG = {
+  brand: 'bcp', // 'bcp' = บางจาก, 'ptt' = ปตท.
+  fuelType: 'gasohol_95',
+  rateKmPerL: 71.4, // Honda Wave 125i (2026)
+  manualPrice: null,
+  lastFetchedPrice: 39.09,
+  lastFetchedDate: ''
+};
+
+function getFuelConfig() {
+  try {
+    const s = localStorage.getItem(FUEL_CONFIG_KEY);
+    if (s) return { ...DEFAULT_FUEL_CONFIG, ...JSON.parse(s) };
+  } catch (e) {}
+  return { ...DEFAULT_FUEL_CONFIG };
+}
+
+function saveFuelConfig(cfg) {
+  localStorage.setItem(FUEL_CONFIG_KEY, JSON.stringify(cfg));
+  updateFuelUI();
+}
+
+function getCurrentFuelPrice() {
+  const cfg = getFuelConfig();
+  if (cfg.manualPrice && Number(cfg.manualPrice) > 0) return Number(cfg.manualPrice);
+  return Number(cfg.lastFetchedPrice) || 39.09;
+}
+
+let isFetchingFuel = false;
+async function fetchLiveOilPrices(force = false) {
+  if (isFetchingFuel) return;
+  isFetchingFuel = true;
+  const cfg = getFuelConfig();
+  const statusEl = document.getElementById('cfg-fuel-status');
+  if (statusEl) statusEl.textContent = '🔄 กำลังดึงข้อมูลราคาน้ำมันล่าสุด...';
+
+  try {
+    const resp = await fetch('https://api.chnwt.dev/thai-oil-api/latest');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const json = await resp.json();
+    if (json && json.response && json.response.stations) {
+      const st = json.response.stations;
+      const brandData = st[cfg.brand] || st.bcp || st.ptt;
+      const fuelItem = brandData && (brandData[cfg.fuelType] || brandData.gasohol_95);
+      if (fuelItem && fuelItem.price) {
+        const price = parseFloat(fuelItem.price);
+        if (!isNaN(price) && price > 0) {
+          cfg.lastFetchedPrice = price;
+          cfg.lastFetchedDate = json.response.date || new Date().toLocaleDateString('th-TH');
+          localStorage.setItem(FUEL_CONFIG_KEY, JSON.stringify(cfg));
+          if (statusEl) statusEl.textContent = `✅ อัปเดตราคาสำเร็จ (${cfg.lastFetchedPrice} ฿/ลิตร)`;
+          if (force) showToast(`⛽ อัปเดตราคาน้ำมัน: ${price.toFixed(2)} บาท/ลิตร`, 'green');
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch oil price from API, using cached price:', err);
+    if (statusEl) statusEl.textContent = `⚠️ ใช้ราคาล่าสุด ${getCurrentFuelPrice()} ฿`;
+  } finally {
+    isFetchingFuel = false;
+    updateFuelUI();
+  }
+}
+
+function updateFuelUI() {
+  const cfg = getFuelConfig();
+  const price = getCurrentFuelPrice();
+  const brandName = cfg.brand === 'ptt' ? 'ปตท.' : 'บางจาก';
+  const fuelName = cfg.fuelType === 'gasohol_91' ? 'แก๊สโซฮอล์ 91 S EVO' :
+                   cfg.fuelType === 'gasohol_e20' ? 'แก๊สโซฮอล์ E20 S EVO' :
+                   cfg.fuelType === 'diesel' || cfg.fuelType === 'disel' ? 'ดีเซล' : 'แก๊สโซฮอล์ 95 S EVO';
+
+  const stationEl = document.getElementById('fuelStationName');
+  const typeEl = document.getElementById('fuelTypeName');
+  const priceEl = document.getElementById('fuelPriceVal');
+  const rateEl = document.getElementById('fuelRateDisplay');
+  const dateEl = document.getElementById('fuelDateDisplay');
+
+  if (stationEl) stationEl.textContent = brandName;
+  if (typeEl) typeEl.textContent = fuelName;
+  if (priceEl) priceEl.textContent = `${price.toFixed(2)} ฿/ลิตร`;
+  if (rateEl) rateEl.textContent = cfg.rateKmPerL || 71.4;
+  if (dateEl) dateEl.textContent = cfg.lastFetchedDate ? `อัปเดต ${cfg.lastFetchedDate}` : 'ราคาล่าสุด';
+
+  const mBrand = document.getElementById('cfg-fuel-brand');
+  const mType = document.getElementById('cfg-fuel-type');
+  const mPrice = document.getElementById('cfg-fuel-price');
+  const mRate = document.getElementById('cfg-fuel-rate');
+  if (mBrand) mBrand.value = cfg.brand || 'bcp';
+  if (mType) mType.value = cfg.fuelType || 'gasohol_95';
+  if (mPrice) mPrice.value = cfg.manualPrice || price.toFixed(2);
+  if (mRate) mRate.value = cfg.rateKmPerL || 71.4;
+
+  handleDistanceInput('f-distance', 'f-oil', 'f-dist-calc');
+  handleRealOilInput('f-oilReal', 'f-oilReal-calc');
+}
+
+function handleDistanceInput(distId, oilId, tagId) {
+  const distEl = document.getElementById(distId);
+  const oilEl = document.getElementById(oilId);
+  const tagEl = document.getElementById(tagId);
+  if (!distEl || !oilEl || !tagEl) return;
+
+  const km = parseFloat(distEl.value);
+  if (isNaN(km) || km <= 0) {
+    tagEl.style.display = 'none';
+    return;
+  }
+
+  const cfg = getFuelConfig();
+  const rate = cfg.rateKmPerL || 71.4;
+  const price = getCurrentFuelPrice();
+  const liters = km / rate;
+  const estCost = liters * price;
+
+  oilEl.value = estCost.toFixed(2);
+  if (distId === 'f-distance') updatePreview();
+
+  tagEl.style.display = '';
+  tagEl.innerHTML = `💡 วิ่ง <strong>${km.toFixed(1)} กม.</strong> = ใช้น้ำมัน <strong>${liters.toFixed(2)} ลิตร</strong> (ประมาณ <strong>${estCost.toFixed(2)} บาท</strong> @ ${price.toFixed(2)} บ./ลิตร)`;
+}
+
+function handleRealOilInput(realOilId, tagId) {
+  const realEl = document.getElementById(realOilId);
+  const tagEl = document.getElementById(tagId);
+  if (!realEl || !tagEl) return;
+
+  const val = parseFloat(realEl.value);
+  if (isNaN(val) || val <= 0) {
+    tagEl.style.display = 'none';
+    return;
+  }
+
+  const price = getCurrentFuelPrice();
+  const liters = val / price;
+  tagEl.style.display = '';
+  tagEl.innerHTML = `💡 เติม <strong>${val.toFixed(2)} บาท</strong> = ได้น้ำมัน <strong>${liters.toFixed(2)} ลิตร</strong>`;
+}
+
+function openFuelModal() {
+  const modal = document.getElementById('fuelModal');
+  if (!modal) return;
+  updateFuelUI();
+  modal.classList.add('show');
+}
+
+function closeFuelModal() {
+  const modal = document.getElementById('fuelModal');
+  if (modal) modal.classList.remove('show');
+}
+
+function onFuelBrandOrTypeChange() {
+  const brand = document.getElementById('cfg-fuel-brand').value;
+  const fuelType = document.getElementById('cfg-fuel-type').value;
+  const cfg = getFuelConfig();
+  cfg.brand = brand;
+  cfg.fuelType = fuelType;
+  localStorage.setItem(FUEL_CONFIG_KEY, JSON.stringify(cfg));
+  fetchLiveOilPrices(false);
+}
+
+function saveFuelSettings() {
+  const brand = document.getElementById('cfg-fuel-brand').value;
+  const fuelType = document.getElementById('cfg-fuel-type').value;
+  const priceVal = parseFloat(document.getElementById('cfg-fuel-price').value);
+  const rateVal = parseFloat(document.getElementById('cfg-fuel-rate').value);
+
+  const cfg = getFuelConfig();
+  cfg.brand = brand;
+  cfg.fuelType = fuelType;
+  cfg.manualPrice = (priceVal && priceVal > 0) ? priceVal : null;
+  cfg.rateKmPerL = (rateVal && rateVal > 0) ? rateVal : 71.4;
+
+  saveFuelConfig(cfg);
+  closeFuelModal();
+  showToast('✅ บันทึกการตั้งค่าน้ำมันสำเร็จ', 'green');
+}
+
 // ─── TABS ────────────────────────────────────────────────────────────────────
 function showTab(name, btn) {
   if (name === 'entry' && isGuest()) { guestBlocked(); return; }
@@ -804,10 +985,12 @@ async function saveEntry() {
   let existRow = rows.find(r => r.date === date);
   if (existRow && !confirm('มีข้อมูลของวันนี้แล้ว ต้องการแทนที่?')) return;
   const hoursVal = document.getElementById('f-hours').value;
+  const distVal = document.getElementById('f-distance') ? document.getElementById('f-distance').value : '';
   const row = {
     id: existRow ? existRow.id : newId(), date,
     grab:     parseFloat(document.getElementById('f-grab').value) || 0,
     tip:      parseFloat(document.getElementById('f-tip').value) || 0,
+    distance: distVal ? parseFloat(distVal) : null,
     oil:      parseFloat(document.getElementById('f-oil').value) || 0,
     oilReal:  parseFloat(document.getElementById('f-oilReal').value) || 0,
     credit:   parseFloat(document.getElementById('f-credit').value) || 0,
@@ -822,9 +1005,13 @@ async function saveEntry() {
     launchConfetti({ count: 70 });
     const dt = new Date(date + 'T00:00:00');
     dt.setDate(dt.getDate() + 1);
-    ['f-grab', 'f-tip', 'f-oil', 'f-oilReal', 'f-credit', 'f-withdraw', 'f-note'].forEach(id => {
+    ['f-grab', 'f-tip', 'f-distance', 'f-oil', 'f-oilReal', 'f-credit', 'f-withdraw', 'f-note'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
+    });
+    ['f-dist-calc', 'f-oil-calc', 'f-oilReal-calc'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
     });
     const hoursEl = document.getElementById('f-hours');
     if (hoursEl) hoursEl.value = '';
@@ -874,7 +1061,9 @@ function renderDashboard() {
   const totalWithdraw= rows.reduce((s, r) => s + (r.withdraw || 0), 0);
   const totalProfit  = rows.reduce((s, r) => s + profit(r), 0);
   const avgProfit    = workRows.length ? totalProfit / workRows.length : 0;
-  const avgIncome    = workRows.length ? totalIncome / workRows.length : 0;
+  const totalDistance= rows.reduce((s, r) => s + (r.distance || 0), 0);
+  const costPerKm    = totalDistance > 0 ? (totalOil / totalDistance) : 0;
+  const revPerKm     = totalDistance > 0 ? (totalIncome / totalDistance) : 0;
 
   updateGreeting();
 
@@ -882,7 +1071,8 @@ function renderDashboard() {
     { label:'💚 รายได้ Grab รวม', val:totalGrab,    color:'green', sub:'บาท' },
     { label:'👋 Tip มือรวม',      val:totalTip,     color:'yellow', sub:'บาท', cls:'yellow' },
     { label:'💰 รายได้รวมทั้งสิ้น',val:totalIncome, color:'green', sub:'บาท' },
-    { label:'⛽ ค่าน้ำมัน (ประมาณ)', val:totalOil,     color:'red',   sub:`บาท | เติมจริง ${fmt(totalOilReal)} บาท`, cls:'red' },
+    { label:'🛵 ระยะทางวิ่งรวม',  val:totalDistance,color:'blue',  sub:`กม. | เฉลี่ย ${fmt(revPerKm)} ฿/กม.`, cls:'blue' },
+    { label:'⛽ ค่าน้ำมัน (ประมาณ)', val:totalOil,     color:'red',   sub:`บาท | เติมจริง ${fmt(totalOilReal)} บ. (${fmt(costPerKm)} ฿/กม.)`, cls:'red' },
     { label:'💳 เครดิต Grab',     val:totalCredit,  color:'yellow',sub:'บาท', cls:'yellow' },
     { label:'🏦 ถอนเข้ากรุงศรี',  val:totalWithdraw,color:'blue',  sub:'บาท', cls:'blue' },
     { label:'💵 กำไรสุทธิรวม',    val:totalProfit,  color:'green', sub:'บาท' },
@@ -1879,7 +2069,7 @@ function renderHistory() {
   if (typeFilter === 'rest' || typeFilter === 'off') rows = rows.filter(r => !isWorkDay(r));
 
   const guest = isGuest();
-  const colCount = guest ? 11 : 12;
+  const colCount = guest ? 12 : 13;
   const tbody = document.getElementById('historyBody');
   if (!tbody) return;
 
@@ -1895,11 +2085,15 @@ function renderHistory() {
         <button class="btn btn-outline btn-sm" onclick="addRipple(event);requireAuth(()=>openEdit('${r.id}'))" title="แก้ไข">✏️</button>
         <button class="btn btn-red btn-sm" onclick="addRipple(event);requireAuth(()=>deleteRow('${r.id}'))" title="ลบ">🗑️</button>
       </td>`;
+    const distCell = (r.distance !== undefined && r.distance !== null && r.distance > 0)
+      ? `${parseFloat(r.distance).toFixed(1)} <span class="td-gray">กม.</span>`
+      : '<span class="td-gray">—</span>';
     return `<tr class="row-anim" style="animation-delay:${Math.min(i * 0.015, 0.3)}s; ${isW ? '' : 'opacity:0.75'}">
       <td class="td-date">${fmtDate(r.date)}</td>
       <td class="td-num">${r.grab ? fmt(r.grab) : '<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.tip ? fmt(r.tip) : '<span class="td-gray">—</span>'}</td>
       <td class="td-num td-green font-bold">${fmt(income(r))}</td>
+      <td class="td-num font-bold">${distCell}</td>
       <td class="td-num td-red">${r.oil ? fmt(r.oil) : '<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.oilReal ? fmt(r.oilReal) : '<span class="td-gray">—</span>'}</td>
       <td class="td-num">${r.credit ? fmt(r.credit) : '<span class="td-gray">—</span>'}</td>
@@ -2129,12 +2323,15 @@ function openEdit(id) {
   tdpSetValue('e-date', r.date);
   document.getElementById('e-grab').value     = r.grab || '';
   document.getElementById('e-tip').value      = r.tip || '';
+  document.getElementById('e-distance').value = (r.distance !== null && r.distance !== undefined) ? r.distance : '';
   document.getElementById('e-oil').value      = r.oil || '';
   document.getElementById('e-oilReal').value  = r.oilReal || '';
   document.getElementById('e-credit').value   = r.credit || '';
   document.getElementById('e-withdraw').value = r.withdraw || '';
   document.getElementById('e-hours').value    = (r.hours !== null && r.hours !== undefined) ? r.hours : '';
   document.getElementById('e-note').value      = r.note || '';
+  handleDistanceInput('e-distance', 'e-oil', 'e-dist-calc');
+  handleRealOilInput('e-oilReal', 'e-oilReal-calc');
   document.getElementById('editModal').classList.add('show');
   setTimeout(() => {
     const el = document.getElementById('e-grab');
@@ -2154,10 +2351,12 @@ async function saveEdit() {
   const date = document.getElementById('e-date').value;
   if (!date) { showToast('กรุณาเลือกวันที่', 'red'); return; }
   const hoursVal = document.getElementById('e-hours').value;
+  const distVal = document.getElementById('e-distance') ? document.getElementById('e-distance').value : '';
   const row = {
     id: editingId, date,
     grab:     parseFloat(document.getElementById('e-grab').value) || 0,
     tip:      parseFloat(document.getElementById('e-tip').value) || 0,
+    distance: distVal ? parseFloat(distVal) : null,
     oil:      parseFloat(document.getElementById('e-oil').value) || 0,
     oilReal:  parseFloat(document.getElementById('e-oilReal').value) || 0,
     credit:   parseFloat(document.getElementById('e-credit').value) || 0,
@@ -2207,8 +2406,8 @@ let pendingImportData = null;
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
 function exportData() {
   const rows = getRows();
-  const ws_data = [['วันที่', 'รายได้ Grab (บาท)', 'Tip มือ (บาท)', 'รายได้รวม (บาท)', 'ค่าน้ำมัน (บาท)', 'เติมน้ำมันจริง (บาท)', 'เครดิต Grab (บาท)', 'ถอนเข้ากรุงศรี (บาท)', 'ชั่วโมงขับ', 'กำไรสุทธิ (บาท)', 'หมายเหตุ'],
-    ...rows.map(r => [r.date, r.grab || 0, r.tip || 0, income(r), r.oil || 0, r.oilReal || 0, r.credit || 0, r.withdraw || 0, r.hours || '', profit(r), r.note || ''])];
+  const ws_data = [['วันที่', 'รายได้ Grab (บาท)', 'Tip มือ (บาท)', 'รายได้รวม (บาท)', 'ระยะทาง (กม.)', 'ค่าน้ำมัน (บาท)', 'เติมน้ำมันจริง (บาท)', 'เครดิต Grab (บาท)', 'ถอนเข้ากรุงศรี (บาท)', 'ชั่วโมงขับ', 'กำไรสุทธิ (บาท)', 'หมายเหตุ'],
+    ...rows.map(r => [r.date, r.grab || 0, r.tip || 0, income(r), r.distance || '', r.oil || 0, r.oilReal || 0, r.credit || 0, r.withdraw || 0, r.hours || '', profit(r), r.note || ''])];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws_data), 'บัญชีรายวัน');
   XLSX.writeFile(wb, `Grab_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -2511,6 +2710,15 @@ function initApp() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updatePreview);
   });
+  const fDist = document.getElementById('f-distance');
+  if (fDist) fDist.addEventListener('input', () => handleDistanceInput('f-distance', 'f-oil', 'f-dist-calc'));
+  const fOilReal = document.getElementById('f-oilReal');
+  if (fOilReal) fOilReal.addEventListener('input', () => handleRealOilInput('f-oilReal', 'f-oilReal-calc'));
+
+  const eDist = document.getElementById('e-distance');
+  if (eDist) eDist.addEventListener('input', () => handleDistanceInput('e-distance', 'e-oil', 'e-dist-calc'));
+  const eOilReal = document.getElementById('e-oilReal');
+  if (eOilReal) eOilReal.addEventListener('input', () => handleRealOilInput('e-oilReal', 'e-oilReal-calc'));
   document.getElementById('importFile').addEventListener('change', function(e) {
     if (isGuest()) { guestBlocked(); e.target.value = ''; return; }
     const file = e.target.files[0]; if (!file) return; e.target.value = '';
@@ -2571,6 +2779,8 @@ function initApp() {
   renderHistory();
   renderMonthly();
   renderBonus();
+  updateFuelUI();
+  fetchLiveOilPrices(false);
   syncFromSheets().then(() => {
     renderDashboard();
     renderHistory();

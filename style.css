@@ -1338,3 +1338,100 @@ tr:hover td { background: var(--green-light); }
   #toast { left: 12px; right: 12px; max-width: none; bottom: 16px; }
   #scrollTop { bottom: 70px; right: 16px; width: 40px; height: 40px; }
 }
+
+/* ── FUEL PRICE BANNER & CALC TAGS ── */
+.fuel-price-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.06) 100%);
+  border: 1.5px solid rgba(16, 185, 129, 0.25);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  transition: all 0.25s ease;
+}
+.fuel-price-banner:hover {
+  border-color: var(--green);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.12);
+}
+.fuel-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+.fuel-banner-icon {
+  font-size: 1.8rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+.fuel-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fuel-banner-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--text-main);
+  flex-wrap: wrap;
+}
+.fuel-price-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 900;
+  padding: 2px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+.fuel-banner-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.fuel-calc-tag {
+  margin-top: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--bg-card-subtle);
+  border: 1px dashed var(--green);
+  color: var(--green-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+  animation: fadeIn 0.2s ease-in-out;
+}
+[data-theme="dark"] .fuel-calc-tag {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+}
+@media (max-width: 600px) {
+  .fuel-price-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .fuel-banner-right {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
