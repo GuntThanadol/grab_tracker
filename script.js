@@ -1061,6 +1061,7 @@ function renderDashboard() {
   const totalWithdraw= rows.reduce((s, r) => s + (r.withdraw || 0), 0);
   const totalProfit  = rows.reduce((s, r) => s + profit(r), 0);
   const avgProfit    = workRows.length ? totalProfit / workRows.length : 0;
+  const avgIncome    = workRows.length ? totalIncome / workRows.length : 0;
   const totalDistance= rows.reduce((s, r) => s + (r.distance || 0), 0);
   const costPerKm    = totalDistance > 0 ? (totalOil / totalDistance) : 0;
   const revPerKm     = totalDistance > 0 ? (totalIncome / totalDistance) : 0;
