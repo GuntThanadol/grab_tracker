@@ -1892,7 +1892,7 @@ function renderHistory() {
     const p = profit(r);
     const isW = isWorkDay(r);
     const actionsCell = guest ? '' : `<td style="display:flex;gap:4px;padding:8px">
-        <button class="btn btn-outline btn-sm" onclick="addRipple(event);openEdit('${r.id}')" title="แก้ไข">✏️</button>
+        <button class="btn btn-outline btn-sm" onclick="addRipple(event);requireAuth(()=>openEdit('${r.id}'))" title="แก้ไข">✏️</button>
         <button class="btn btn-red btn-sm" onclick="addRipple(event);requireAuth(()=>deleteRow('${r.id}'))" title="ลบ">🗑️</button>
       </td>`;
     return `<tr class="row-anim" style="animation-delay:${Math.min(i * 0.015, 0.3)}s; ${isW ? '' : 'opacity:0.75'}">
@@ -2121,6 +2121,7 @@ function renderBonus() {
 // ─── EDIT MODAL ──────────────────────────────────────────────────────────────
 function openEdit(id) {
   if (isGuest()) { guestBlocked(); return; }
+  if (!isAuthed()) { requireAuth(() => openEdit(id)); return; }
   const rows = loadData();
   const r = rows.find(x => x.id === id);
   if (!r) return;
@@ -2135,6 +2136,10 @@ function openEdit(id) {
   document.getElementById('e-hours').value    = (r.hours !== null && r.hours !== undefined) ? r.hours : '';
   document.getElementById('e-note').value      = r.note || '';
   document.getElementById('editModal').classList.add('show');
+  setTimeout(() => {
+    const el = document.getElementById('e-grab');
+    if (el) { el.focus(); el.select(); }
+  }, 100);
 }
 const openEditModal = openEdit;
 
@@ -2407,42 +2412,54 @@ function pinKey(k) {
   if (pinBuffer.length >= 6) return;
   pinBuffer += k; updatePinDots();
   if (pinBuffer.length === 6) {
-    if (pinBuffer === PIN_CORRECT) {
-      closePinModal();
-      if (pinAction?.type === 'auth') {
-        setAuthed(); showToast('🔓 ปลดล็อคแล้ว', 'green');
-        const cb = pinAction.callback; pinAction = null; if (cb) cb();
-      } else if (pinAction?.type === 'clearAll') {
-        showToast('🗑️ กำลังล้างข้อมูล...');
-        saveAllRemote([]).then(() => {
-          localStorage.removeItem(STORAGE_KEY);
-          renderDashboard();
-          renderHistory();
-          renderMonthly();
-          renderBonus();
-          showToast('🗑️ ล้างข้อมูลแล้ว');
-        });
-        pinAction = null;
-      } else if (pinAction?.type === 'deleteRow') {
-        showToast('🗑️ กำลังลบ...');
-        deleteRowRemote(pinAction.id).then(() => {
-          renderDashboard();
-          renderHistory();
-          renderMonthly();
-          renderBonus();
-          showToast('🗑️ ลบแล้ว');
-        });
-        pinAction = null;
-      }
-    } else {
-      document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
-      document.getElementById('pinMsg').textContent = '❌ รหัสไม่ถูกต้อง';
-      setTimeout(() => {
-        pinBuffer = ''; updatePinDots();
-        document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
-        document.getElementById('pinMsg').textContent = '';
-      }, 1000);
+    verifyPin();
+  }
+}
+
+function verifyPin() {
+  if (pinBuffer.length < 6) {
+    document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
+    document.getElementById('pinMsg').textContent = '❌ กรุณากรอกรหัสให้ครบ 6 หลัก';
+    setTimeout(() => {
+      document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
+    }, 1000);
+    return;
+  }
+  if (pinBuffer === PIN_CORRECT) {
+    closePinModal();
+    if (pinAction?.type === 'auth') {
+      setAuthed(); showToast('🔓 ปลดล็อคแล้ว', 'green');
+      const cb = pinAction.callback; pinAction = null; if (cb) cb();
+    } else if (pinAction?.type === 'clearAll') {
+      showToast('🗑️ กำลังล้างข้อมูล...');
+      saveAllRemote([]).then(() => {
+        localStorage.removeItem(STORAGE_KEY);
+        renderDashboard();
+        renderHistory();
+        renderMonthly();
+        renderBonus();
+        showToast('🗑️ ล้างข้อมูลแล้ว');
+      });
+      pinAction = null;
+    } else if (pinAction?.type === 'deleteRow') {
+      showToast('🗑️ กำลังลบ...');
+      deleteRowRemote(pinAction.id).then(() => {
+        renderDashboard();
+        renderHistory();
+        renderMonthly();
+        renderBonus();
+        showToast('🗑️ ลบแล้ว');
+      });
+      pinAction = null;
     }
+  } else {
+    document.querySelectorAll('.pin-dot').forEach(d => d.classList.add('error'));
+    document.getElementById('pinMsg').textContent = '❌ รหัสไม่ถูกต้อง';
+    setTimeout(() => {
+      pinBuffer = ''; updatePinDots();
+      document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
+      document.getElementById('pinMsg').textContent = '';
+    }, 1000);
   }
 }
 function updatePinDots() {
@@ -2560,6 +2577,102 @@ function initApp() {
     renderMonthly();
     renderBonus();
     applyRoleUI();
+  });
+  initKeyboardShortcuts();
+}
+
+let keyboardShortcutsInitialized = false;
+function initKeyboardShortcuts() {
+  if (keyboardShortcutsInitialized) return;
+  keyboardShortcutsInitialized = true;
+  document.addEventListener('keydown', (e) => {
+    // 1. PIN Modal is open
+    const pinModal = document.getElementById('pinModal');
+    if (pinModal && pinModal.classList.contains('show')) {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        pinKey(e.key);
+        const btns = pinModal.querySelectorAll('.pin-btn');
+        btns.forEach(b => {
+          if (b.textContent.trim() === e.key) {
+            b.classList.add('key-active');
+            setTimeout(() => b.classList.remove('key-active'), 120);
+          }
+        });
+        return;
+      }
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        pinKey('del');
+        const delBtn = pinModal.querySelector('.pin-btn.del');
+        if (delBtn) {
+          delBtn.classList.add('key-active');
+          setTimeout(() => delBtn.classList.remove('key-active'), 120);
+        }
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        verifyPin();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closePinModal();
+        return;
+      }
+      return;
+    }
+
+    // 2. Edit Modal is open
+    const editModal = document.getElementById('editModal');
+    if (editModal && editModal.classList.contains('show')) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        requireAuth(saveEdit);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+        return;
+      }
+      return;
+    }
+
+    // 3. Import Modal is open
+    const importModal = document.getElementById('importModal');
+    if (importModal && importModal.classList.contains('show')) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        importModal.classList.remove('show');
+        return;
+      }
+      return;
+    }
+
+    // 4. Normal Form Inputs (Save with Enter)
+    if (e.key === 'Enter') {
+      const activeEl = document.activeElement;
+      if (!activeEl) return;
+
+      // Goal Input
+      if (activeEl.id === 'goalInput') {
+        e.preventDefault();
+        saveGoal();
+        return;
+      }
+
+      // Main Entry Form Inputs (Grab, Tip, Gas, Credit, Withdraw, Hours, Note)
+      const entryCard = document.querySelector('#page-entry .card');
+      if (entryCard && entryCard.contains(activeEl)) {
+        if (['INPUT', 'SELECT'].includes(activeEl.tagName)) {
+          e.preventDefault();
+          requireAuth(saveEntry);
+          return;
+        }
+      }
+    }
   });
 }
 

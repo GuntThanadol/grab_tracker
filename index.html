@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🏍️ Grab บัญชีรายวัน</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="style.css?v=20260907_1300">
+<link rel="stylesheet" href="style.css?v=20260915_2030">
 </head>
 <body>
 
@@ -401,8 +401,9 @@
       <button class="pin-btn" onclick="pinKey('7')">7</button>
       <button class="pin-btn" onclick="pinKey('8')">8</button>
       <button class="pin-btn" onclick="pinKey('9')">9</button>
-      <button class="pin-btn" onclick="pinKey('0')" style="grid-column:2">0</button>
-      <button class="pin-btn del" onclick="pinKey('del')">⌫</button>
+      <button class="pin-btn" onclick="verifyPin()" style="font-size:1.1rem;font-weight:700;color:var(--green)" title="ยืนยัน (Enter)">↵</button>
+      <button class="pin-btn" onclick="pinKey('0')">0</button>
+      <button class="pin-btn del" onclick="pinKey('del')" title="ลบ (Backspace)">⌫</button>
     </div>
     <button class="btn btn-outline" onclick="closePinModal()" style="margin-top:14px;width:100%">ยกเลิก</button>
   </div>
@@ -470,6 +471,6 @@
 
 </div>
 
-<script src="script.js?v=20260907_1300"></script>
+<script src="script.js?v=20260915_2030"></script>
 </body>
 </html>

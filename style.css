@@ -1210,7 +1210,7 @@ tr:hover td { background: var(--green-light); }
   position: relative; overflow: hidden;
 }
 .pin-btn:hover { background: var(--green-light); border-color: var(--green); color: var(--green); transform: scale(1.04); }
-.pin-btn:active { transform: scale(0.94); background: var(--green); color: #ffffff; }
+.pin-btn:active, .pin-btn.key-active { transform: scale(0.94); background: var(--green); color: #ffffff; }
 .pin-btn.del { color: var(--red); }
 
 /* ── WEEK COMPARE ── */
