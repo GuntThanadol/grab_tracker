@@ -1,0 +1,155 @@
+﻿'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Entry, FuelSettings, TabType } from '@/types';
+import { supabase } from '@/lib/supabase';
+import Header from '@/components/Header';
+import DashboardTab from '@/components/DashboardTab';
+import EntryTab from '@/components/EntryTab';
+import HistoryTab from '@/components/HistoryTab';
+import MonthlyTab from '@/components/MonthlyTab';
+import FuelSettingsModal from '@/components/FuelSettingsModal';
+import { Loader2 } from 'lucide-react';
+
+export default function HomePage() {
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isRealtime, setIsRealtime] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
+
+  const [fuelSettings, setFuelSettings] = useState<FuelSettings>({
+    brand: 'bcp',
+    fuel_type: 'gasohol_95',
+    rate_km_per_l: 71.4,
+    manual_price: null,
+    last_fetched_price: 39.09,
+    last_fetched_date: '',
+  });
+
+  // Dark mode effect
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // Fetch initial data
+  const fetchData = useCallback(async () => {
+    try {
+      // 1. Fetch entries
+      const { data: entryData, error: entryErr } = await supabase
+        .from('entries')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (entryErr) console.error('Error fetching entries:', entryErr);
+      if (entryData) setEntries(entryData as Entry[]);
+
+      // 2. Fetch fuel settings
+      const { data: fuelData } = await supabase
+        .from('fuel_settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
+      if (fuelData) {
+        setFuelSettings(fuelData as FuelSettings);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+
+    // Setup Supabase Realtime Subscription
+    const channel = supabase
+      .channel('entries_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'entries' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setEntries((prev) => {
+              const updated = [payload.new as Entry, ...prev.filter(r => r.id !== (payload.new as Entry).id)];
+              return updated.sort((a, b) => b.date.localeCompare(a.date));
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setEntries((prev) =>
+              prev.map((r) => (r.id === (payload.new as Entry).id ? (payload.new as Entry) : r))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setEntries((prev) => prev.filter((r) => r.id !== (payload.old as Entry).id));
+          }
+        }
+      )
+      .subscribe((status) => {
+        setIsRealtime(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <p className="text-sm font-semibold">กำลังเชื่อมต่อฐานข้อมูล Supabase...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
+      {/* Top Header */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isRealtime={isRealtime}
+        fuelSettings={fuelSettings}
+        onOpenFuelModal={() => setIsFuelModalOpen(true)}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
+
+      {/* Main Content Area */}
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        {activeTab === 'dashboard' && <DashboardTab entries={entries} />}
+        {activeTab === 'entry' && (
+          <EntryTab
+            fuelSettings={fuelSettings}
+            onSuccess={() => {
+              fetchData();
+              setActiveTab('history');
+            }}
+          />
+        )}
+        {activeTab === 'history' && (
+          <HistoryTab
+            entries={entries}
+            fuelSettings={fuelSettings}
+            onRefresh={fetchData}
+          />
+        )}
+        {activeTab === 'monthly' && <MonthlyTab entries={entries} />}
+      </main>
+
+      {/* Fuel Settings Modal */}
+      <FuelSettingsModal
+        isOpen={isFuelModalOpen}
+        onClose={() => setIsFuelModalOpen(false)}
+        fuelSettings={fuelSettings}
+        onUpdated={(newSettings) => setFuelSettings(newSettings)}
+      />
+    </div>
+  );
+}

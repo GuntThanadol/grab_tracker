@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏍️ Grab บัญชีรายวัน</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="style.css?v=20260915_2255">
+</head>
+<body>
+
+<!-- CANVAS FOR CONFETTI / PARTICLES -->
+<canvas id="confettiCanvas"></canvas>
+
+<!-- LOGIN SCREEN WITH PULL-CORD LAMP -->
+<div class="login-screen" id="loginScreen">
+  <!-- Interactive Pendant Lamp & Spotlight -->
+  <div class="lamp-system">
+    <svg class="lamp-svg" viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="cordGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#1f2937"/>
+          <stop offset="50%" stop-color="#4b5563"/>
+          <stop offset="100%" stop-color="#111827"/>
+        </linearGradient>
+        <linearGradient id="shadeOuter" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00662d"/>
+          <stop offset="35%" stop-color="#00b14f"/>
+          <stop offset="70%" stop-color="#008037"/>
+          <stop offset="100%" stop-color="#003d19"/>
+        </linearGradient>
+        <linearGradient id="brassTrim" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#997a15"/>
+          <stop offset="40%" stop-color="#ffe699"/>
+          <stop offset="70%" stop-color="#d4af37"/>
+          <stop offset="100%" stop-color="#735905"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Ceiling Cord -->
+      <line x1="120" y1="0" x2="120" y2="48" stroke="url(#cordGrad)" stroke-width="3.5" stroke-linecap="round"/>
+      
+      <!-- Top Brass Collar -->
+      <rect x="114" y="44" width="12" height="8" rx="2" fill="url(#brassTrim)" stroke="#594404" stroke-width="0.5"/>
+      
+      <!-- Lamp Shade Body -->
+      <path d="M72,96 C72,62 94,52 120,52 C146,52 168,62 168,96 Z" fill="url(#shadeOuter)" stroke="#002b12" stroke-width="1.5"/>
+      <path d="M76,96 C76,66 96,56 120,56 C144,56 164,66 164,96" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+      
+      <!-- Brass Rim -->
+      <ellipse cx="120" cy="96" rx="48" ry="10" fill="url(#brassTrim)" stroke="#594404" stroke-width="0.8"/>
+      
+      <!-- Inner Shade Cavity -->
+      <ellipse cx="120" cy="96" rx="44" ry="7.5" class="lamp-inner-cavity" fill="#121815"/>
+      
+      <!-- Light Bulb -->
+      <circle cx="120" cy="99" r="15" class="lamp-bulb-element" fill="#242c26"/>
+    </svg>
+
+    <!-- Hanging Pull Chain Switch (Drag & Release) -->
+    <div class="pull-chain-switch" id="pullChain">
+      <svg class="pull-chain-svg" id="chainSvg" viewBox="0 0 36 200" width="36" height="200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="handleGrad" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="30%" stop-color="#ffe699"/>
+            <stop offset="70%" stop-color="#d4af37"/>
+            <stop offset="100%" stop-color="#664d00"/>
+          </radialGradient>
+        </defs>
+        <!-- Bead Chain -->
+        <line id="chainLine" x1="18" y1="0" x2="18" y2="105" stroke="#d4af37" stroke-width="2.5" stroke-dasharray="2.5,4" stroke-linecap="round"/>
+        <!-- Brass Pull Handle / Bell Knob -->
+        <g id="chainKnobGroup" transform="translate(0, 0)">
+          <path d="M14,105 C14,101 22,101 22,105 L24,130 C24,137 12,137 12,130 Z" fill="url(#handleGrad)" stroke="#594404" stroke-width="1"/>
+          <ellipse cx="18" cy="131" rx="6" ry="3.5" fill="#ffe699" opacity="0.8"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Volumetric Cone of Light -->
+    <div class="lamp-light-cone" id="lampBeam"></div>
+  </div>
+
+  <!-- Login Card inside Illuminated Area -->
+  <div class="login-card-wrapper" id="loginCardWrapper">
+    <div class="login-card">
+      <div class="login-logo">🏍️</div>
+      <div class="login-title">Grab บัญชีรายวัน</div>
+      <div class="login-sub">เข้าสู่ระบบเพื่อจัดการบัญชีของคุณ</div>
+      <div class="login-form">
+        <div class="form-group">
+          <label>👤 ชื่อผู้ใช้</label>
+          <input type="text" id="login-user" autocomplete="username" placeholder="ชื่อผู้ใช้" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+        </div>
+        <div class="form-group">
+          <label>🔑 รหัสผ่าน</label>
+          <div class="login-pass-wrap">
+            <input type="password" id="login-pass" autocomplete="current-password" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')doLogin()">
+            <button type="button" class="login-eye" onclick="toggleLoginPass()" id="loginEyeBtn" tabindex="-1">👁️</button>
+          </div>
+        </div>
+        <div class="login-error" id="loginError"></div>
+        <button class="btn btn-green login-submit" onclick="addRipple(event);doLogin()">เข้าสู่ระบบ</button>
+        <div style="display:flex;align-items:center;gap:10px;margin:2px 0;">
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+          <span style="font-size:0.76rem;color:#a7f3d0;opacity:0.8">หรือ</span>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+        </div>
+        <button type="button" class="btn btn-outline login-submit login-guest-btn" onclick="addRipple(event);loginAsGuest()">👀 Guest Mode</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none">
+
+<div class="nav">
+  <div class="nav-brand">
+    <span class="logo-icon">🏍️</span>
+    <span class="brand-text">Grab บัญชีรายวัน</span>
+  </div>
+  <span id="guestBadge" style="display:none;font-size:0.76rem;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--yellow-light);color:var(--yellow-text);white-space:nowrap;">👀 View Only</span>
+  <div id="syncStatus">☁️ Synced</div>
+  <div class="nav-actions">
+    <button class="btn btn-outline btn-sm theme-btn" id="themeBtn" onclick="addRipple(event);cycleTheme()" title="เปลี่ยนธีมสี">🎨 <span id="themeName">ธีมสดใส</span></button>
+    <button class="btn btn-outline btn-sm sound-btn" id="soundBtn" onclick="addRipple(event);toggleSound()" title="เปิด/ปิดเสียง">🔊</button>
+    <label class="btn btn-outline btn-sm" style="cursor:pointer" id="importLabel">
+      📥 Import
+      <input type="file" accept=".xlsx,.xls" id="importFile" style="display:none">
+    </label>
+    <button class="btn btn-outline btn-sm" id="exportBtn" onclick="addRipple(event);exportData()">📤 Export</button>
+    <button class="btn btn-outline btn-sm" id="syncBtn" onclick="addRipple(event);manualSync()">🔄 Sync</button>
+    <button class="btn btn-outline btn-sm" id="lockBtn" onclick="addRipple(event);toggleLock()" title="ปลดล็อคการแก้ไข">🔒 ปลดล็อค</button>
+    <button class="btn btn-outline btn-sm" onclick="addRipple(event);doLogout()" title="ออกจากระบบ">🚪 ออกจากระบบ</button>
+    <button class="btn btn-red btn-sm" id="clearBtn" onclick="addRipple(event);clearAllConfirm()">🗑️ ล้างข้อมูล</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('dashboard',this)">📊 ภาพรวม</button>
+  <button class="tab-btn" id="tabEntryBtn" onclick="showTab('entry',this)">➕ กรอกข้อมูล</button>
+  <button class="tab-btn" onclick="showTab('history',this)">📋 รายวัน</button>
+  <button class="tab-btn" onclick="showTab('monthly',this)">📅 รายเดือน</button>
+  <button class="tab-btn" onclick="showTab('bonus',this)">💎 อินพิเศษ/อินเพชร</button>
+</div>
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <!-- Hero Banner -->
+    <div class="hero-banner" id="heroBanner">
+      <div class="hero-left">
+        <div class="hero-greeting" id="heroGreeting">สวัสดีตอนเช้า ☀️</div>
+        <div class="hero-quote" id="heroQuote">ขอให้เป็นวันที่ยอดปัง ขับขี่ปลอดภัยทุกเส้นทาง! 🏍️💨</div>
+      </div>
+    </div>
+
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;" class="two-col-grid">
+      <div class="card" id="goalCard" style="margin-bottom:0">
+        <div class="card-title">🎯 เป้าหมายรายเดือน</div>
+        <div id="goalContent"></div>
+        <div class="goal-input-row" id="goalInputRow">
+          <span style="font-size:0.83rem;color:var(--gray-600)">ตั้งเป้า:</span>
+          <input type="number" id="goalInput" placeholder="เช่น 15000" step="100">
+          <button class="btn btn-green btn-sm" onclick="addRipple(event);saveGoal()">บันทึก</button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">📊 สัปดาห์นี้ vs สัปดาห์ที่แล้ว</div>
+        <div id="weekCompare"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-title">📆 เดือนนี้ vs เดือนที่แล้ว</div>
+      <div id="monthCompare"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-title">📅 รายได้เฉลี่ยแต่ละวันในสัปดาห์</div>
+      <div id="dowChart"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span>📈 กำไรสุทธิ 30 วันล่าสุด</span>
+        <div style="display:flex;gap:12px;font-size:0.75rem;font-weight:600;color:var(--text-muted);flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#00e066;border-radius:2px;vertical-align:middle;margin-right:4px"></span>เหนือกราฟเฉลี่ย</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#2dd4bf;border-radius:2px;vertical-align:middle;margin-right:4px"></span>ต่ำกว่าค่าเฉลี่ย</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:50%;vertical-align:middle;margin-right:4px"></span>วันพีคสุด ★</span>
+        </div>
+      </div>
+      <div class="chart-wrap" id="barChart"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📉 Trend รายได้ 3 เดือนล่าสุด</div>
+      <div id="trendChart" style="width:100%;position:relative;"></div>
+    </div>
+  </div>
+
+  <!-- ENTRY -->
+  <div class="page" id="page-entry">
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span>➕ เพิ่มข้อมูลรายวัน</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="openFuelModal()" style="font-size:0.8rem;padding:4px 10px;" title="ตั้งค่าราคาน้ำมันและรุ่นรถ">⚙️ ตั้งค่าน้ำมัน</button>
+      </div>
+
+      <!-- LIVE FUEL PRICE BANNER -->
+      <div class="fuel-price-banner" id="fuelPriceBanner">
+        <div class="fuel-banner-left">
+          <div class="fuel-banner-icon">⛽</div>
+          <div class="fuel-banner-text">
+            <div class="fuel-banner-head">
+              <span id="fuelStationName">บางจาก</span> • <span id="fuelTypeName">แก๊สโซฮอล์ 95</span>
+              <span class="fuel-price-badge" id="fuelPriceVal">... ฿/ลิตร</span>
+            </div>
+            <div class="fuel-banner-sub">
+              🏍️ Honda Wave 125i • อัตราประหยัด <strong id="fuelRateDisplay">71.4</strong> กม./ลิตร • <span id="fuelDateDisplay">อัปเดตวันนี้</span>
+            </div>
+          </div>
+        </div>
+        <div class="fuel-banner-right">
+          <button type="button" class="btn btn-outline btn-sm" onclick="fetchLiveOilPrices(true)" title="ดึงราคาน้ำมันล่าสุด">🔄 รีเฟรช</button>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>📅 วันที่</label>
+          <div class="tdp-wrap">
+            <button type="button" class="tdp-input placeholder" id="f-date-btn" onclick="tdpOpen('f-date')">เลือกวันที่</button>
+            <div class="tdp-pop" id="f-date-pop"></div>
+            <input type="hidden" id="f-date" value="">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>💚 รายได้ Grab (บาท)</label>
+          <input type="number" id="f-grab" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>👋 Tip มือ (บาท)</label>
+          <input type="number" id="f-tip" placeholder="0.00" step="0.01">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="addChipValue('f-tip', 10)">+10</button>
+            <button type="button" class="chip-btn" onclick="addChipValue('f-tip', 15)">+15</button>
+            <button type="button" class="chip-btn" onclick="addChipValue('f-tip', 20)">+20</button>
+            <button type="button" class="chip-btn" onclick="addChipValue('f-tip', 30)">+30</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>🛵 ระยะทางวิ่งงานวันนี้ (กม.)</label>
+          <input type="number" id="f-distance" placeholder="เช่น 85.5" step="0.1">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 40)">40 กม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 60)">60 กม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 80)">80 กม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 100)">100 กม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-distance', 120)">120 กม.</button>
+          </div>
+          <div class="fuel-calc-tag" id="f-dist-calc" style="display:none"></div>
+        </div>
+        <div class="form-group">
+          <label>⛽ ค่าน้ำมัน (ประมาณการ)</label>
+          <input type="number" id="f-oil" placeholder="0.00" step="0.01">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 20)">20</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 30)">30</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 40)">40</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oil', 50)">50</button>
+          </div>
+          <div class="fuel-calc-tag" id="f-oil-calc" style="display:none"></div>
+        </div>
+        <div class="form-group">
+          <label>⛽ เติมน้ำมันจริง (บาท)</label>
+          <input type="number" id="f-oilReal" placeholder="0.00" step="0.01">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="copyValue('f-oil', 'f-oilReal')">เท่าค่าน้ำมัน</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oilReal', 100)">100</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oilReal', 120)">120</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-oilReal', 140)">140</button>
+          </div>
+          <div class="fuel-calc-tag" id="f-oilReal-calc" style="display:none"></div>
+        </div>
+        <div class="form-group">
+          <label>💳 เครดิต Grab (บาท)</label>
+          <input type="number" id="f-credit" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>🏦 ถอนเข้ากรุงศรี (บาท)</label>
+          <input type="number" id="f-withdraw" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>⏱️ จำนวนชั่วโมงขับ</label>
+          <select id="f-hours">
+            <option value="">— ไม่ระบุ —</option>
+          </select>
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="setChipValue('f-hours', '2')">2 ชม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-hours', '3')">3 ชม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-hours', '4')">4 ชม.</button>
+            <button type="button" class="chip-btn" onclick="setChipValue('f-hours', '5')">5 ชม.</button>
+          </div>
+        </div>
+        <div class="form-group form-row-full">
+          <label>📝 หมายเหตุ</label>
+          <input type="text" id="f-note" placeholder="เช่น อินเพชร 80 หรือ อินพิเศษ 50">
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="appendNote('อินเพชร 80')">💎 อินเพชร 80</button>
+            <button type="button" class="chip-btn" onclick="appendNote('อินพิเศษ 50')">⭐ อินพิเศษ 50</button>
+            <button type="button" class="chip-btn" onclick="appendNote('ฝนตกหนัก')">🌧️ ฝนตก</button>
+          </div>
+        </div>
+      </div>
+      <div class="preview-box" id="previewBox">
+        <div class="preview-item">รายได้รวม: <strong id="prev-income">—</strong></div>
+        <div class="preview-item">กำไรสุทธิ: <strong id="prev-profit">—</strong></div>
+        <button class="btn btn-green" onclick="addRipple(event);requireAuth(saveEntry)" style="margin-left:auto">💾 บันทึก</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">💡 หมายเหตุ</div>
+      <ul style="font-size:0.88rem; color:var(--gray-600); line-height:2; padding-left:20px;">
+        <li>รายได้รวม = รายได้ Grab + Tip มือ</li>
+        <li>กำไรสุทธิ = รายได้รวม − ค่าน้ำมัน (ประมาณการ)</li>
+        <li>เครดิต Grab และถอนกรุงศรีไม่นับรวมในกำไร</li>
+        <li>หากมีอินพิเศษ/อินเพชร ให้พิมพ์ในหมายเหตุ เช่น "อินเพชร 80" หรือ "อินพิเศษ 50" ระบบจะรวมยอดให้อัตโนมัติในแท็บ 💎 อินพิเศษ/อินเพชร</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="page" id="page-history">
+    <div class="section-header">
+      <div class="section-title">📋 รายการทั้งหมด</div>
+    </div>
+    <div class="filter-bar">
+      <div class="tdp-wrap" style="display:inline-block">
+        <button type="button" class="tdp-input placeholder" id="filterMonth-btn" onclick="tdpOpenMonth('filterMonth')" style="min-width:130px">ทุกเดือน</button>
+        <div class="tdp-pop" id="filterMonth-pop"></div>
+        <input type="hidden" id="filterMonth" value="">
+      </div>
+      <select id="filterType" onchange="renderHistory()">
+        <option value="all">ทุกวัน</option>
+        <option value="work">วันทำงาน</option>
+        <option value="rest">วันหยุด</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="addRipple(event);clearMonthFilter()">ล้าง</button>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th class="td-num">รายได้ Grab</th>
+              <th class="td-num">Tip</th>
+              <th class="td-num">รายได้รวม</th>
+              <th class="td-num">ระยะทาง (กม.)</th>
+              <th class="td-num">ค่าน้ำมัน</th>
+              <th class="td-num">เติมน้ำมันจริง</th>
+              <th class="td-num">เครดิต Grab</th>
+              <th class="td-num">ถอนกรุงศรี</th>
+              <th class="td-num">ชั่วโมงขับ</th>
+              <th class="td-num">กำไรสุทธิ</th>
+              <th>หมายเหตุ</th>
+              <th id="historyActionsTh"></th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONTHLY -->
+  <div class="page" id="page-monthly">
+    <div id="monthlyContent"></div>
+  </div>
+
+  <!-- BONUS (อินพิเศษ/อินเพชร) -->
+  <div class="page" id="page-bonus">
+    <div class="section-header">
+      <div class="section-title">💎 วันที่ได้อินพิเศษ / อินเพชร</div>
+    </div>
+    <div class="bonus-summary-grid" id="bonusSummary"></div>
+    <div class="filter-bar">
+      <select id="bonusFilterType" onchange="renderBonus()">
+        <option value="all">ทุกประเภท</option>
+        <option value="diamond">💎 อินเพชร</option>
+        <option value="special">⭐ อินพิเศษ</option>
+      </select>
+    </div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+        <table id="bonusTable">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>ประเภท</th>
+              <th class="td-num">จำนวนเงิน</th>
+              <th>หมายเหตุเต็ม</th>
+            </tr>
+          </thead>
+          <tbody id="bonusBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PIN MODAL -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal" style="max-width:320px;text-align:center;">
+    <div class="modal-title" id="pinTitle">🔐 ยืนยันการลบข้อมูล</div>
+    <p style="color:var(--gray-600);font-size:0.86rem;margin-bottom:4px;">กรอกรหัส 6 หลักเพื่อยืนยัน</p>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+      <div class="pin-dot" id="pd4"></div>
+      <div class="pin-dot" id="pd5"></div>
+    </div>
+    <div id="pinMsg" style="height:18px;font-size:0.8rem;color:var(--red);margin-bottom:10px;font-weight:700;"></div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinKey('1')">1</button>
+      <button class="pin-btn" onclick="pinKey('2')">2</button>
+      <button class="pin-btn" onclick="pinKey('3')">3</button>
+      <button class="pin-btn" onclick="pinKey('4')">4</button>
+      <button class="pin-btn" onclick="pinKey('5')">5</button>
+      <button class="pin-btn" onclick="pinKey('6')">6</button>
+      <button class="pin-btn" onclick="pinKey('7')">7</button>
+      <button class="pin-btn" onclick="pinKey('8')">8</button>
+      <button class="pin-btn" onclick="pinKey('9')">9</button>
+      <button class="pin-btn" onclick="verifyPin()" style="font-size:1.1rem;font-weight:700;color:var(--green)" title="ยืนยัน (Enter)">↵</button>
+      <button class="pin-btn" onclick="pinKey('0')">0</button>
+      <button class="pin-btn del" onclick="pinKey('del')" title="ลบ (Backspace)">⌫</button>
+    </div>
+    <button class="btn btn-outline" onclick="closePinModal()" style="margin-top:14px;width:100%">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title">📥 Import ข้อมูลจาก Excel</div>
+    <p style="color:var(--gray-600);font-size:0.88rem;margin-bottom:18px;text-align:center;">
+      พบข้อมูล <strong style="font-size:1.2rem;color:var(--green-dark)" id="importCount">0</strong> วัน<br>ต้องการ import แบบไหน?
+    </p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="import-option" onclick="requireAuth(()=>doImport(true))">
+        <div class="opt-title">🔄 แทนที่ทั้งหมด</div>
+        <div class="opt-desc">ล้างข้อมูลเก่าแล้ว import ใหม่ทั้งหมด</div>
+      </button>
+      <button class="import-option" onclick="requireAuth(()=>doImport(false))">
+        <div class="opt-title">➕ เพิ่มเฉพาะวันที่ยังไม่มี</div>
+        <div class="opt-desc">ข้ามวันที่มีอยู่แล้ว ไม่เขียนทับ</div>
+      </button>
+      <button class="btn btn-outline" onclick="document.getElementById('importModal').classList.remove('show')" style="color:var(--gray-400);margin-top:4px;">
+        ยกเลิก
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">✏️ แก้ไขข้อมูล</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>📅 วันที่</label>
+        <div class="tdp-wrap">
+          <button type="button" class="tdp-input placeholder" id="e-date-btn" onclick="tdpOpen('e-date')">เลือกวันที่</button>
+          <div class="tdp-pop" id="e-date-pop"></div>
+          <input type="hidden" id="e-date" value="">
+        </div>
+      </div>
+      <div class="form-group"><label>💚 รายได้ Grab</label><input type="number" id="e-grab" step="0.01"></div>
+      <div class="form-group"><label>👋 Tip มือ</label><input type="number" id="e-tip" step="0.01"></div>
+      <div class="form-group"><label>🛵 ระยะทางวิ่งงาน (กม.)</label><input type="number" id="e-distance" step="0.1"><div class="fuel-calc-tag" id="e-dist-calc" style="display:none"></div></div>
+      <div class="form-group"><label>⛽ ค่าน้ำมัน</label><input type="number" id="e-oil" step="0.01"><div class="fuel-calc-tag" id="e-oil-calc" style="display:none"></div></div>
+      <div class="form-group"><label>⛽ เติมน้ำมันจริง</label><input type="number" id="e-oilReal" step="0.01"><div class="fuel-calc-tag" id="e-oilReal-calc" style="display:none"></div></div>
+      <div class="form-group"><label>💳 เครดิต Grab</label><input type="number" id="e-credit" step="0.01"></div>
+      <div class="form-group"><label>🏦 ถอนกรุงศรี</label><input type="number" id="e-withdraw" step="0.01"></div>
+      <div class="form-group">
+        <label>⏱️ จำนวนชั่วโมงขับ</label>
+        <select id="e-hours">
+          <option value="">— ไม่ระบุ —</option>
+        </select>
+      </div>
+      <div class="form-group form-row-full"><label>📝 หมายเหตุ</label><input type="text" id="e-note"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-green" onclick="addRipple(event);requireAuth(saveEdit)">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- FUEL SETTINGS MODAL -->
+<div class="modal-overlay" id="fuelModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">⛽ ตั้งค่าน้ำมันและรุ่นรถ</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin:16px 0;">
+      <div class="form-group">
+        <label>ปั๊มน้ำมันหลัก</label>
+        <select id="cfg-fuel-brand" onchange="onFuelBrandOrTypeChange()">
+          <option value="bcp">บางจาก (Bangchak) - ค่าเริ่มต้น</option>
+          <option value="ptt">ปตท. (PTT)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ชนิดน้ำมันที่เติมประจำ</label>
+        <select id="cfg-fuel-type" onchange="onFuelBrandOrTypeChange()">
+          <option value="gasohol_95">แก๊สโซฮอล์ 95 S EVO (แนะนำสำหรับ Wave 125i)</option>
+          <option value="gasohol_91">แก๊สโซฮอล์ 91 S EVO</option>
+          <option value="gasohol_e20">แก๊สโซฮอล์ E20 S EVO</option>
+          <option value="disel">ดีเซล</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ราคาน้ำมันขายปลีกวันนี้ (บาท/ลิตร)</label>
+        <div style="display:flex;gap:8px;">
+          <input type="number" id="cfg-fuel-price" step="0.01" style="flex:1" placeholder="39.09">
+          <button type="button" class="btn btn-outline btn-sm" onclick="fetchLiveOilPrices(true)" title="ดึงราคาล่าสุดจาก API">🔄 ดึงราคา</button>
+        </div>
+        <small style="color:var(--text-muted);font-size:0.78rem" id="cfg-fuel-status">กำลังเชื่อมต่อราคาน้ำมัน...</small>
+      </div>
+      <div class="form-group">
+        <label>อัตราสิ้นเปลืองของรถ (กิโลเมตร / ลิตร)</label>
+        <input type="number" id="cfg-fuel-rate" step="0.1" value="71.4">
+        <small style="color:var(--text-muted);font-size:0.78rem">🛵 Honda Wave 125i (2026): มาตรฐาน <strong>71.4 กม./ลิตร</strong></small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeFuelModal()">ยกเลิก</button>
+      <button class="btn btn-green" onclick="saveFuelSettings()">💾 บันทึกการตั้งค่า</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<button id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="กลับขึ้นบน">↑</button>
+
+</div>
+
+<script src="script.js?v=20260915_2255"></script>
+</body>
+</html>
