@@ -68,6 +68,12 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
 
     const id = Date.now() + Math.random().toString(36).slice(2, 6);
 
+    const isWorkDay = numGrab > 0 || numDist > 0 || numOil > 0;
+    const parsedHours = parseFloat(hours);
+    const finalHours = !isNaN(parsedHours) && parsedHours > 0 
+      ? parsedHours 
+      : (isWorkDay ? 3 : null);
+
     const payload = {
       id,
       date,
@@ -78,7 +84,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
       oil_real: numRealOil,
       credit: parseFloat(credit) || 0,
       withdraw: parseFloat(withdraw) || 0,
-      hours: parseFloat(hours) || null,
+      hours: finalHours,
       note: note.trim(),
     };
 
@@ -287,8 +293,8 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
           </div>
         </div>
 
-        {/* Banking & Credits */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+        {/* Banking, Withdraw & Hours */}
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               💳 เติมเครดิต Grab (บาท)
@@ -315,6 +321,21 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               placeholder="0.00"
               value={withdraw}
               onChange={(e) => setWithdraw(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              ⏱️ ชั่วโมงขับ (ชม.) <span className="text-slate-400 font-normal">- ว่างไว้ใส่ 3 ชม.</span>
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              placeholder="3"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>

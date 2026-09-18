@@ -238,17 +238,25 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
             dist = parseFloat(((oil / price) * rate).toFixed(1));
           }
 
+          const grabVal = cGrab >= 0 && row[cGrab] != null ? parseFloat(row[cGrab]) || 0 : 0;
+          const tipVal = cTip >= 0 && row[cTip] != null ? parseFloat(row[cTip]) || 0 : 0;
+          let hoursVal = cHours >= 0 && row[cHours] != null ? parseFloat(row[cHours]) || null : null;
+          const isWork = grabVal > 0 || tipVal > 0 || (dist != null && dist > 0) || oil > 0;
+          if (isWork && (hoursVal === null || hoursVal === 0)) {
+            hoursVal = 3;
+          }
+
           parsed.push({
             id: `entry_${dateStr}_${Math.random().toString(36).slice(2, 6)}`,
             date: dateStr,
-            grab: cGrab >= 0 && row[cGrab] != null ? parseFloat(row[cGrab]) || 0 : 0,
-            tip: cTip >= 0 && row[cTip] != null ? parseFloat(row[cTip]) || 0 : 0,
+            grab: grabVal,
+            tip: tipVal,
             distance: dist,
             oil: oil,
             oil_real: cOilReal >= 0 && row[cOilReal] != null ? parseFloat(row[cOilReal]) || 0 : 0,
             credit: cCredit >= 0 && row[cCredit] != null ? parseFloat(row[cCredit]) || 0 : 0,
             withdraw: cWithdraw >= 0 && row[cWithdraw] != null ? parseFloat(row[cWithdraw]) || 0 : 0,
-            hours: cHours >= 0 && row[cHours] != null ? parseFloat(row[cHours]) || null : null,
+            hours: hoursVal,
             note: cNote >= 0 && row[cNote] != null ? String(row[cNote]).trim() : '',
           });
         }
