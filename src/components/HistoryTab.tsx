@@ -4,8 +4,9 @@ import React, { useState, useMemo } from 'react';
 import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { fmt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, TH_MONTHS } from '@/lib/utils';
-import { Search, Filter, Download, Edit2, Trash2, X, Check, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, Download, Upload, FileSpreadsheet, Edit2, Trash2, X, Check, ArrowUpDown, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import confetti from 'canvas-confetti';
 import ThaiDatePicker from './ThaiDatePicker';
 
 interface HistoryTabProps {
@@ -24,6 +25,11 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Import Excel state
+  const [isImporting, setIsImporting] = useState(false);
+  const [pendingImport, setPendingImport] = useState<Entry[] | null>(null);
+  const [importStatusMsg, setImportStatusMsg] = useState<string | null>(null);
 
   // Available months
   const availableMonths = useMemo(() => {
@@ -127,6 +133,169 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
     }
   };
 
+  // Handle Excel File Selection
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = ev.target?.result;
+        if (!data) return;
+        const wb = XLSX.read(data, { type: 'array', cellDates: false });
+
+        const isDateSerial = (v: any) => typeof v === 'number' && v > 30000 && v < 70000;
+        const isDateString = (v: any) => typeof v === 'string' && (/\d{4}-\d{2}-\d{2}/.test(v) || /\d{1,2}\/\d{1,2}\/\d{4}/.test(v));
+        const isDateCell = (v: any) => isDateSerial(v) || isDateString(v);
+
+        let rawRows: any[][] | null = null;
+        for (const sheetName of wb.SheetNames) {
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null }) as any[][];
+          if (rows.some((r) => r && isDateCell(r[0]))) {
+            rawRows = rows;
+            break;
+          }
+        }
+
+        if (!rawRows) {
+          alert('ไม่พบข้อมูลวันที่ในไฟล์ Excel');
+          return;
+        }
+
+        const firstDataRowIdx = rawRows.findIndex((r) => r && isDateCell(r[0]));
+        if (firstDataRowIdx < 0) {
+          alert('ไม่พบแถวข้อมูลในไฟล์');
+          return;
+        }
+
+        const headerRow = firstDataRowIdx > 0 ? rawRows[firstDataRowIdx - 1] : [];
+        const headers = (headerRow || []).map((h) => (h ? String(h).toLowerCase() : ''));
+
+        const colOf = (kws: string[]) => {
+          for (const kw of kws) {
+            const i = headers.findIndex((h) => h.includes(kw.toLowerCase()));
+            if (i >= 0) return i;
+          }
+          return -1;
+        };
+
+        const cGrab = colOf(['grab', 'แกร็บ']) >= 0 ? colOf(['grab', 'แกร็บ']) : 1;
+        const cTip = colOf(['tip', 'ทิป']) >= 0 ? colOf(['tip', 'ทิป']) : 2;
+        const cDist = colOf(['ระยะทาง', 'distance', 'กม']);
+        const cOil = colOf(['ค่าน้ำมัน', 'ประมาณการ']) >= 0 ? colOf(['ค่าน้ำมัน', 'ประมาณการ']) : 4;
+        const cOilReal = colOf(['เติมจริง', 'เติมน้ำมันจริง']) >= 0 ? colOf(['เติมจริง', 'เติมน้ำมันจริง']) : 5;
+        const cCredit = colOf(['เครดิต', 'credit']) >= 0 ? colOf(['เครดิต', 'credit']) : 6;
+        const cWithdraw = colOf(['ถอน', 'withdraw']) >= 0 ? colOf(['ถอน', 'withdraw']) : 7;
+        const cHours = colOf(['ชั่วโมง', 'ชม', 'hours']);
+        const cNote = colOf(['หมายเหตุ', 'note']) >= 0 ? colOf(['หมายเหตุ', 'note']) : 9;
+
+        const parseExcelDate = (val: any): string | null => {
+          if (val == null) return null;
+          if (typeof val === 'number' && val > 30000 && val < 70000) {
+            const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+            const y = d.getUTCFullYear();
+            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(d.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+          }
+          const str = String(val).trim();
+          const mIso = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+          if (mIso) {
+            let y = parseInt(mIso[1], 10);
+            if (y > 2500) y -= 543;
+            return `${y}-${mIso[2].padStart(2, '0')}-${mIso[3].padStart(2, '0')}`;
+          }
+          const mSlash = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+          if (mSlash) {
+            let y = parseInt(mSlash[3], 10);
+            if (y > 2500) y -= 543;
+            return `${y}-${mSlash[2].padStart(2, '0')}-${mSlash[1].padStart(2, '0')}`;
+          }
+          if (str.includes('T')) {
+            const d = new Date(str);
+            if (!isNaN(d.getTime())) {
+              d.setHours(d.getHours() + 7);
+              return d.toISOString().slice(0, 10);
+            }
+          }
+          return null;
+        };
+
+        const parsed: Entry[] = [];
+        for (let i = firstDataRowIdx; i < rawRows.length; i++) {
+          const row = rawRows[i];
+          if (!row) continue;
+          const dateStr = parseExcelDate(row[0]);
+          if (!dateStr) continue;
+
+          let dist = cDist >= 0 && row[cDist] != null ? parseFloat(row[cDist]) || null : null;
+          const oil = cOil >= 0 && row[cOil] != null ? parseFloat(row[cOil]) || 0 : 0;
+          if (!dist && oil > 0) {
+            const rate = fuelSettings.rate_km_per_l || 71.4;
+            const price = fuelSettings.manual_price || fuelSettings.last_fetched_price || 39.09;
+            dist = parseFloat(((oil / price) * rate).toFixed(1));
+          }
+
+          parsed.push({
+            id: `entry_${dateStr}_${Math.random().toString(36).slice(2, 6)}`,
+            date: dateStr,
+            grab: cGrab >= 0 && row[cGrab] != null ? parseFloat(row[cGrab]) || 0 : 0,
+            tip: cTip >= 0 && row[cTip] != null ? parseFloat(row[cTip]) || 0 : 0,
+            distance: dist,
+            oil: oil,
+            oil_real: cOilReal >= 0 && row[cOilReal] != null ? parseFloat(row[cOilReal]) || 0 : 0,
+            credit: cCredit >= 0 && row[cCredit] != null ? parseFloat(row[cCredit]) || 0 : 0,
+            withdraw: cWithdraw >= 0 && row[cWithdraw] != null ? parseFloat(row[cWithdraw]) || 0 : 0,
+            hours: cHours >= 0 && row[cHours] != null ? parseFloat(row[cHours]) || null : null,
+            note: cNote >= 0 && row[cNote] != null ? String(row[cNote]).trim() : '',
+          });
+        }
+
+        if (parsed.length === 0) {
+          alert('ไม่พบข้อมูลที่สามารถนำเข้าได้');
+          return;
+        }
+
+        setPendingImport(parsed);
+      } catch (err: any) {
+        alert(`เกิดข้อผิดพลาดในการอ่านไฟล์: ${err.message}`);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const confirmImport = async () => {
+    if (!pendingImport || pendingImport.length === 0) return;
+    setIsImporting(true);
+    setImportStatusMsg(`กำลังนำเข้าข้อมูล ${pendingImport.length} วันลง Supabase...`);
+
+    try {
+      const chunkSize = 50;
+      for (let i = 0; i < pendingImport.length; i += chunkSize) {
+        const chunk = pendingImport.slice(i, i + chunkSize);
+        const { error } = await supabase.from('entries').upsert(chunk, { onConflict: 'date' });
+        if (error) throw error;
+      }
+
+      const count = pendingImport.length;
+      setPendingImport(null);
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+      alert(`✅ นำเข้าข้อมูลสำเร็จทั้งหมด ${count} รายการ!`);
+      onRefresh();
+    } catch (err: any) {
+      alert(`นำเข้าไม่สำเร็จ: ${err.message}`);
+    } finally {
+      setIsImporting(false);
+      setImportStatusMsg(null);
+    }
+  };
+
   return (
     <div className="space-y-4 pb-12">
       {/* Control Bar: Search & Filters */}
@@ -186,14 +355,33 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
           </div>
         </div>
 
-        {/* Export Excel Button */}
-        <button
-          onClick={handleExportExcel}
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm shrink-0"
-        >
-          <Download className="h-4 w-4" />
-          <span>Export Excel ({filteredEntries.length})</span>
-        </button>
+        {/* Actions: Import & Export Excel */}
+        <div className="flex items-center gap-2 shrink-0">
+          {userRole !== 'guest' && (
+            <label
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer"
+              title="นำเข้าไฟล์ Excel (.xlsx, .xls, .csv)"
+            >
+              <Upload className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Import Excel</span>
+              <input
+                type="file"
+                accept=".xlsx, .xls, .csv"
+                onChange={handleImportExcel}
+                className="hidden"
+                disabled={isImporting}
+              />
+            </label>
+          )}
+
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm"
+          >
+            <Download className="h-4 w-4" />
+            <span>Export Excel ({filteredEntries.length})</span>
+          </button>
+        </div>
       </div>
 
       {/* Table Card */}
@@ -304,6 +492,93 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
           </table>
         </div>
       </div>
+
+      {/* Excel Import Preview Modal */}
+      {pendingImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 shadow-sm">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white">
+                    📥 นำเข้าข้อมูลจากไฟล์ Excel
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    ตรวจพบข้อมูลทั้งหมด <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{pendingImport.length}</strong> วัน
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPendingImport(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                ตัวอย่างข้อมูล 5 รายการแรก (หากวันที่ซ้ำ ระบบจะอัปเดตข้อมูลให้ทันที):
+              </p>
+
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-bold sticky top-0 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th className="p-2.5">วันที่</th>
+                      <th className="p-2.5 text-right">Grab</th>
+                      <th className="p-2.5 text-right">ระยะทาง</th>
+                      <th className="p-2.5 text-right">น้ำมัน</th>
+                      <th className="p-2.5">หมายเหตุ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {pendingImport.slice(0, 5).map((row) => (
+                      <tr key={row.date} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                        <td className="p-2.5 font-mono font-bold text-emerald-600 dark:text-emerald-400">{fmtDateSlash(row.date)}</td>
+                        <td className="p-2.5 text-right font-medium">{fmt(row.grab)} ฿</td>
+                        <td className="p-2.5 text-right text-blue-600 dark:text-blue-400">{row.distance ? `${row.distance} กม.` : '—'}</td>
+                        <td className="p-2.5 text-right text-rose-500 font-medium">{fmt(row.oil)} ฿</td>
+                        <td className="p-2.5 text-slate-400 truncate max-w-[120px]">{row.note || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {importStatusMsg && (
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                  <span>{importStatusMsg}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  disabled={isImporting}
+                  onClick={() => setPendingImport(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 disabled:opacity-50"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  disabled={isImporting}
+                  onClick={confirmImport}
+                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30 disabled:opacity-50"
+                >
+                  {isImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  <span>ยืนยันนำเข้าข้อมูล ({pendingImport.length} วัน)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editingEntry && (

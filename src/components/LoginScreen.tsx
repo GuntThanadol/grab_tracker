@@ -26,6 +26,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isShake, setIsShake] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+
+  const proceedLogin = (role: UserRole) => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onLogin(role);
+    }, 350);
+  };
 
   const handleAdminLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -49,7 +57,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         p === '120946';
 
       if (u === 'admin' && isPasswordValid) {
-        onLogin('admin');
+        proceedLogin('admin');
       } else {
         setErrorMsg('❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
         triggerShake();
@@ -68,11 +76,15 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   };
 
   const handleGuestLogin = () => {
-    onLogin('guest');
+    proceedLogin('guest');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 relative overflow-hidden">
+    <div
+      className={`min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 relative overflow-hidden transition-all duration-350 ease-out ${
+        isExiting ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+      }`}
+    >
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -159,15 +171,11 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         <button
           type="button"
           onClick={handleGuestLogin}
-          className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-600 active:scale-[0.98] transition shadow-sm cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3.5 text-sm font-bold text-slate-200 hover:bg-slate-800 hover:text-white hover:border-slate-600 active:scale-[0.98] transition shadow-sm cursor-pointer"
         >
           <Compass className="h-4 w-4 text-amber-400" />
-          เข้าชมในฐานะ Guest (โหมดดูอย่างเดียว)
+          Guest Mode
         </button>
-
-        <p className="text-[11px] text-center text-slate-500 mt-6 leading-relaxed">
-          โหมด Guest สามารถเปิดดูสถิติ กราฟ และประวัติได้ แต่จะไม่สามารถแก้ไขหรือบันทึกข้อมูลทับได้
-        </p>
       </div>
     </div>
   );
