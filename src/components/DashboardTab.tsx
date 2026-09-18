@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { Entry } from '@/types';
-import { fmt, fmtInt, income, profit, isWorkDay, fmtDateTh } from '@/lib/utils';
+import { fmt, fmtInt, income, profit, isWorkDay, fmtDateTh, fmtDateSlash } from '@/lib/utils';
 import { TrendingUp, Fuel, Bike, Wallet, ArrowDownRight, Clock, Award, DollarSign, CalendarCheck } from 'lucide-react';
 
 interface DashboardTabProps {
@@ -193,7 +193,7 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
           </div>
           {selectedBar && (
             <div className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              <strong>{fmtDateTh(selectedBar.date)}</strong>: กำไร <strong>{fmt(profit(selectedBar))} ฿</strong> (รายได้ {fmt(income(selectedBar))} บ. | น้ำมัน {fmt(selectedBar.oil)} บ. | วิ่ง {selectedBar.distance || 0} กม.)
+              <strong className="font-mono">{fmtDateSlash(selectedBar.date)}</strong> ({fmtDateTh(selectedBar.date)}): กำไร <strong>{fmt(profit(selectedBar))} ฿</strong> (รายได้ {fmt(income(selectedBar))} บ. | น้ำมัน {fmt(selectedBar.oil)} บ. | วิ่ง {selectedBar.distance || 0} กม.)
             </div>
           )}
         </div>

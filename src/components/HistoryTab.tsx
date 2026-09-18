@@ -1,11 +1,12 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useMemo } from 'react';
 import { Entry, FuelSettings } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { fmt, income, profit, isWorkDay, fmtDateTh, TH_MONTHS } from '@/lib/utils';
+import { fmt, income, profit, isWorkDay, fmtDateTh, fmtDateSlash, TH_MONTHS } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import { Search, Download, Edit2, Trash2, X, Bike, Check, Filter } from 'lucide-react';
+import ThaiDatePicker from './ThaiDatePicker';
 
 interface HistoryTabProps {
   entries: Entry[];
@@ -235,8 +236,9 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh }: History
                         isW ? '' : 'opacity-60 bg-slate-50/30 dark:bg-slate-900/40'
                       }`}
                     >
-                      <td className="whitespace-nowrap px-3.5 py-3 font-semibold text-slate-900 dark:text-white">
-                        {fmtDateTh(r.date)}
+                      <td className="whitespace-nowrap px-3.5 py-3 text-slate-900 dark:text-white">
+                        <div className="font-bold text-sm tracking-wide text-emerald-700 dark:text-emerald-400 font-mono">{fmtDateSlash(r.date)}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{fmtDateTh(r.date)}</div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-medium">
                         {Number(r.grab) > 0 ? fmt(r.grab) : <span className="text-slate-300">—</span>}
@@ -317,6 +319,14 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh }: History
             </div>
 
             <form onSubmit={handleSaveEdit} className="mt-4 space-y-3">
+              <div>
+                <ThaiDatePicker
+                  value={editingEntry.date}
+                  onChange={(d) => setEditingEntry({ ...editingEntry, date: d })}
+                  label="📅 วันที่ (วัน/เดือน/ปี)"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Grab (บาท)</label>

@@ -1,11 +1,12 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fmt, getTodayThai, fmtDateSlash } from '@/lib/utils';
 import { FuelSettings } from '@/types';
-import { fmt } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import { Save, Sparkles, Fuel, Bike, DollarSign, Wallet, ArrowDownRight, Clock, StickyNote } from 'lucide-react';
+import ThaiDatePicker from './ThaiDatePicker';
 
 interface EntryTabProps {
   fuelSettings: FuelSettings;
@@ -13,7 +14,7 @@ interface EntryTabProps {
 }
 
 export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayThai();
   const [date, setDate] = useState(today);
   const [grab, setGrab] = useState<string>('');
   const [tip, setTip] = useState<string>('');
@@ -145,17 +146,12 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
         )}
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Date Picker */}
+          {/* Thai Date Picker */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              📅 วันที่
-            </label>
-            <input
-              type="date"
+            <ThaiDatePicker
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              onChange={setDate}
+              label="📅 วันที่ทำงาน (วัน/เดือน/ปี)"
             />
           </div>
 
