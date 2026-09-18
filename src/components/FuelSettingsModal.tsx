@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { X, RefreshCw, Save, Fuel } from 'lucide-react';
@@ -20,6 +21,11 @@ export default function FuelSettingsModal({
   onUpdated,
   userRole,
 }: FuelSettingsModalProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [brand, setBrand] = useState<'bcp' | 'ptt'>(fuelSettings.brand || 'bcp');
   const [fuelType, setFuelType] = useState<string>(fuelSettings.fuel_type || 'gasohol_95');
   const [rate, setRate] = useState<number>(fuelSettings.rate_km_per_l || 71.4);
@@ -27,7 +33,19 @@ export default function FuelSettingsModal({
   const [isFetching, setIsFetching] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string>('');
 
-  if (!isOpen) return null;
+  // Lock body scroll while open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
 
   const currentPrice = manualPrice ? parseFloat(manualPrice) : (fuelSettings.last_fetched_price || 39.09);
 
@@ -90,8 +108,8 @@ export default function FuelSettingsModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-md max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
@@ -216,6 +234,7 @@ export default function FuelSettingsModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

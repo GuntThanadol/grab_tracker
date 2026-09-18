@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { fmt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, TH_MONTHS } from '@/lib/utils';
@@ -17,6 +18,11 @@ interface HistoryTabProps {
 }
 
 export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole }: HistoryTabProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'work' | 'rest'>('all');
@@ -30,6 +36,18 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   const [isImporting, setIsImporting] = useState(false);
   const [pendingImport, setPendingImport] = useState<Entry[] | null>(null);
   const [importStatusMsg, setImportStatusMsg] = useState<string | null>(null);
+
+  // Prevent background scroll while any modal is open
+  useEffect(() => {
+    if (editingEntry || pendingImport || deleteConfirmId) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [editingEntry, pendingImport, deleteConfirmId]);
 
   // Available months
   const availableMonths = useMemo(() => {
@@ -504,8 +522,8 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       </div>
 
       {/* Excel Import Preview Modal */}
-      {pendingImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+      {mounted && pendingImport && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-xl max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 animate-fade-in">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -587,12 +605,13 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Modal */}
-      {editingEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+      {mounted && editingEntry && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800 shrink-0">
               <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
@@ -724,12 +743,13 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirm Modal */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      {mounted && deleteConfirmId && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400 mb-3">
               <Trash2 className="h-6 w-6" />
@@ -751,7 +771,8 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
