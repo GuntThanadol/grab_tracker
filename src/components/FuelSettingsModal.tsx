@@ -91,28 +91,28 @@ export default function FuelSettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+      <div className="w-full max-w-md max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
               <Fuel className="h-4 w-4" />
             </div>
-            <h3 className="font-bold text-slate-900 dark:text-white">⚙️ ตั้งค่าน้ำมันและอัตราสิ้นเปลือง</h3>
+            <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">⚙️ ตั้งค่าน้ำมันและอัตราสิ้นเปลือง</h3>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="mt-4 space-y-4">
+        <form onSubmit={handleSave} className="mt-4 space-y-4 overflow-y-auto flex-1 pr-1">
           {/* Brand */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">สถานีบริการน้ำมัน</label>
             <select
               value={brand}
               onChange={(e) => setBrand(e.target.value as any)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium dark:border-slate-800 dark:bg-slate-800"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-base sm:text-sm font-medium dark:border-slate-800 dark:bg-slate-800"
             >
               <option value="bcp">🌿 บางจาก (Bangchak)</option>
               <option value="ptt">🔵 ปตท. (PTT Station)</option>
@@ -125,7 +125,7 @@ export default function FuelSettingsModal({
             <select
               value={fuelType}
               onChange={(e) => setFuelType(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium dark:border-slate-800 dark:bg-slate-800"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-base sm:text-sm font-medium dark:border-slate-800 dark:bg-slate-800"
             >
               <option value="gasohol_95">แก๊สโซฮอล์ 95 (แนะนำสำหรับ Wave 125i)</option>
               <option value="gasohol_91">แก๊สโซฮอล์ 91</option>
@@ -141,10 +141,11 @@ export default function FuelSettingsModal({
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               value={rate}
               onChange={(e) => setRate(parseFloat(e.target.value) || 71.4)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-bold dark:border-slate-800 dark:bg-slate-800"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-base sm:text-sm font-bold dark:border-slate-800 dark:bg-slate-800"
             />
             <small className="mt-1 block text-[11px] text-slate-400">
               Honda Wave 125i (2026) ค่ามาตรฐานจากโรงงานคือ <strong>71.4 กม./ลิตร</strong>
@@ -158,11 +159,12 @@ export default function FuelSettingsModal({
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               placeholder={`ราคาล่าสุด ${fuelSettings.last_fetched_price || 39.09} ฿`}
               value={manualPrice}
               onChange={(e) => setManualPrice(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm dark:border-slate-800 dark:bg-slate-800"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-base sm:text-sm dark:border-slate-800 dark:bg-slate-800"
             />
           </div>
 
@@ -176,7 +178,7 @@ export default function FuelSettingsModal({
               type="button"
               disabled={isFetching}
               onClick={fetchLivePrices}
-              className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+              className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 active:scale-95"
             >
               <RefreshCw className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`} />
               ดึงราคาใหม่
@@ -195,18 +197,18 @@ export default function FuelSettingsModal({
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300"
+              className="rounded-xl border border-slate-200 px-3.5 sm:px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 active:scale-95"
             >
               ปิด
             </button>
             {userRole !== 'guest' && (
               <button
                 type="submit"
-                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30"
+                className="rounded-xl bg-emerald-600 px-3.5 sm:px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30 active:scale-95"
               >
                 💾 บันทึกการตั้งค่า
               </button>

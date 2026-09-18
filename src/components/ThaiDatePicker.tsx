@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check } from 'lucide-react';
@@ -127,9 +127,17 @@ export default function ThaiDatePicker({
         </span>
       </button>
 
+      {/* Mobile Backdrop Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] sm:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
       {/* Popup Calendar Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 z-50 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed sm:absolute left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 top-1/2 -translate-y-1/2 sm:top-full sm:translate-y-0 z-50 mt-0 sm:mt-2 w-[calc(100vw-2.5rem)] sm:w-80 max-w-xs sm:max-w-none rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900 animate-in fade-in zoom-in-95 duration-150">
           
           {/* Header with Thai Month & Year (ค.ศ. / พ.ศ.) */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
@@ -175,7 +183,7 @@ export default function ThaiDatePicker({
           <div className="mt-2 grid grid-cols-7 gap-1 text-center">
             {/* Blank padding for day offset */}
             {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-              <div key={`blank-${i}`} className="h-8 w-8" />
+              <div key={`blank-${i}`} className="h-9 w-9 sm:h-8 sm:w-8 mx-auto" />
             ))}
 
             {/* Days in Month */}
@@ -190,7 +198,7 @@ export default function ThaiDatePicker({
                   type="button"
                   key={day}
                   onClick={() => handleSelectDay(day)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition ${
+                  className={`flex h-9 w-9 sm:h-8 sm:w-8 mx-auto items-center justify-center rounded-xl sm:rounded-lg text-xs font-semibold transition active:scale-95 ${
                     isSelected
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                       : isToday

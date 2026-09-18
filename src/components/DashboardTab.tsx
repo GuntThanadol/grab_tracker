@@ -38,30 +38,30 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
   return (
     <div className="space-y-6 pb-12">
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-green-800 p-6 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-green-800 p-4 sm:p-6 text-white shadow-xl">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider backdrop-blur-sm">
-                Grab Daily Driver Tracker
+              <span className="rounded-md bg-white/20 px-2 py-0.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider backdrop-blur-sm">
+                Grab Driver Tracker
               </span>
-              <span className="text-xs text-emerald-100">ขับขี่ปลอดภัย รวยๆ เฮงๆ 🛵💨</span>
+              <span className="text-[11px] sm:text-xs text-emerald-100">ขับขี่ปลอดภัย รวยๆ เฮงๆ 🛵💨</span>
             </div>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight">
+            <h2 className="mt-2 text-xl sm:text-3xl font-black tracking-tight">
               กำไรสุทธิรวม {fmt(totalProfit)} บาท
             </h2>
-            <p className="mt-1 text-sm text-emerald-100">
-              วิ่งงานแล้ว {workRows.length} วัน • เฉลี่ยกำไรวันละ {fmt(avgProfit)} บาท • ระยะทางรวม {fmtInt(totalDistance)} กม.
+            <p className="mt-1 text-xs sm:text-sm text-emerald-100 leading-relaxed">
+              วิ่งงาน {workRows.length} วัน • เฉลี่ยกำไร {fmt(avgProfit)} บ./วัน • รวม {fmtInt(totalDistance)} กม.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-white/10 p-3 backdrop-blur-md border border-white/20 text-center">
-              <div className="text-xs font-medium text-emerald-100">ความคุ้มค่าเฉลี่ย</div>
-              <div className="text-lg font-bold">{fmt(revPerKm)} ฿/กม.</div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+            <div className="rounded-xl bg-white/10 p-2.5 sm:p-3 backdrop-blur-md border border-white/20 text-center">
+              <div className="text-[11px] font-medium text-emerald-100">ความคุ้มค่าเฉลี่ย</div>
+              <div className="text-base sm:text-lg font-bold">{fmt(revPerKm)} ฿/กม.</div>
             </div>
-            <div className="rounded-xl bg-white/10 p-3 backdrop-blur-md border border-white/20 text-center">
-              <div className="text-xs font-medium text-emerald-100">กำไรเฉลี่ย/ชม.</div>
-              <div className="text-lg font-bold">{fmt(avgHourlyRate)} ฿/ชม.</div>
+            <div className="rounded-xl bg-white/10 p-2.5 sm:p-3 backdrop-blur-md border border-white/20 text-center">
+              <div className="text-[11px] font-medium text-emerald-100">กำไรเฉลี่ย/ชม.</div>
+              <div className="text-base sm:text-lg font-bold">{fmt(avgHourlyRate)} ฿/ชม.</div>
             </div>
           </div>
         </div>

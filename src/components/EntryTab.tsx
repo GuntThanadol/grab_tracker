@@ -117,20 +117,20 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-12">
       {/* Form Card */}
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800 gap-2">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span>✍️ บันทึกบัญชี Grab ประจำวัน</span>
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
               กรอกระยะทางเพื่อคำนวณค่าน้ำมันอัตโนมัติ (Wave 125i @ {rate} กม./ลิตร)
             </p>
           </div>
-          <div className="text-right">
-            <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-              ⛽ น้ำมัน {price.toFixed(2)} ฿
+          <div className="text-right shrink-0">
+            <span className="rounded-xl bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+              ⛽ {price.toFixed(2)} ฿
             </span>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
           </div>
         )}
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-3.5 sm:gap-4 sm:grid-cols-2">
           {/* Thai Date Picker */}
           <div>
             <ThaiDatePicker
@@ -162,11 +162,12 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               placeholder="0.00"
               value={grab}
               onChange={(e) => setGrab(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
 
@@ -177,11 +178,12 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               placeholder="0.00"
               value={tip}
               onChange={(e) => setTip(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
 
@@ -192,11 +194,12 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               placeholder="เช่น 3 หรือ 4.5"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-medium text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
         </div>
@@ -252,11 +255,12 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 placeholder="0.00"
                 value={oil}
                 onChange={(e) => setOil(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white transition"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white transition"
               />
             </div>
 
@@ -267,11 +271,12 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 placeholder="เช่น 100"
                 value={oilReal}
                 onChange={(e) => setOilReal(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white transition"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white transition"
               />
               {numRealOil > 0 && (
                 <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">
@@ -283,18 +288,19 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
         </div>
 
         {/* Banking & Credits */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               💳 เติมเครดิต Grab (บาท)
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               placeholder="0.00"
               value={credit}
               onChange={(e) => setCredit(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
 
@@ -304,11 +310,12 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               placeholder="0.00"
               value={withdraw}
               onChange={(e) => setWithdraw(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
         </div>
@@ -323,20 +330,20 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
             placeholder="เช่น อินพิเศษ 32 บาท, ขาดงาน, หยุด"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
           />
         </div>
 
         {/* Live Preview Bar */}
-        <div className="mt-6 flex items-center justify-between rounded-xl bg-slate-900 p-4 text-white dark:bg-slate-800">
+        <div className="mt-6 flex items-center justify-between rounded-2xl bg-slate-900 p-4 sm:p-5 text-white dark:bg-slate-800 shadow-md">
           <div>
-            <div className="text-xs text-slate-400">รายได้รวมวันนี้</div>
-            <div className="text-lg font-bold text-emerald-400">{fmt(prevIncome)} บาท</div>
+            <div className="text-[11px] sm:text-xs text-slate-400 font-medium">รายได้รวมวันนี้</div>
+            <div className="text-base sm:text-xl font-bold text-emerald-400">{fmt(prevIncome)} ฿</div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-slate-400">กำไรสุทธิ (หักน้ำมัน)</div>
-            <div className={`text-xl font-black ${prevProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {fmt(prevProfit)} บาท
+            <div className="text-[11px] sm:text-xs text-slate-400 font-medium">กำไรสุทธิ (หักน้ำมัน)</div>
+            <div className={`text-lg sm:text-2xl font-black ${prevProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {fmt(prevProfit)} ฿
             </div>
           </div>
         </div>
@@ -345,9 +352,9 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
         <button
           type="submit"
           disabled={loading}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 hover:from-emerald-500 hover:to-green-500 focus:outline-none disabled:opacity-50 transition"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 py-4 text-base font-bold text-white shadow-xl shadow-emerald-600/30 hover:from-emerald-500 hover:to-green-500 focus:outline-none active:scale-[0.98] disabled:opacity-50 transition cursor-pointer"
         >
-          <Save className="h-4 w-4" />
+          <Save className="h-5 w-5" />
           {loading ? 'กำลังบันทึกลง Supabase...' : '💾 บันทึกข้อมูลวันนี้'}
         </button>
       </form>

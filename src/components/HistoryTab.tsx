@@ -299,59 +299,61 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   return (
     <div className="space-y-4 pb-12">
       {/* Control Bar: Search & Filters */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         
-        <div className="flex flex-1 flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex flex-1 flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
           {/* Search Box */}
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
               placeholder="ค้นหาวันที่ เช่น 2026-09 หรือหมายเหตุ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3.5 py-2 text-xs sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3.5 py-2 text-base sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
 
-          {/* Month Filter */}
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
-          >
-            <option value="all">📅 ทุกเดือน ({entries.length} วัน)</option>
-            {availableMonths.map((m) => {
-              const [y, mo] = m.split('-');
-              const thYear = parseInt(y, 10) + 543;
-              const thMonthName = TH_MONTHS[parseInt(mo, 10) - 1] || m;
-              return (
-                <option key={m} value={m}>
-                  {thMonthName} {thYear}
-                </option>
-              );
-            })}
-          </select>
+          <div className="flex items-center gap-2">
+            {/* Month Filter */}
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="flex-1 sm:flex-initial rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            >
+              <option value="all">📅 ทุกเดือน ({entries.length} วัน)</option>
+              {availableMonths.map((m) => {
+                const [y, mo] = m.split('-');
+                const thYear = parseInt(y, 10) + 543;
+                const thMonthName = TH_MONTHS[parseInt(mo, 10) - 1] || m;
+                return (
+                  <option key={m} value={m}>
+                    {thMonthName} {thYear}
+                  </option>
+                );
+              })}
+            </select>
 
-          {/* Type Filter */}
-          <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-800 dark:bg-slate-800">
-            {[
-              { id: 'all', label: 'ทั้งหมด' },
-              { id: 'work', label: 'วันวิ่งงาน' },
-              { id: 'rest', label: 'วันหยุด' },
-            ].map((btn) => (
-              <button
-                key={btn.id}
-                onClick={() => setTypeFilter(btn.id as any)}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
-                  typeFilter === btn.id
-                    ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                {btn.label}
-              </button>
-            ))}
+            {/* Type Filter */}
+            <div className="flex shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-800 dark:bg-slate-800">
+              {[
+                { id: 'all', label: 'ทั้งหมด' },
+                { id: 'work', label: 'วิ่งงาน' },
+                { id: 'rest', label: 'หยุด' },
+              ].map((btn) => (
+                <button
+                  key={btn.id}
+                  onClick={() => setTypeFilter(btn.id as any)}
+                  className={`rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-semibold transition ${
+                    typeFilter === btn.id
+                      ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -359,11 +361,11 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
         <div className="flex items-center gap-2 shrink-0">
           {userRole !== 'guest' && (
             <label
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer active:scale-95 touch-manipulation"
               title="นำเข้าไฟล์ Excel (.xlsx, .xls, .csv)"
             >
               <span className="text-base">📥</span>
-              <span>Import Excel</span>
+              <span>Import</span>
               <input
                 type="file"
                 accept=".xlsx, .xls, .csv"
@@ -376,21 +378,21 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
 
           <button
             onClick={handleExportExcel}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm active:scale-95 touch-manipulation"
           >
             <span className="text-base">📤</span>
-            <span>Export Excel ({filteredEntries.length})</span>
+            <span>Export ({filteredEntries.length})</span>
           </button>
         </div>
       </div>
 
       {/* Table Card */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
           <table className="w-full text-left text-xs sm:text-sm border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
-                <th className="px-3.5 py-3">วันที่</th>
+                <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-800 px-3.5 py-3 shadow-[1px_0_0_0_#e2e8f0] dark:shadow-[1px_0_0_0_#334155]">วันที่</th>
                 <th className="px-3 py-3 text-right">Grab (฿)</th>
                 <th className="px-3 py-3 text-right">Tip (฿)</th>
                 <th className="px-3 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">รวม (฿)</th>
@@ -421,11 +423,11 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                   return (
                     <tr
                       key={r.id}
-                      className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition ${
-                        isW ? '' : 'opacity-60 bg-slate-50/30 dark:bg-slate-900/40'
+                      className={`group hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition ${
+                        isW ? '' : 'opacity-70 bg-slate-50/30 dark:bg-slate-900/40'
                       }`}
                     >
-                      <td className="whitespace-nowrap px-3.5 py-3 text-slate-900 dark:text-white">
+                      <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-850 whitespace-nowrap px-3.5 py-3 text-slate-900 dark:text-white shadow-[1px_0_0_0_#f1f5f9] dark:shadow-[1px_0_0_0_#1e293b]">
                         <div className="font-bold text-sm tracking-wide text-emerald-700 dark:text-emerald-400 font-mono">{fmtDateSlash(r.date)}</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{fmtDateTh(r.date)}</div>
                       </td>
@@ -470,16 +472,16 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                             <button
                               onClick={() => setEditingEntry({ ...r })}
                               title="แก้ไขข้อมูล"
-                              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition"
+                              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition active:scale-95"
                             >
-                              <Edit2 className="h-3.5 w-3.5" />
+                              <Edit2 className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => setDeleteConfirmId(r.id)}
                               title="ลบข้อมูล"
-                              className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 transition"
+                              className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 transition active:scale-95"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
                         </td>
@@ -495,36 +497,36 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
 
       {/* Excel Import Preview Modal */}
       {pendingImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+          <div className="w-full max-w-xl max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 shadow-sm">
+                <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 shadow-sm">
                   <FileSpreadsheet className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white">
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                     📥 นำเข้าข้อมูลจากไฟล์ Excel
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
                     ตรวจพบข้อมูลทั้งหมด <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{pendingImport.length}</strong> วัน
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setPendingImport(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 active:scale-95"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-3 overflow-y-auto flex-1 pr-1">
               <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
                 ตัวอย่างข้อมูล 5 รายการแรก (หากวันที่ซ้ำ ระบบจะอัปเดตข้อมูลให้ทันที):
               </p>
 
-              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
+              <div className="max-h-52 sm:max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-bold sticky top-0 border-b border-slate-200 dark:border-slate-700">
                     <tr>
@@ -555,26 +557,26 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                   <span>{importStatusMsg}</span>
                 </div>
               )}
+            </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  disabled={isImporting}
-                  onClick={() => setPendingImport(null)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 disabled:opacity-50"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="button"
-                  disabled={isImporting}
-                  onClick={confirmImport}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30 disabled:opacity-50"
-                >
-                  {isImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-sm">📥</span>}
-                  <span>ยืนยันนำเข้าข้อมูล ({pendingImport.length} วัน)</span>
-                </button>
-              </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <button
+                type="button"
+                disabled={isImporting}
+                onClick={() => setPendingImport(null)}
+                className="rounded-xl border border-slate-200 px-3.5 sm:px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 disabled:opacity-50 active:scale-95"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                disabled={isImporting}
+                onClick={confirmImport}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 sm:px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30 disabled:opacity-50 active:scale-95"
+              >
+                {isImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-sm">📥</span>}
+                <span>ยืนยันนำเข้าข้อมูล ({pendingImport.length} วัน)</span>
+              </button>
             </div>
           </div>
         </div>
@@ -582,21 +584,21 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
 
       {/* Edit Modal */}
       {editingEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+          <div className="w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800 shrink-0">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                 ✏️ แก้ไขข้อมูลวันที่ {fmtDateTh(editingEntry.date)}
               </h3>
               <button
                 onClick={() => setEditingEntry(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 active:scale-95"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="mt-4 space-y-3">
+            <form onSubmit={handleSaveEdit} className="mt-4 space-y-3 overflow-y-auto flex-1 pr-1">
               <div>
                 <ThaiDatePicker
                   value={editingEntry.date}
@@ -605,34 +607,37 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Grab (บาท)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="any"
                     value={editingEntry.grab}
                     onChange={(e) => setEditingEntry({ ...editingEntry, grab: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold dark:border-slate-800 dark:bg-slate-800"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm font-semibold dark:border-slate-800 dark:bg-slate-800"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tip (บาท)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="any"
                     value={editingEntry.tip}
                     onChange={(e) => setEditingEntry({ ...editingEntry, tip: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold dark:border-slate-800 dark:bg-slate-800"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm font-semibold dark:border-slate-800 dark:bg-slate-800"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ระยะทาง (กม.)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="any"
                     value={editingEntry.distance || ''}
                     onChange={(e) => {
@@ -642,40 +647,43 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                       const newOil = dist > 0 ? parseFloat(((dist / rate) * price).toFixed(2)) : editingEntry.oil;
                       setEditingEntry({ ...editingEntry, distance: dist || null, oil: newOil });
                     }}
-                    className="w-full rounded-xl border border-blue-200 bg-blue-50/50 px-3 py-2 text-sm font-bold text-blue-700 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
+                    className="w-full rounded-xl border border-blue-200 bg-blue-50/50 px-3 py-2 text-base sm:text-sm font-bold text-blue-700 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ค่าน้ำมัน (บาท)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="any"
                     value={editingEntry.oil}
                     onChange={(e) => setEditingEntry({ ...editingEntry, oil: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-rose-600 dark:border-slate-800 dark:bg-slate-800"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm font-semibold text-rose-600 dark:border-slate-800 dark:bg-slate-800"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ถอนเข้ากรุงศรี (บาท)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="any"
                     value={editingEntry.withdraw}
                     onChange={(e) => setEditingEntry({ ...editingEntry, withdraw: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-800"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm dark:border-slate-800 dark:bg-slate-800"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ชั่วโมงขับ</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="any"
                     value={editingEntry.hours || ''}
                     onChange={(e) => setEditingEntry({ ...editingEntry, hours: parseFloat(e.target.value) || null })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-800"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm dark:border-slate-800 dark:bg-slate-800"
                   />
                 </div>
               </div>
@@ -686,22 +694,22 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                   type="text"
                   value={editingEntry.note}
                   onChange={(e) => setEditingEntry({ ...editingEntry, note: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-800"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm dark:border-slate-800 dark:bg-slate-800"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setEditingEntry(null)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300"
+                  className="rounded-xl border border-slate-200 px-3.5 sm:px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 active:scale-95"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={editLoading}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30"
+                  className="rounded-xl bg-emerald-600 px-3.5 sm:px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30 active:scale-95"
                 >
                   {editLoading ? 'กำลังบันทึก...' : '💾 บันทึกการแก้ไข'}
                 </button>
@@ -723,13 +731,13 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
             <div className="mt-5 flex justify-center gap-2">
               <button
                 onClick={() => setDeleteConfirmId(null)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300"
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 active:scale-95"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={() => handleDelete(deleteConfirmId)}
-                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-500 shadow-md shadow-rose-600/30"
+                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-500 shadow-md shadow-rose-600/30 active:scale-95"
               >
                 ยืนยันการลบ
               </button>
