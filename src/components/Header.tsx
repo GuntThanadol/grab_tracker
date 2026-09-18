@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
-import { TabType, FuelSettings } from '@/types';
-import { LayoutDashboard, PlusCircle, History, Calendar, Fuel, Settings2, Moon, Sun, Wifi, WifiOff } from 'lucide-react';
+import { TabType, FuelSettings, UserRole } from '@/types';
+import { LayoutDashboard, PlusCircle, History, Calendar, Fuel, Settings2, Moon, Sun, Wifi, WifiOff, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -12,6 +12,8 @@ interface HeaderProps {
   onOpenFuelModal: () => void;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
+  userRole: UserRole | null;
+  onLogout: () => void;
 }
 
 export default function Header({
@@ -22,6 +24,8 @@ export default function Header({
   onOpenFuelModal,
   darkMode,
   setDarkMode,
+  userRole,
+  onLogout,
 }: HeaderProps) {
   const currentPrice = fuelSettings.manual_price || fuelSettings.last_fetched_price || 39.09;
   const brandName = fuelSettings.brand === 'ptt' ? 'ปตท.' : 'บางจาก';
@@ -77,6 +81,17 @@ export default function Header({
               <Settings2 className="h-3 w-3 text-slate-400 hover:text-slate-600" />
             </button>
 
+            {/* Role Badge */}
+            {userRole === 'admin' ? (
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                👑 Admin
+              </span>
+            ) : userRole === 'guest' ? (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-indigo-500/10 px-2.5 py-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                👀 Guest (ดูอย่างเดียว)
+              </span>
+            ) : null}
+
             {/* Dark / Light Mode Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -85,6 +100,16 @@ export default function Header({
             >
               {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
             </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={onLogout}
+              title="ออกจากระบบ"
+              className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 hover:border-rose-200 dark:border-slate-800 dark:bg-slate-800/80 dark:text-rose-400 dark:hover:bg-rose-950/40 transition shadow-sm"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">ออก</span>
+            </button>
           </div>
         </div>
 
@@ -92,7 +117,7 @@ export default function Header({
         <nav className="flex space-x-1 sm:space-x-2 overflow-x-auto py-2 scrollbar-none border-t border-slate-100 dark:border-slate-800/80">
           {[
             { id: 'dashboard', label: 'ภาพรวม', icon: LayoutDashboard },
-            { id: 'entry', label: 'บันทึกงานวันนี้', icon: PlusCircle },
+            ...(userRole === 'guest' ? [] : [{ id: 'entry', label: 'บันทึกงานวันนี้', icon: PlusCircle }]),
             { id: 'history', label: 'ประวัติรายวัน', icon: History },
             { id: 'monthly', label: 'สรุปรายเดือน', icon: Calendar },
           ].map((tab) => {

@@ -1,20 +1,21 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Entry, FuelSettings } from '@/types';
+import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { fmt, income, profit, isWorkDay, fmtDateTh, fmtDateSlash, TH_MONTHS } from '@/lib/utils';
+import { fmt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, TH_MONTHS } from '@/lib/utils';
+import { Search, Filter, Download, Edit2, Trash2, X, Check, ArrowUpDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Search, Download, Edit2, Trash2, X, Bike, Check, Filter } from 'lucide-react';
 import ThaiDatePicker from './ThaiDatePicker';
 
 interface HistoryTabProps {
   entries: Entry[];
   fuelSettings: FuelSettings;
   onRefresh: () => void;
+  userRole?: UserRole | null;
 }
 
-export default function HistoryTab({ entries, fuelSettings, onRefresh }: HistoryTabProps) {
+export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole }: HistoryTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'work' | 'rest'>('all');
@@ -213,13 +214,13 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh }: History
                 <th className="px-3 py-3 text-right">ชม.</th>
                 <th className="px-3 py-3 text-right font-black">กำไรสุทธิ</th>
                 <th className="px-3 py-3">หมายเหตุ</th>
-                <th className="px-3 py-3 text-center">จัดการ</th>
+                {userRole !== 'guest' && <th className="px-3 py-3 text-center">จัดการ</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-12 text-center text-slate-400">
+                  <td colSpan={userRole === 'guest' ? 12 : 13} className="py-12 text-center text-slate-400">
                     ไม่พบรายการข้อมูลตามตัวกรอง
                   </td>
                 </tr>
@@ -275,24 +276,26 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh }: History
                       <td className="max-w-[140px] truncate px-3 py-3 text-xs text-slate-500 dark:text-slate-400" title={r.note || ''}>
                         {r.note || <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => setEditingEntry({ ...r })}
-                            title="แก้ไขข้อมูล"
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmId(r.id)}
-                            title="ลบข้อมูล"
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 transition"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
+                      {userRole !== 'guest' && (
+                        <td className="whitespace-nowrap px-3 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => setEditingEntry({ ...r })}
+                              title="แก้ไขข้อมูล"
+                              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(r.id)}
+                              title="ลบข้อมูล"
+                              className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 transition"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })

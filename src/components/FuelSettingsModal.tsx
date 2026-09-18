@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
-import { FuelSettings } from '@/types';
+import { FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { X, RefreshCw, Save, Fuel } from 'lucide-react';
 
@@ -10,6 +10,7 @@ interface FuelSettingsModalProps {
   onClose: () => void;
   fuelSettings: FuelSettings;
   onUpdated: (newSettings: FuelSettings) => void;
+  userRole?: UserRole | null;
 }
 
 export default function FuelSettingsModal({
@@ -17,6 +18,7 @@ export default function FuelSettingsModal({
   onClose,
   fuelSettings,
   onUpdated,
+  userRole,
 }: FuelSettingsModalProps) {
   const [brand, setBrand] = useState<'bcp' | 'ptt'>(fuelSettings.brand || 'bcp');
   const [fuelType, setFuelType] = useState<string>(fuelSettings.fuel_type || 'gasohol_95');
@@ -67,6 +69,10 @@ export default function FuelSettingsModal({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (userRole === 'guest') {
+      alert('👀 บัญชี Guest ดูข้อมูลได้อย่างเดียว ไม่สามารถเปลี่ยนแปลงการตั้งค่าได้');
+      return;
+    }
     const updated: FuelSettings = {
       ...fuelSettings,
       brand,
@@ -183,6 +189,12 @@ export default function FuelSettingsModal({
             </div>
           )}
 
+          {userRole === 'guest' && (
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+              👀 บัญชี Guest: ดูข้อมูลได้อย่างเดียว ไม่สามารถแก้ไขหรือบันทึกได้
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
@@ -191,12 +203,14 @@ export default function FuelSettingsModal({
             >
               ปิด
             </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30"
-            >
-              💾 บันทึกการตั้งค่า
-            </button>
+            {userRole !== 'guest' && (
+              <button
+                type="submit"
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30"
+              >
+                💾 บันทึกการตั้งค่า
+              </button>
+            )}
           </div>
         </form>
       </div>

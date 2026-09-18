@@ -1,4 +1,4 @@
-﻿export interface Entry {
+export interface Entry {
   id: string;
   date: string;
   grab: number;
@@ -25,3 +25,5 @@ export interface FuelSettings {
 }
 
 export type TabType = 'dashboard' | 'entry' | 'history' | 'monthly';
+
+export type UserRole = 'admin' | 'guest';
