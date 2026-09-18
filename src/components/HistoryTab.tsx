@@ -362,7 +362,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer"
               title="นำเข้าไฟล์ Excel (.xlsx, .xls, .csv)"
             >
-              <Upload className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-base">📥</span>
               <span>Import Excel</span>
               <input
                 type="file"
@@ -378,7 +378,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
             onClick={handleExportExcel}
             className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm"
           >
-            <Download className="h-4 w-4" />
+            <span className="text-base">📤</span>
             <span>Export Excel ({filteredEntries.length})</span>
           </button>
         </div>
@@ -571,7 +571,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                   onClick={confirmImport}
                   className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/30 disabled:opacity-50"
                 >
-                  {isImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  {isImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-sm">📥</span>}
                   <span>ยืนยันนำเข้าข้อมูล ({pendingImport.length} วัน)</span>
                 </button>
               </div>
