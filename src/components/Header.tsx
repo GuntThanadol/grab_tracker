@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { TabType, FuelSettings, UserRole } from '@/types';
-import { LayoutDashboard, PlusCircle, History, Calendar, Fuel, Settings2, Moon, Sun, Wifi, WifiOff, LogOut } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, History, Calendar, Fuel, Settings2, Moon, Sun, Wifi, WifiOff, LogOut, Bell } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -10,6 +10,7 @@ interface HeaderProps {
   isRealtime: boolean;
   fuelSettings: FuelSettings;
   onOpenFuelModal: () => void;
+  onOpenLineModal?: () => void;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
   userRole: UserRole | null;
@@ -22,6 +23,7 @@ export default function Header({
   isRealtime,
   fuelSettings,
   onOpenFuelModal,
+  onOpenLineModal,
   darkMode,
   setDarkMode,
   userRole,
@@ -80,6 +82,18 @@ export default function Header({
               <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{currentPrice.toFixed(2)} ฿</strong>
               <Settings2 className="h-3 w-3 text-slate-400 hover:text-slate-600 hidden sm:inline" />
             </button>
+
+            {/* LINE Notification Setup */}
+            {userRole !== 'guest' && onOpenLineModal && (
+              <button
+                onClick={onOpenLineModal}
+                title="ตั้งค่าการแจ้งเตือน LINE"
+                className="flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50/80 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm active:scale-95"
+              >
+                <Bell className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className="hidden sm:inline">LINE</span>
+              </button>
+            )}
 
             {/* Role Badge */}
             {userRole === 'admin' ? (

@@ -9,6 +9,7 @@ import EntryTab from '@/components/EntryTab';
 import HistoryTab from '@/components/HistoryTab';
 import MonthlyTab from '@/components/MonthlyTab';
 import FuelSettingsModal from '@/components/FuelSettingsModal';
+import LineSettingsModal from '@/components/LineSettingsModal';
 import LoginScreen from '@/components/LoginScreen';
 import { Loader2 } from 'lucide-react';
 
@@ -21,6 +22,7 @@ export default function HomePage() {
   const [isRealtime, setIsRealtime] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
+  const [isLineModalOpen, setIsLineModalOpen] = useState(false);
 
   // Restore stored session on mount
   useEffect(() => {
@@ -168,6 +170,7 @@ export default function HomePage() {
         isRealtime={isRealtime}
         fuelSettings={fuelSettings}
         onOpenFuelModal={() => setIsFuelModalOpen(true)}
+        onOpenLineModal={() => setIsLineModalOpen(true)}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
         userRole={userRole}
@@ -203,6 +206,13 @@ export default function HomePage() {
         onClose={() => setIsFuelModalOpen(false)}
         fuelSettings={fuelSettings}
         onUpdated={(newSettings) => setFuelSettings(newSettings)}
+        userRole={userRole}
+      />
+
+      {/* LINE Notification Settings Modal */}
+      <LineSettingsModal
+        isOpen={isLineModalOpen}
+        onClose={() => setIsLineModalOpen(false)}
         userRole={userRole}
       />
     </div>

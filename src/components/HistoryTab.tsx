@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { fmt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, TH_MONTHS } from '@/lib/utils';
-import { Search, Filter, Download, Upload, FileSpreadsheet, Edit2, Trash2, X, Check, ArrowUpDown, Loader2 } from 'lucide-react';
+import { Search, Filter, Download, Upload, FileSpreadsheet, Edit2, Trash2, X, Check, ArrowUpDown, Loader2, Send } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
 import ThaiDatePicker from './ThaiDatePicker';
@@ -31,6 +31,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [sendingLineId, setSendingLineId] = useState<string | null>(null);
 
   // Import Excel state
   const [isImporting, setIsImporting] = useState(false);
@@ -148,6 +149,30 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       alert(`แก้ไขไม่สำเร็จ: ${err.message}`);
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  // Send single entry report to LINE
+  const handleSendLine = async (entry: Entry) => {
+    setSendingLineId(entry.id);
+    try {
+      const customToken = localStorage.getItem('grab_line_token') || undefined;
+      const customUserId = localStorage.getItem('grab_line_userid') || undefined;
+      const res = await fetch('/api/notify-line', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry, customToken, customUserId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ ส่งสรุปยอดวันที่ ${fmtDateSlash(entry.date)} เข้า LINE เรียบร้อยแล้ว! 📲`);
+      } else {
+        alert(`❌ ${data.error || 'ส่งไม่สำเร็จ กรุณาตรวจสอบการตั้งค่า LINE'}`);
+      }
+    } catch (err: any) {
+      alert(`❌ เกิดข้อผิดพลาด: ${err.message}`);
+    } finally {
+      setSendingLineId(null);
     }
   };
 
@@ -495,6 +520,18 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                       {userRole !== 'guest' && (
                         <td className="whitespace-nowrap px-3 py-3 text-center">
                           <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => handleSendLine(r)}
+                              disabled={sendingLineId === r.id}
+                              title="ส่งสรุปยอดวันนี้เข้า LINE"
+                              className="rounded-lg p-2 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/50 transition active:scale-95 disabled:opacity-50"
+                            >
+                              {sendingLineId === r.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                            </button>
                             <button
                               onClick={() => setEditingEntry({ ...r })}
                               title="แก้ไขข้อมูล"

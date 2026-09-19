@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fmt, getTodayThai, fmtDateSlash } from '@/lib/utils';
 import { FuelSettings } from '@/types';
@@ -25,8 +25,18 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
   const [withdraw, setWithdraw] = useState<string>('');
   const [hours, setHours] = useState<string>('');
   const [note, setNote] = useState<string>('');
+  const [notifyLine, setNotifyLine] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    try {
+      const auto = localStorage.getItem('grab_line_auto');
+      if (auto !== null) {
+        setNotifyLine(auto !== 'false');
+      }
+    } catch {}
+  }, []);
 
   const price = fuelSettings.manual_price || fuelSettings.last_fetched_price || 39.09;
   const rate = fuelSettings.rate_km_per_l || 71.4;
@@ -100,7 +110,27 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
         colors: ['#00b14f', '#10b981', '#3b82f6', '#f59e0b', '#ffd700']
       });
 
-      setToast({ msg: `✅ บันทึกข้อมูลวันที่ ${date} สำเร็จแล้ว!`, type: 'success' });
+      // Send LINE notification if enabled
+      let lineNote = '';
+      if (notifyLine) {
+        try {
+          const customToken = localStorage.getItem('grab_line_token') || undefined;
+          const customUserId = localStorage.getItem('grab_line_userid') || undefined;
+          const lineRes = await fetch('/api/notify-line', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entry: payload, customToken, customUserId }),
+          });
+          const lineData = await lineRes.json();
+          if (lineData.success) {
+            lineNote = ' และส่งแจ้งเตือนเข้า LINE แล้ว 📲';
+          }
+        } catch {
+          // ignore notification error so entry save succeeds
+        }
+      }
+
+      setToast({ msg: `✅ บันทึกข้อมูลวันที่ ${date} สำเร็จแล้ว!${lineNote}`, type: 'success' });
       onSuccess();
 
       // Reset form fields
@@ -367,6 +397,21 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               {fmt(prevProfit)} ฿
             </div>
           </div>
+        </div>
+
+        {/* LINE Notification Toggle */}
+        <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={notifyLine}
+              onChange={(e) => setNotifyLine(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <span>💬 ส่งการ์ดสรุปเข้า LINE ทันทีเมื่อบันทึก</span>
+            </span>
+          </label>
         </div>
 
         {/* Submit Button */}
