@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateGrabFlexMessage } from '@/lib/lineFlex';
 import { Entry } from '@/types';
 
+const DEFAULT_TOKEN = 'kVSt7x6gMoIr58RUYSqd+htDr9skmUeNFjvGXUuE5ZkAZ/YoMMeDbYFADPM+rV6HHF5B5DhnYVlw7cawqWGQwo8MXvLrqFMRZI4sLVMNWftYEmEX9RccMzBTJyllP7Ewjq6BtnEIMUP/Nl3cfNHTZAdB04t89/1O/w1cDnyilFU=';
+const DEFAULT_USER_ID = 'U2110c05b07339d8342ee7d8e5cb187d2';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { entry, isTest, customToken, customUserId } = body;
 
-    const token = (customToken || process.env.LINE_CHANNEL_ACCESS_TOKEN || '').trim();
-    const userId = (customUserId || process.env.LINE_USER_ID || '').trim();
+    const token = (customToken || process.env.LINE_CHANNEL_ACCESS_TOKEN || DEFAULT_TOKEN).trim();
+    const userId = (customUserId || process.env.LINE_USER_ID || DEFAULT_USER_ID).trim();
 
     if (!token || !userId) {
       return NextResponse.json(

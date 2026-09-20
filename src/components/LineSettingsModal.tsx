@@ -19,11 +19,14 @@ export default function LineSettingsModal({ isOpen, onClose, userRole }: LineSet
   const [testResult, setTestResult] = useState<{ success: boolean; msg: string } | null>(null);
   const [showGuide, setShowGuide] = useState(false);
 
+  const DEFAULT_TOKEN = 'kVSt7x6gMoIr58RUYSqd+htDr9skmUeNFjvGXUuE5ZkAZ/YoMMeDbYFADPM+rV6HHF5B5DhnYVlw7cawqWGQwo8MXvLrqFMRZI4sLVMNWftYEmEX9RccMzBTJyllP7Ewjq6BtnEIMUP/Nl3cfNHTZAdB04t89/1O/w1cDnyilFU=';
+  const DEFAULT_USER_ID = 'U2110c05b07339d8342ee7d8e5cb187d2';
+
   useEffect(() => {
     setMounted(true);
     try {
-      const savedToken = localStorage.getItem('grab_line_token') || '';
-      const savedUserId = localStorage.getItem('grab_line_userid') || '';
+      const savedToken = localStorage.getItem('grab_line_token') || DEFAULT_TOKEN;
+      const savedUserId = localStorage.getItem('grab_line_userid') || DEFAULT_USER_ID;
       const savedAutoNotify = localStorage.getItem('grab_line_auto') !== 'false';
       setToken(savedToken);
       setUserId(savedUserId);

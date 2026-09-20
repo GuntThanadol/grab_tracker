@@ -160,7 +160,6 @@ export function generateGrabFlexMessage(entry: Entry, appUrl = 'https://grab-tra
                 color: '#ffffff',
                 weight: 'bold',
                 size: 'xs',
-                letterSpacing: '1px',
               },
               {
                 type: 'text',
