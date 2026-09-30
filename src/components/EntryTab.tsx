@@ -152,30 +152,38 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-12">
-      {/* Form Card */}
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {/* Form Cockpit Card */}
+      <form onSubmit={handleSubmit} className="cockpit-card rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-8 dark:border-emerald-500/25 dark:bg-[#0c121e]/95 shadow-xl relative overflow-hidden">
+        {/* Subtle Background Mesh */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800 gap-2">
           <div>
-            <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>✍️ บันทึกบัญชี Grab ประจำวัน</span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 led-beacon-green"></span>
+              <span className="text-[10px] font-mono tracking-widest text-emerald-600 dark:text-emerald-400 font-bold uppercase">
+                TRIP TELEMETRY DISPATCH
+              </span>
+            </div>
+            <h2 className="text-base sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2 tracking-tight">
+              <span>✍️ บันทึกบัญชีงาน Grab วันนี้</span>
             </h2>
             <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-              กรอกระยะทางเพื่อคำนวณค่าน้ำมันอัตโนมัติ (Wave 125i @ {rate} กม./ลิตร)
+              ระบบคำนวณค่าน้ำมันอัจฉริยะ (Honda Wave 125i @ {rate} กม./ลิตร)
             </p>
           </div>
           <div className="text-right shrink-0">
-            <span className="rounded-xl bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-              ⛽ {price.toFixed(2)} ฿
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-1.5 text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 shadow-sm">
+              <Fuel className="h-3.5 w-3.5 text-emerald-500" /> {price.toFixed(2)} ฿/L
             </span>
           </div>
         </div>
 
         {toast && (
-          <div className={`mt-4 rounded-xl p-3 text-sm font-medium ${
+          <div className={`mt-4 rounded-xl p-3 text-sm font-medium animate-fade-in ${
             toast.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-              : 'bg-rose-50 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-sm'
+              : 'bg-rose-50 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-sm'
           }`}>
             {toast.msg}
           </div>
@@ -203,7 +211,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               placeholder="0.00"
               value={grab}
               onChange={(e) => setGrab(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white transition shadow-inner"
             />
           </div>
 
@@ -219,7 +227,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               placeholder="0.00"
               value={tip}
               onChange={(e) => setTip(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white transition shadow-inner"
             />
           </div>
 
@@ -235,19 +243,19 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               placeholder="เช่น 3 หรือ 4.5"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-medium text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-base sm:text-sm font-mono font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white transition shadow-inner"
             />
           </div>
         </div>
 
-        {/* Distance & Smart Fuel Section */}
-        <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 sm:p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20 space-y-4">
+        {/* Distance & Smart Fuel Section: Cockpit Telemetry Box */}
+        <div className="mt-6 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent p-4 sm:p-5 dark:border-emerald-500/30 dark:bg-emerald-950/20 space-y-4 ring-1 ring-emerald-500/20">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
-              <Bike className="h-4 w-4 text-emerald-600" />
-              <span>🛵 ระยะทางวิ่งงานวันนี้ (กิโลเมตร)</span>
+            <label className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5 font-mono">
+              <Bike className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span>ODOMETER • ระยะทางวิ่งงานวันนี้ (กิโลเมตร)</span>
             </label>
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-400">คำนวณค่าน้ำมันอัตโนมัติ</span>
+            <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400">AUTO-CALC FUEL</span>
           </div>
 
           <input
@@ -256,18 +264,18 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
             placeholder="เช่น 45 หรือ 85.5"
             value={distance}
             onChange={(e) => handleDistanceChange(e.target.value)}
-            className="w-full rounded-xl border border-emerald-200 bg-white px-3.5 py-2.5 text-base font-bold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-emerald-800 dark:bg-slate-900 dark:text-white transition"
+            className="w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2.5 text-lg font-black font-mono text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-emerald-700 dark:bg-slate-900 dark:text-white transition shadow-inner"
           />
 
           {/* Quick Distance Chips */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-slate-500 dark:text-slate-400 mr-1">ระยะทางด่วน:</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 mr-1 font-mono">QUICK KM:</span>
             {[40, 60, 80, 100, 120].map((km) => (
               <button
                 type="button"
                 key={km}
                 onClick={() => handleDistanceChange(km.toString())}
-                className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-emerald-800 border border-emerald-200 hover:bg-emerald-100 dark:bg-slate-800 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-slate-700 transition"
+                className="rounded-lg bg-white/90 px-2.5 py-1 text-xs font-mono font-bold text-emerald-800 border border-emerald-300 hover:bg-emerald-100 dark:bg-slate-800 dark:text-emerald-300 dark:border-emerald-700 dark:hover:bg-slate-700 transition active:scale-95 shadow-sm"
               >
                 {km} กม.
               </button>
@@ -275,8 +283,8 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
           </div>
 
           {numDist > 0 && (
-            <div className="rounded-xl bg-emerald-100/70 p-3 text-xs text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 shrink-0 text-emerald-600" />
+            <div className="rounded-xl bg-emerald-500/15 p-3 text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2 border border-emerald-500/30">
+              <Sparkles className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span>
                 วิ่ง <strong>{numDist.toFixed(1)} กม.</strong> = ใช้น้ำมัน <strong>{estLiters} ลิตร</strong> (ประมาณ <strong>{numOil.toFixed(2)} บาท</strong> @ {price.toFixed(2)} ฿/ลิตร)
               </span>
@@ -296,7 +304,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
                 placeholder="0.00"
                 value={oil}
                 onChange={(e) => setOil(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white transition"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white transition shadow-inner"
               />
             </div>
 
@@ -312,10 +320,10 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
                 placeholder="เช่น 100"
                 value={oilReal}
                 onChange={(e) => setOilReal(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white transition"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white transition shadow-inner"
               />
               {numRealOil > 0 && (
-                <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                   💡 เติม {numRealOil.toFixed(2)} บ. = ได้น้ำมัน <strong>{realLiters} ลิตร</strong>
                 </span>
               )}
@@ -336,7 +344,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               placeholder="0.00"
               value={credit}
               onChange={(e) => setCredit(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white transition shadow-inner"
             />
           </div>
 
@@ -351,13 +359,13 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               placeholder="0.00"
               value={withdraw}
               onChange={(e) => setWithdraw(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white transition shadow-inner"
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              ⏱️ ชั่วโมงขับ (ชม.) <span className="text-slate-400 font-normal">- ว่างไว้ใส่ 3 ชม.</span>
+              ⏱️ ชั่วโมงขับ (ชม.) <span className="text-slate-400 font-normal">- ว่างใส่ 3 ชม.</span>
             </label>
             <input
               type="number"
@@ -366,7 +374,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               placeholder="3"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-base sm:text-sm font-mono font-bold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white transition shadow-inner"
             />
           </div>
         </div>
@@ -381,26 +389,26 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
             placeholder="เช่น อินพิเศษ 32 บาท, ขาดงาน, หยุด"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-base sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white transition shadow-inner"
           />
         </div>
 
-        {/* Live Preview Bar */}
-        <div className="mt-6 flex items-center justify-between rounded-2xl bg-slate-900 p-4 sm:p-5 text-white dark:bg-slate-800 shadow-md">
+        {/* Live Cockpit Preview HUD Bar */}
+        <div className="mt-6 flex items-center justify-between rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 p-4 sm:p-5 text-white shadow-xl border border-emerald-500/30">
           <div>
-            <div className="text-[11px] sm:text-xs text-slate-400 font-medium">รายได้รวมวันนี้</div>
-            <div className="text-base sm:text-xl font-bold text-emerald-400">{fmt(prevIncome)} ฿</div>
+            <div className="text-[11px] sm:text-xs text-slate-400 font-mono">GROSS INCOME TODAY</div>
+            <div className="text-lg sm:text-2xl font-black font-mono text-emerald-400">{fmt(prevIncome)} ฿</div>
           </div>
           <div className="text-right">
-            <div className="text-[11px] sm:text-xs text-slate-400 font-medium">กำไรสุทธิ (หักน้ำมัน)</div>
-            <div className={`text-lg sm:text-2xl font-black ${prevProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <div className="text-[11px] sm:text-xs text-slate-400 font-mono">NET ESTIMATED YIELD</div>
+            <div className={`text-xl sm:text-3xl font-black font-mono ${prevProfit >= 0 ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(0,177,79,0.5)]' : 'text-rose-400'}`}>
               {fmt(prevProfit)} ฿
             </div>
           </div>
         </div>
 
         {/* LINE Notification Toggle */}
-        <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
+        <div className="mt-4 flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 dark:border-emerald-500/30 dark:bg-emerald-950/20">
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -409,19 +417,22 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
             />
             <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <span>💬 ส่งการ์ดสรุปเข้า LINE ทันทีเมื่อบันทึก</span>
+              <span>💬 ส่งการ์ดสรุปเข้า LINE ทันทีเมื่อบันทึก (@646nonst)</span>
             </span>
           </label>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Button: Start Trip Record */}
         <button
           type="submit"
           disabled={loading}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 py-4 text-base font-bold text-white shadow-xl shadow-emerald-600/30 hover:from-emerald-500 hover:to-green-500 focus:outline-none active:scale-[0.98] disabled:opacity-50 transition cursor-pointer"
+          className="group relative mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-600 py-4 text-base font-black text-white shadow-xl shadow-emerald-600/30 hover:shadow-emerald-500/40 focus:outline-none active:scale-[0.98] disabled:opacity-50 transition-all cursor-pointer border-t border-white/20 overflow-hidden"
         >
-          <Save className="h-5 w-5" />
-          {loading ? 'กำลังบันทึกลง Supabase...' : '💾 บันทึกข้อมูลวันนี้'}
+          <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
+          <Save className="h-5 w-5 transition-transform group-hover:scale-110" />
+          <span className="tracking-wide">
+            {loading ? 'กำลังซิงค์ขึ้นระบบ...' : 'RECORD TRIP • บันทึกข้อมูลวันนี้ 🏁'}
+          </span>
         </button>
       </form>
     </div>

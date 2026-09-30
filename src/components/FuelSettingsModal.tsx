@@ -109,16 +109,19 @@ export default function FuelSettingsModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-md max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-md p-3 sm:p-4 animate-in fade-in duration-150">
+      <div className="cockpit-card w-full max-w-md max-h-[92vh] flex flex-col rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-2xl dark:border-emerald-500/30 dark:bg-[#0c121e]">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-400 border border-emerald-500/20">
               <Fuel className="h-4 w-4" />
             </div>
-            <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">⚙️ ตั้งค่าน้ำมันและอัตราสิ้นเปลือง</h3>
+            <div>
+              <span className="text-[10px] font-mono tracking-widest text-emerald-600 dark:text-emerald-400 font-bold uppercase block">FUEL TELEMETRY</span>
+              <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">ตั้งค่าน้ำมันและอัตราสิ้นเปลือง</h3>
+            </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95">
+          <button onClick={onClose} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition">
             <X className="h-5 w-5" />
           </button>
         </div>
