@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Entry } from '@/types';
 import { fmt, fmtInt, income, profit, isWorkDay, fmtDateTh, fmtDateSlash, TH_DOWS, TH_DOWS_S } from '@/lib/utils';
-import { TrendingUp, BarChart3, Calendar, Zap, Fuel, Bike, Clock, Award, Layers, HelpCircle, Check, Info } from 'lucide-react';
+import { TrendingUp, BarChart3, Calendar, Zap, Fuel, Bike, Clock, Award, Layers, HelpCircle, Check, Info, X } from 'lucide-react';
 
 interface AnalyticsChartsProps {
   entries: Entry[];
@@ -16,6 +16,11 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
   const [mode, setMode] = useState<ChartMode>('trend');
   const [timeRange, setTimeRange] = useState<TimeRange>('30');
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+
+  const handleModeChange = (newMode: ChartMode) => {
+    setMode(newMode);
+    setSelectedEntry(null);
+  };
 
   // Series visibility toggles for Trend mode
   const [showProfit, setShowProfit] = useState(true);
@@ -267,28 +272,37 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
             </p>
           </div>
 
-          {/* Time Range Selector */}
-          <div className="flex items-center gap-1.5 self-start lg:self-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800/80">
-            {[
-              { id: '7', label: '7 วัน' },
-              { id: '14', label: '14 วัน' },
-              { id: '30', label: '30 วัน' },
-              { id: '60', label: '60 วัน' },
-              { id: 'all', label: 'ทั้งหมด' },
-            ].map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTimeRange(t.id as TimeRange)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition active:scale-95 ${
-                  timeRange === t.id
-                    ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          {/* Time Range Selector (shown for trend, breakdown, efficiency) */}
+          {mode !== 'dow' ? (
+            <div className="flex items-center gap-1.5 self-start lg:self-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800/80">
+              {[
+                { id: '7', label: '7 วัน' },
+                { id: '14', label: '14 วัน' },
+                { id: '30', label: '30 วัน' },
+                { id: '60', label: '60 วัน' },
+                { id: 'all', label: 'ทั้งหมด' },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    setTimeRange(t.id as TimeRange);
+                    setSelectedEntry(null);
+                  }}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition active:scale-95 ${
+                    timeRange === t.id
+                      ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
+                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 self-start lg:self-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-800/80 text-xs text-slate-500 font-medium">
+              <span>🗓️ สถิติสะสมทั้งหมด</span>
+            </div>
+          )}
         </div>
 
         {/* Chart Mode Selector Pills */}
@@ -304,7 +318,7 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
             return (
               <button
                 key={tab.id}
-                onClick={() => setMode(tab.id as ChartMode)}
+                onClick={() => handleModeChange(tab.id as ChartMode)}
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
                   isActive
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 dark:bg-emerald-500 dark:text-slate-950 font-bold'
@@ -361,9 +375,16 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
         )}
 
         {/* Selected Data Point Banner / Tooltip */}
-        {selectedEntry && (
-          <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50/70 p-3.5 text-xs text-slate-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-slate-200 animate-fade-in">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/60 dark:border-emerald-800/60 pb-2">
+        {selectedEntry && mode !== 'dow' && (
+          <div className="mt-4 relative rounded-xl border border-emerald-300 bg-emerald-50/70 p-3.5 text-xs text-slate-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-slate-200 animate-fade-in">
+            <button
+              onClick={() => setSelectedEntry(null)}
+              className="absolute top-2.5 right-2.5 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-emerald-200/50 dark:hover:text-slate-200 dark:hover:bg-emerald-900/50 transition"
+              title="ปิดรายละเอียด"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/60 dark:border-emerald-800/60 pb-2 pr-7">
               <div className="font-bold flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300">
                 <span>📅 {fmtDateSlash(selectedEntry.date)} ({fmtDateTh(selectedEntry.date)})</span>
                 {!isWorkDay(selectedEntry) && (
