@@ -226,16 +226,16 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
           {/* Work Hours */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              ⏱️ ชั่วโมงขับ (ชม.)
+              ⏱️ ชั่วโมงขับ (ชม.) <span className="text-slate-400 font-normal text-[11px]">- เว้นว่างไว้ใส่ 3 ชม.</span>
             </label>
             <input
               type="number"
               inputMode="decimal"
               step="any"
-              placeholder="เช่น 3 หรือ 4.5"
+              placeholder="3"
               value={hours}
               onChange={(e) => setHours(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-medium text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
         </div>
@@ -323,8 +323,8 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
           </div>
         </div>
 
-        {/* Banking, Withdraw & Hours */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+        {/* Banking & Credits */}
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               💳 เติมเครดิต Grab (บาท)
@@ -351,21 +351,6 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
               placeholder="0.00"
               value={withdraw}
               onChange={(e) => setWithdraw(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              ⏱️ ชั่วโมงขับ (ชม.) <span className="text-slate-400 font-normal">- ว่างไว้ใส่ 3 ชม.</span>
-            </label>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="any"
-              placeholder="3"
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
