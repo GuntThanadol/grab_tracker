@@ -350,7 +350,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   return (
     <div className="space-y-4 pb-12">
       {/* Control Bar: Search & Filters */}
-      <div className="cockpit-card flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-3xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-md dark:border-emerald-500/20 dark:bg-[#0c121e]/90">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         
         <div className="flex flex-1 flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
           {/* Search Box */}
@@ -361,7 +361,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               placeholder="ค้นหาวันที่ เช่น 2026-09 หรือหมายเหตุ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-3.5 py-2 text-base sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white transition shadow-inner font-mono"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3.5 py-2 text-base sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
             />
           </div>
 
@@ -370,7 +370,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="flex-1 sm:flex-initial rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs sm:text-sm font-bold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200"
+              className="flex-1 sm:flex-initial rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
             >
               <option value="all">📅 ทุกเดือน ({entries.length} วัน)</option>
               {availableMonths.map((m) => {
@@ -386,7 +386,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
             </select>
 
             {/* Type Filter */}
-            <div className="flex shrink-0 rounded-xl border border-slate-200/80 bg-slate-50/80 p-0.5 dark:border-slate-700 dark:bg-slate-800/80">
+            <div className="flex shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-800 dark:bg-slate-800">
               {[
                 { id: 'all', label: 'ทั้งหมด' },
                 { id: 'work', label: 'วิ่งงาน' },
@@ -395,10 +395,10 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                 <button
                   key={btn.id}
                   onClick={() => setTypeFilter(btn.id as any)}
-                  className={`rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+                  className={`rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-semibold transition ${
                     typeFilter === btn.id
-                      ? 'bg-emerald-600 text-white shadow-sm dark:bg-emerald-500 dark:text-slate-950'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                   }`}
                 >
                   {btn.label}
@@ -412,7 +412,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
         <div className="flex items-center gap-2 shrink-0">
           {userRole !== 'guest' && (
             <label
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-750 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer active:scale-95 touch-manipulation"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer active:scale-95 touch-manipulation"
               title="นำเข้าไฟล์ Excel (.xlsx, .xls, .csv)"
             >
               <span className="text-base">📥</span>
@@ -429,7 +429,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
 
           <button
             onClick={handleExportExcel}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm active:scale-95 touch-manipulation"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm active:scale-95 touch-manipulation"
           >
             <span className="text-base">📤</span>
             <span>Export ({filteredEntries.length})</span>
@@ -438,12 +438,12 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       </div>
 
       {/* Table Card */}
-      <div className="cockpit-card overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xl dark:border-emerald-500/20 dark:bg-[#0c121e]/90">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
           <table className="w-full text-left text-xs sm:text-sm border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-400 font-mono">
-                <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-850 px-3.5 py-3 shadow-[1px_0_0_0_#e2e8f0] dark:shadow-[1px_0_0_0_#334155]">วันที่</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
+                <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-800 px-3.5 py-3 shadow-[1px_0_0_0_#e2e8f0] dark:shadow-[1px_0_0_0_#334155]">วันที่</th>
                 <th className="px-3 py-3 text-right">Grab (฿)</th>
                 <th className="px-3 py-3 text-right">Tip (฿)</th>
                 <th className="px-3 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">รวม (฿)</th>
@@ -482,35 +482,35 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                         <div className="font-bold text-sm tracking-wide text-emerald-700 dark:text-emerald-400 font-mono">{fmtDateSlash(r.date)}</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{fmtDateTh(r.date)}</div>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-medium font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right font-medium">
                         {Number(r.grab) > 0 ? fmt(r.grab) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-medium font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right font-medium">
                         {Number(r.tip) > 0 ? fmt(r.tip) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
                         {fmt(income(r))}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-blue-600 dark:text-blue-400 font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-blue-600 dark:text-blue-400">
                         {distVal !== '—' ? `${distVal} กม.` : <span className="text-slate-300 font-normal">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-medium text-rose-600 dark:text-rose-400 font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right font-medium text-rose-600 dark:text-rose-400">
                         {Number(r.oil) > 0 ? fmt(r.oil) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-600 dark:text-slate-400 font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-600 dark:text-slate-400">
                         {Number(r.oil_real) > 0 ? fmt(r.oil_real) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-600 dark:text-slate-400 font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-600 dark:text-slate-400">
                         {Number(r.credit) > 0 ? fmt(r.credit) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-600 dark:text-slate-400 font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-600 dark:text-slate-400">
                         {Number(r.withdraw) > 0 ? fmt(r.withdraw) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-500 font-mono">
+                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-500">
                         {r.hours ? `${r.hours} ชม.` : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
-                        <span className={`font-black ${p >= 0 ? 'text-emerald-600 dark:text-emerald-400 drop-shadow-[0_0_4px_rgba(0,177,79,0.25)]' : 'text-rose-600'}`}>
+                      <td className="whitespace-nowrap px-3 py-3 text-right">
+                        <span className={`font-black ${p >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
                           {fmt(p)}
                         </span>
                       </td>

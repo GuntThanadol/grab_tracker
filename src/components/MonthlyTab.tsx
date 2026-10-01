@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useMemo } from 'react';
 import { Entry } from '@/types';
@@ -57,72 +57,61 @@ export default function MonthlyTab({ entries }: MonthlyTabProps) {
   return (
     <div className="space-y-6 pb-12">
       <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 led-beacon-green"></span>
-          <span className="text-[10px] font-mono tracking-widest text-emerald-600 dark:text-emerald-400 font-bold uppercase">
-            SEASON LOGS & TELEMETRY
-          </span>
-        </div>
-        <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2 tracking-tight">
-          <span>📅 สรุปผลการขับขี่รายเดือน (Monthly Records)</span>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <span>📅 สรุปผลการขับขี่แยกตามรายเดือน</span>
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          วิเคราะห์รายรับ ค่าใช้จ่ายน้ำมัน และกำไรสุทธิต่อเดือน
+          วิเคราะห์รายรับ ค่าใช้จ่ายน้ำมัน และกำไรสุทธิในแต่ละเดือน
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        {monthlyStats.map((item) => {
-          const revKm = item.totalDist > 0 ? (item.totalInc / item.totalDist).toFixed(2) : '0.00';
-          return (
-            <div
-              key={item.monthKey}
-              className="cockpit-card rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-md dark:border-emerald-500/20 dark:bg-[#0c121e]/90 space-y-4 transition-all relative overflow-hidden"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800/80">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-white font-bold shadow-md shadow-emerald-500/20 border border-emerald-400/30">
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-slate-900 dark:text-white text-base sm:text-lg">{item.title}</h3>
-                    <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                      วิ่งงาน <strong className="text-emerald-600 dark:text-emerald-400">{item.workDays}</strong> วัน • พัก {item.restDays} วัน
-                    </p>
-                  </div>
+        {monthlyStats.map((item) => (
+          <div
+            key={item.monthKey}
+            className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4 transition hover:border-emerald-300 dark:hover:border-emerald-800"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 font-bold">
+                  <Calendar className="h-5 w-5" />
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-mono tracking-wider uppercase text-emerald-600 dark:text-emerald-400 font-bold block">
-                    NET PROFIT
-                  </span>
-                  <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 drop-shadow-[0_0_6px_rgba(0,177,79,0.3)]">
-                    {fmt(item.totalProf)} ฿
-                  </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white">{item.title}</h3>
+                  <p className="text-xs text-slate-500">
+                    วิ่งงาน {item.workDays} วัน • หยุด {item.restDays} วัน
+                  </p>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-                <div className="rounded-2xl bg-slate-50/80 p-3 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <div className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">รายได้รวม (GROSS)</div>
-                  <div className="mt-1 font-black font-mono text-slate-900 dark:text-white text-base">{fmt(item.totalInc)} ฿</div>
-                  <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">~{revKm} ฿/กม.</div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50/80 p-3 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <div className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">ค่าน้ำมัน (FUEL)</div>
-                  <div className="mt-1 font-black font-mono text-rose-600 dark:text-rose-400 text-base">{fmt(item.totalO)} ฿</div>
-                  <div className="text-[10px] text-slate-400">Wave 125i</div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50/80 p-3 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 col-span-2 sm:col-span-1">
-                  <div className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">ระยะทาง (ODOMETER)</div>
-                  <div className="mt-1 font-black font-mono text-blue-600 dark:text-blue-400 text-base">{fmtInt(item.totalDist)} กม.</div>
-                  <div className="text-[10px] font-mono text-slate-400">เฉลี่ย {(item.workDays ? (item.totalDist / item.workDays).toFixed(1) : 0)} กม./วัน</div>
+              <div className="text-right">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">กำไรสุทธิ</span>
+                <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
+                  {fmt(item.totalProf)} ฿
                 </div>
               </div>
             </div>
-          );
-        })}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                <div className="text-[11px] font-medium text-slate-500">รายได้รวม</div>
+                <div className="mt-1 font-bold text-slate-900 dark:text-white">{fmt(item.totalInc)} ฿</div>
+                <div className="text-[10px] text-slate-400">(เฉลี่ย {fmt(item.avgInc)}/วัน)</div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                <div className="text-[11px] font-medium text-slate-500">ค่าน้ำมันประมาณ</div>
+                <div className="mt-1 font-bold text-rose-600 dark:text-rose-400">{fmt(item.totalO)} ฿</div>
+                <div className="text-[10px] text-slate-400">Wave 125i</div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                <div className="text-[11px] font-medium text-slate-500">ระยะทางวิ่ง</div>
+                <div className="mt-1 font-bold text-blue-600 dark:text-blue-400">{fmtInt(item.totalDist)} กม.</div>
+                <div className="text-[10px] text-slate-400">เฉลี่ย {(item.workDays ? (item.totalDist / item.workDays).toFixed(1) : 0)} กม./วัน</div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
