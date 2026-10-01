@@ -1,17 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Entry } from '@/types';
-import { fmt, fmtInt, income, profit, isWorkDay, fmtDateTh, fmtDateSlash } from '@/lib/utils';
+import { fmt, fmtInt, income, profit, isWorkDay } from '@/lib/utils';
 import { TrendingUp, Fuel, Bike, Wallet, ArrowDownRight, Clock, Award, DollarSign, CalendarCheck } from 'lucide-react';
+import AnalyticsCharts from './AnalyticsCharts';
 
 interface DashboardTabProps {
   entries: Entry[];
 }
 
 export default function DashboardTab({ entries }: DashboardTabProps) {
-  const [selectedBar, setSelectedBar] = useState<Entry | null>(null);
-
   const workRows = entries.filter(isWorkDay);
   const totalGrab = entries.reduce((s, r) => s + (Number(r.grab) || 0), 0);
   const totalTip = entries.reduce((s, r) => s + (Number(r.tip) || 0), 0);
@@ -29,11 +28,6 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
   const revPerKm = totalDistance > 0 ? totalIncome / totalDistance : 0;
   const costPerKm = totalDistance > 0 ? totalOil / totalDistance : 0;
   const avgHourlyRate = totalHours > 0 ? totalProfit / totalHours : 0;
-
-  // Last 30 days for column chart
-  const sortedDesc = [...entries].sort((a, b) => b.date.localeCompare(a.date));
-  const last30 = sortedDesc.slice(0, 30).reverse();
-  const maxBarProfit = Math.max(...last30.map(r => profit(r)), 100);
 
   return (
     <div className="space-y-6 pb-12">
@@ -180,58 +174,8 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
         </div>
       </div>
 
-      {/* 30-Day Interactive Column Chart */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>📊 กำไรสุทธิ 30 วันล่าสุด</span>
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              แตะหรือเลื่อนเมาส์ไปที่แท่งกราฟเพื่อดูรายละเอียดรายวัน
-            </p>
-          </div>
-          {selectedBar && (
-            <div className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              <strong className="font-mono">{fmtDateSlash(selectedBar.date)}</strong> ({fmtDateTh(selectedBar.date)}): กำไร <strong>{fmt(profit(selectedBar))} ฿</strong> (รายได้ {fmt(income(selectedBar))} บ. | น้ำมัน {fmt(selectedBar.oil)} บ. | วิ่ง {selectedBar.distance || 0} กม.)
-            </div>
-          )}
-        </div>
-
-        <div className="mt-6 flex h-48 items-end gap-1 sm:gap-2 overflow-x-auto pb-2">
-          {last30.map((r) => {
-            const p = profit(r);
-            const heightPct = Math.max(4, Math.min(100, (p / maxBarProfit) * 100));
-            const isWork = isWorkDay(r);
-            const isSelected = selectedBar?.id === r.id;
-
-            return (
-              <div
-                key={r.id}
-                onMouseEnter={() => setSelectedBar(r)}
-                onClick={() => setSelectedBar(r)}
-                className="group relative flex flex-1 flex-col items-center justify-end h-full min-w-[20px] cursor-pointer"
-              >
-                {/* Bar */}
-                <div
-                  style={{ height: `${heightPct}%` }}
-                  className={`w-full rounded-t-md transition-all duration-200 ${
-                    isSelected
-                      ? 'bg-emerald-500 ring-2 ring-emerald-300'
-                      : isWork
-                      ? 'bg-emerald-600/80 hover:bg-emerald-500 group-hover:scale-y-105'
-                      : 'bg-slate-200 dark:bg-slate-800'
-                  }`}
-                />
-                {/* Date label */}
-                <span className="mt-2 text-[10px] text-slate-400">
-                  {r.date.slice(8, 10)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Advanced Performance & Analytics Charts Suite */}
+      <AnalyticsCharts entries={entries} />
     </div>
   );
 }
