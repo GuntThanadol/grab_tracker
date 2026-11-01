@@ -98,11 +98,13 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       list = list.filter(r => (Number(r.tip) || 0) <= 0);
     }
 
-    // Profit Filter
-    if (profitFilter === 'profit_500') {
+    // Profit Filter (300+, 400+, 500+)
+    if (profitFilter === 'profit_300') {
+      list = list.filter(r => profit(r) >= 300);
+    } else if (profitFilter === 'profit_400') {
+      list = list.filter(r => profit(r) >= 400);
+    } else if (profitFilter === 'profit_500') {
       list = list.filter(r => profit(r) >= 500);
-    } else if (profitFilter === 'profit_1000') {
-      list = list.filter(r => profit(r) >= 1000);
     } else if (profitFilter === 'profit_pos') {
       list = list.filter(r => profit(r) > 0);
     } else if (profitFilter === 'loss') {
@@ -648,8 +650,9 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
             >
               <option value="all">💰 กำไรทุกระดับ</option>
+              <option value="profit_300">💵 กำไร 300+ บาท</option>
+              <option value="profit_400">💵 กำไร 400+ บาท</option>
               <option value="profit_500">💵 กำไร 500+ บาท</option>
-              <option value="profit_1000">💎 กำไร 1,000+ บาท</option>
               <option value="profit_pos">🟢 มีกำไร (&gt; 0 ฿)</option>
               <option value="loss">🔻 ขาดทุน/ไม่คุ้มน้ำมัน</option>
             </select>
