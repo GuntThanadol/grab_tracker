@@ -4,8 +4,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { fmt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, TH_MONTHS } from '@/lib/utils';
-import { Search, Filter, Download, Upload, FileSpreadsheet, Edit2, Trash2, X, Check, ArrowUpDown, Loader2, Send } from 'lucide-react';
+import { fmt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, TH_MONTHS, TH_DOWS, TH_DOWS_S } from '@/lib/utils';
+import { Search, Filter, Download, Upload, FileSpreadsheet, Edit2, Trash2, X, Check, ArrowUpDown, Loader2, Send, Calendar, Gift, RotateCcw, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
 import ThaiDatePicker from './ThaiDatePicker';
@@ -26,6 +26,10 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'work' | 'rest'>('all');
+  const [dowFilter, setDowFilter] = useState<string>('all');
+  const [tipFilter, setTipFilter] = useState<'all' | 'has_tip' | 'no_tip'>('all');
+  const [profitFilter, setProfitFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('date_desc');
   
   // Edit modal state
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
@@ -61,7 +65,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
 
   // Filtered rows
   const filteredEntries = useMemo(() => {
-    let list = [...entries].sort((a, b) => b.date.localeCompare(a.date));
+    let list = [...entries];
 
     if (selectedMonth !== 'all') {
       list = list.filter(r => r.date.startsWith(selectedMonth));
@@ -73,6 +77,38 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       list = list.filter(r => !isWorkDay(r));
     }
 
+    // Day of Week Filter
+    if (dowFilter !== 'all') {
+      list = list.filter(r => {
+        if (!r.date) return false;
+        const parts = r.date.slice(0, 10).split('-').map(Number);
+        if (parts.length !== 3) return false;
+        const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+        const dow = dt.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+        if (dowFilter === 'weekday') return dow >= 1 && dow <= 5;
+        if (dowFilter === 'weekend') return dow === 0 || dow === 6;
+        return dow === Number(dowFilter);
+      });
+    }
+
+    // Tip Filter
+    if (tipFilter === 'has_tip') {
+      list = list.filter(r => (Number(r.tip) || 0) > 0);
+    } else if (tipFilter === 'no_tip') {
+      list = list.filter(r => (Number(r.tip) || 0) <= 0);
+    }
+
+    // Profit Filter
+    if (profitFilter === 'profit_500') {
+      list = list.filter(r => profit(r) >= 500);
+    } else if (profitFilter === 'profit_1000') {
+      list = list.filter(r => profit(r) >= 1000);
+    } else if (profitFilter === 'profit_pos') {
+      list = list.filter(r => profit(r) > 0);
+    } else if (profitFilter === 'loss') {
+      list = list.filter(r => isWorkDay(r) && profit(r) <= 0);
+    }
+
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       list = list.filter(r => 
@@ -80,8 +116,80 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       );
     }
 
+    // Sorting
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case 'date_asc':
+          return a.date.localeCompare(b.date);
+        case 'profit_desc':
+          return profit(b) - profit(a);
+        case 'profit_asc':
+          return profit(a) - profit(b);
+        case 'income_desc':
+          return income(b) - income(a);
+        case 'tip_desc':
+          return (Number(b.tip) || 0) - (Number(a.tip) || 0);
+        case 'distance_desc':
+          return (Number(b.distance) || 0) - (Number(a.distance) || 0);
+        case 'hours_desc':
+          return (Number(b.hours) || 0) - (Number(a.hours) || 0);
+        case 'date_desc':
+        default:
+          return b.date.localeCompare(a.date);
+      }
+    });
+
     return list;
-  }, [entries, selectedMonth, typeFilter, searchTerm]);
+  }, [entries, selectedMonth, typeFilter, dowFilter, tipFilter, profitFilter, searchTerm, sortBy]);
+
+  // Active filter count
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (searchTerm.trim()) count++;
+    if (selectedMonth !== 'all') count++;
+    if (typeFilter !== 'all') count++;
+    if (dowFilter !== 'all') count++;
+    if (tipFilter !== 'all') count++;
+    if (profitFilter !== 'all') count++;
+    if (sortBy !== 'date_desc') count++;
+    return count;
+  }, [searchTerm, selectedMonth, typeFilter, dowFilter, tipFilter, profitFilter, sortBy]);
+
+  const hasActiveFilters = activeFilterCount > 0;
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedMonth('all');
+    setTypeFilter('all');
+    setDowFilter('all');
+    setTipFilter('all');
+    setProfitFilter('all');
+    setSortBy('date_desc');
+  };
+
+  // Aggregated metrics for filtered rows
+  const filterStats = useMemo(() => {
+    const workCount = filteredEntries.filter(isWorkDay).length;
+    const restCount = filteredEntries.length - workCount;
+    const sumGrab = filteredEntries.reduce((s, r) => s + (Number(r.grab) || 0), 0);
+    const sumTip = filteredEntries.reduce((s, r) => s + (Number(r.tip) || 0), 0);
+    const sumIncome = filteredEntries.reduce((s, r) => s + income(r), 0);
+    const sumProfit = filteredEntries.reduce((s, r) => s + profit(r), 0);
+    const sumOil = filteredEntries.reduce((s, r) => s + (Number(r.oil) || 0), 0);
+    const sumDist = filteredEntries.reduce((s, r) => s + (Number(r.distance) || 0), 0);
+    const sumHours = filteredEntries.reduce((s, r) => s + (Number(r.hours) || 0), 0);
+    return {
+      workCount,
+      restCount,
+      sumGrab,
+      sumTip,
+      sumIncome,
+      sumProfit,
+      sumOil,
+      sumDist,
+      sumHours,
+    };
+  }, [filteredEntries]);
 
   // Export Excel
   const handleExportExcel = () => {
@@ -350,91 +458,289 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   return (
     <div className="space-y-4 pb-12">
       {/* Control Bar: Search & Filters */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        
-        <div className="flex flex-1 flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="ค้นหาวันที่ เช่น 2026-09 หรือหมายเหตุ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3.5 py-2 text-base sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
-            />
-          </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-3">
+        {/* Row 1: Search Box, Month Selector, Type Selector & Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="flex flex-1 flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
+            {/* Search Box */}
+            <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="ค้นหาวันที่ เช่น 2026-09 หรือหมายเหตุ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3.5 py-2 text-base sm:text-sm text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              />
+            </div>
 
-          <div className="flex items-center gap-2">
-            {/* Month Filter */}
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="flex-1 sm:flex-initial rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
-            >
-              <option value="all">📅 ทุกเดือน ({entries.length} วัน)</option>
-              {availableMonths.map((m) => {
-                const [y, mo] = m.split('-');
-                const thYear = parseInt(y, 10) + 543;
-                const thMonthName = TH_MONTHS[parseInt(mo, 10) - 1] || m;
-                return (
-                  <option key={m} value={m}>
-                    {thMonthName} {thYear}
-                  </option>
-                );
-              })}
-            </select>
+            <div className="flex items-center gap-2">
+              {/* Month Filter */}
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="flex-1 sm:flex-initial rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+              >
+                <option value="all">📅 ทุกเดือน ({entries.length} วัน)</option>
+                {availableMonths.map((m) => {
+                  const [y, mo] = m.split('-');
+                  const thYear = parseInt(y, 10) + 543;
+                  const thMonthName = TH_MONTHS[parseInt(mo, 10) - 1] || m;
+                  return (
+                    <option key={m} value={m}>
+                      {thMonthName} {thYear}
+                    </option>
+                  );
+                })}
+              </select>
 
-            {/* Type Filter */}
-            <div className="flex shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-800 dark:bg-slate-800">
-              {[
-                { id: 'all', label: 'ทั้งหมด' },
-                { id: 'work', label: 'วิ่งงาน' },
-                { id: 'rest', label: 'หยุด' },
-              ].map((btn) => (
-                <button
-                  key={btn.id}
-                  onClick={() => setTypeFilter(btn.id as any)}
-                  className={`rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-semibold transition ${
-                    typeFilter === btn.id
-                      ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                  }`}
-                >
-                  {btn.label}
-                </button>
-              ))}
+              {/* Type Filter */}
+              <div className="flex shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-800 dark:bg-slate-800">
+                {[
+                  { id: 'all', label: 'ทั้งหมด' },
+                  { id: 'work', label: 'วิ่งงาน' },
+                  { id: 'rest', label: 'หยุด' },
+                ].map((btn) => (
+                  <button
+                    key={btn.id}
+                    onClick={() => setTypeFilter(btn.id as any)}
+                    className={`rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-semibold transition ${
+                      typeFilter === btn.id
+                        ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Actions: Import & Export Excel */}
-        <div className="flex items-center gap-2 shrink-0">
-          {userRole !== 'guest' && (
-            <label
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer active:scale-95 touch-manipulation"
-              title="นำเข้าไฟล์ Excel (.xlsx, .xls, .csv)"
+          {/* Actions: Import & Export Excel */}
+          <div className="flex items-center gap-2 shrink-0">
+            {userRole !== 'guest' && (
+              <label
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer active:scale-95 touch-manipulation"
+                title="นำเข้าไฟล์ Excel (.xlsx, .xls, .csv)"
+              >
+                <span className="text-base">📥</span>
+                <span>Import</span>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleImportExcel}
+                  className="hidden"
+                  disabled={isImporting}
+                />
+              </label>
+            )}
+
+            <button
+              onClick={handleExportExcel}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm active:scale-95 touch-manipulation"
             >
-              <span className="text-base">📥</span>
-              <span>Import</span>
-              <input
-                type="file"
-                accept=".xlsx, .xls, .csv"
-                onChange={handleImportExcel}
-                className="hidden"
-                disabled={isImporting}
-              />
-            </label>
-          )}
-
-          <button
-            onClick={handleExportExcel}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs sm:text-sm font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition shadow-sm active:scale-95 touch-manipulation"
-          >
-            <span className="text-base">📤</span>
-            <span>Export ({filteredEntries.length})</span>
-          </button>
+              <span className="text-base">📤</span>
+              <span>Export ({filteredEntries.length})</span>
+            </button>
+          </div>
         </div>
+
+        {/* Row 2: Day of Week Pills (จันทร์ - อาทิตย์) & Quick Tip Toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          {/* Day of Week Selector */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1 mr-1">
+              <Calendar className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>วัน:</span>
+            </span>
+
+            {[
+              { id: 'all', label: 'ทุกวัน' },
+              { id: '1', label: 'จ.', title: 'เฉพาะวันจันทร์', dot: 'bg-amber-400' },
+              { id: '2', label: 'อ.', title: 'เฉพาะวันอังคาร', dot: 'bg-pink-400' },
+              { id: '3', label: 'พ.', title: 'เฉพาะวันพุธ', dot: 'bg-emerald-500' },
+              { id: '4', label: 'พฤ.', title: 'เฉพาะวันพฤหัสบดี', dot: 'bg-orange-400' },
+              { id: '5', label: 'ศ.', title: 'เฉพาะวันศุกร์', dot: 'bg-sky-400' },
+              { id: '6', label: 'ส.', title: 'เฉพาะวันเสาร์', dot: 'bg-purple-400' },
+              { id: '0', label: 'อา.', title: 'เฉพาะวันอาทิตย์', dot: 'bg-rose-500' },
+              { id: 'weekday', label: 'จ.-ศ.', title: 'วันธรรมดา (จันทร์ - ศุกร์)' },
+              { id: 'weekend', label: 'ส.-อา.', title: 'วันหยุด (เสาร์ - อาทิตย์)' },
+            ].map((p) => {
+              const active = dowFilter === p.id;
+              return (
+                <button
+                  key={p.id}
+                  title={p.title || p.label}
+                  onClick={() => setDowFilter(p.id)}
+                  className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition active:scale-95 ${
+                    active
+                      ? 'bg-emerald-600 text-white shadow-sm dark:bg-emerald-500 dark:text-slate-950 font-bold'
+                      : 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {p.dot && <span className={`h-1.5 w-1.5 rounded-full ${p.dot}`} />}
+                  <span>{p.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Tip Toggle Chip */}
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+            <button
+              onClick={() => setTipFilter(tipFilter === 'has_tip' ? 'all' : 'has_tip')}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition active:scale-95 border ${
+                tipFilter === 'has_tip'
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm font-bold dark:bg-amber-500 dark:text-slate-950'
+                  : 'border-amber-200/80 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60'
+              }`}
+            >
+              <Gift className="h-3.5 w-3.5" />
+              <span>{tipFilter === 'has_tip' ? '✓ เฉพาะได้ทิป' : '🎁 เฉพาะได้ทิป'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Row 3: Dropdowns for Day of Week, Tip, Profit, Sort Order & Reset */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+          {/* Day of Week Dropdown */}
+          <div className="relative">
+            <label className="block text-[10px] text-slate-400 font-medium mb-1">วันในสัปดาห์</label>
+            <select
+              value={dowFilter}
+              onChange={(e) => setDowFilter(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            >
+              <option value="all">🗓️ ทุกวันในสัปดาห์</option>
+              <option value="1">🟡 เฉพาะวันจันทร์</option>
+              <option value="2">🌸 เฉพาะวันอังคาร</option>
+              <option value="3">🟢 เฉพาะวันพุธ</option>
+              <option value="4">🟠 เฉพาะวันพฤหัสบดี</option>
+              <option value="5">🔵 เฉพาะวันศุกร์</option>
+              <option value="6">🟣 เฉพาะวันเสาร์</option>
+              <option value="0">🔴 เฉพาะวันอาทิตย์</option>
+              <option value="weekday">💼 วันธรรมดา (จ.-ศ.)</option>
+              <option value="weekend">🏖️ วันหยุด (ส.-อา.)</option>
+            </select>
+          </div>
+
+          {/* Tip Filter Dropdown */}
+          <div className="relative">
+            <label className="block text-[10px] text-slate-400 font-medium mb-1">ตัวกรองทิป</label>
+            <select
+              value={tipFilter}
+              onChange={(e) => setTipFilter(e.target.value as any)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            >
+              <option value="all">🎁 ทิปทั้งหมด</option>
+              <option value="has_tip">🎁 เฉพาะวันที่ได้ทิป (Tip &gt; 0)</option>
+              <option value="no_tip">⚪ เฉพาะวันที่ไม่ได้ทิป</option>
+            </select>
+          </div>
+
+          {/* Profit Filter Dropdown */}
+          <div className="relative">
+            <label className="block text-[10px] text-slate-400 font-medium mb-1">ระดับกำไร</label>
+            <select
+              value={profitFilter}
+              onChange={(e) => setProfitFilter(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            >
+              <option value="all">💰 กำไรทุกระดับ</option>
+              <option value="profit_500">💵 กำไร 500+ บาท</option>
+              <option value="profit_1000">💎 กำไร 1,000+ บาท</option>
+              <option value="profit_pos">🟢 มีกำไร (&gt; 0 ฿)</option>
+              <option value="loss">🔻 ขาดทุน/ไม่คุ้มน้ำมัน</option>
+            </select>
+          </div>
+
+          {/* Sort By Dropdown */}
+          <div className="relative">
+            <label className="block text-[10px] text-slate-400 font-medium mb-1">เรียงลำดับตาม</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            >
+              <option value="date_desc">📅 วันที่: ล่าสุด → เก่าสุด</option>
+              <option value="date_asc">📅 วันที่: เก่าสุด → ล่าสุด</option>
+              <option value="profit_desc">💰 กำไรสุทธิ: มากสุด</option>
+              <option value="profit_asc">💰 กำไรสุทธิ: น้อยสุด</option>
+              <option value="income_desc">📈 รายได้รวม: มากสุด</option>
+              <option value="tip_desc">🎁 ทิป: มากสุด</option>
+              <option value="distance_desc">🛵 ระยะทาง: มากสุด</option>
+              <option value="hours_desc">⏱️ ชม.ขับ: มากสุด</option>
+            </select>
+          </div>
+
+          {/* Reset Filters Button */}
+          <div className="flex flex-col justify-end col-span-2 sm:col-span-4 lg:col-span-1">
+            {hasActiveFilters ? (
+              <button
+                onClick={resetFilters}
+                className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-rose-300 bg-rose-50 py-1.5 px-3 text-xs font-bold text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-900/60 transition active:scale-95 shadow-sm"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>ล้างตัวกรอง ({activeFilterCount})</span>
+              </button>
+            ) : (
+              <div className="hidden lg:flex items-center justify-center py-1.5 text-[11px] text-slate-400">
+                <span>(ตัวกรองมาตรฐาน)</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Results Summary HUD Ribbon */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-3.5 py-2.5 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/30">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-700 dark:text-slate-300 font-medium">
+          <span className="flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-300">
+            <span>📊 แสดง {filteredEntries.length} วัน</span>
+            <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+              (วิ่งงาน {filterStats.workCount} / หยุด {filterStats.restCount})
+            </span>
+          </span>
+          <span>•</span>
+          <span>
+            กำไรสุทธิ: <strong className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">{fmt(filterStats.sumProfit)} ฿</strong>
+          </span>
+          <span>•</span>
+          <span>
+            รายได้รวม: <strong className="font-bold text-slate-900 dark:text-white font-mono">{fmt(filterStats.sumIncome)} ฿</strong>
+          </span>
+          {filterStats.sumTip > 0 && (
+            <>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 font-bold font-mono">
+                <span>🎁 ทิป {fmt(filterStats.sumTip)} ฿</span>
+              </span>
+            </>
+          )}
+          <span>•</span>
+          <span>
+            น้ำมัน: <strong className="font-bold text-rose-600 dark:text-rose-400 font-mono">{fmt(filterStats.sumOil)} ฿</strong>
+          </span>
+          {filterStats.sumDist > 0 && (
+            <>
+              <span>•</span>
+              <span>
+                ระยะทาง: <strong className="font-bold text-blue-600 dark:text-blue-400 font-mono">{filterStats.sumDist.toFixed(1)} กม.</strong>
+              </span>
+            </>
+          )}
+        </div>
+
+        {hasActiveFilters && (
+          <button
+            onClick={resetFilters}
+            className="flex sm:hidden items-center gap-1 text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400"
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span>ล้าง</span>
+          </button>
+        )}
       </div>
 
       {/* Table Card */}
@@ -486,7 +792,14 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                         {Number(r.grab) > 0 ? fmt(r.grab) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-medium">
-                        {Number(r.tip) > 0 ? fmt(r.tip) : <span className="text-slate-300">—</span>}
+                        {Number(r.tip) > 0 ? (
+                          <span className="inline-flex items-center justify-end gap-1 font-bold text-amber-600 dark:text-amber-400 font-mono">
+                            <span className="text-xs">🎁</span>
+                            <span>{fmt(r.tip)}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
                         {fmt(income(r))}
