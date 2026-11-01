@@ -98,15 +98,29 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       list = list.filter(r => (Number(r.tip) || 0) <= 0);
     }
 
-    // Profit Filter (300+, 400+, 500+)
-    if (profitFilter === 'profit_300') {
-      list = list.filter(r => profit(r) >= 300);
-    } else if (profitFilter === 'profit_400') {
-      list = list.filter(r => profit(r) >= 400);
-    } else if (profitFilter === 'profit_500') {
-      list = list.filter(r => profit(r) >= 500);
-    } else if (profitFilter === 'profit_pos') {
-      list = list.filter(r => profit(r) > 0);
+    // Profit Filter (Ranges: 300-399.99, 400-499.99, etc.)
+    if (profitFilter === 'profit_300_399') {
+      list = list.filter(r => {
+        const p = profit(r);
+        return p >= 300 && p < 400;
+      });
+    } else if (profitFilter === 'profit_400_499') {
+      list = list.filter(r => {
+        const p = profit(r);
+        return p >= 400 && p < 500;
+      });
+    } else if (profitFilter === 'profit_500_599') {
+      list = list.filter(r => {
+        const p = profit(r);
+        return p >= 500 && p < 600;
+      });
+    } else if (profitFilter === 'profit_gte600') {
+      list = list.filter(r => profit(r) >= 600);
+    } else if (profitFilter === 'profit_lt300') {
+      list = list.filter(r => {
+        const p = profit(r);
+        return isWorkDay(r) && p > 0 && p < 300;
+      });
     } else if (profitFilter === 'loss') {
       list = list.filter(r => isWorkDay(r) && profit(r) <= 0);
     }
@@ -650,11 +664,12 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
             >
               <option value="all">💰 กำไรทุกระดับ</option>
-              <option value="profit_300">💵 กำไร 300+ บาท</option>
-              <option value="profit_400">💵 กำไร 400+ บาท</option>
-              <option value="profit_500">💵 กำไร 500+ บาท</option>
-              <option value="profit_pos">🟢 มีกำไร (&gt; 0 ฿)</option>
-              <option value="loss">🔻 ขาดทุน/ไม่คุ้มน้ำมัน</option>
+              <option value="profit_300_399">💵 300 – 399.99 บาท</option>
+              <option value="profit_400_499">💵 400 – 499.99 บาท</option>
+              <option value="profit_500_599">💵 500 – 599.99 บาท</option>
+              <option value="profit_gte600">💎 600 บาทขึ้นไป (600+ ฿)</option>
+              <option value="profit_lt300">💵 ต่ำกว่า 300 บาท (&lt; 300 ฿)</option>
+              <option value="loss">🔻 ขาดทุน/ไม่คุ้มน้ำมัน (≤ 0 ฿)</option>
             </select>
           </div>
 
