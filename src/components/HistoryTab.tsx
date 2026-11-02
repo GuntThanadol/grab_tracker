@@ -17,6 +17,22 @@ interface HistoryTabProps {
   userRole?: UserRole | null;
 }
 
+// Helpers to detect incentives in note
+export const checkHasSpecialInc = (n: string | null | undefined): boolean => {
+  if (!n) return false;
+  return n.includes('อินพิเศษ') || (n.includes('พิเศษ') && n.includes('อิน'));
+};
+
+export const checkHasGemInc = (n: string | null | undefined): boolean => {
+  if (!n) return false;
+  return n.includes('อินเพชร') || n.includes('เพชร');
+};
+
+export const checkHasAnyInc = (n: string | null | undefined): boolean => {
+  if (!n) return false;
+  return checkHasSpecialInc(n) || checkHasGemInc(n) || n.includes('อิน');
+};
+
 export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole }: HistoryTabProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -28,6 +44,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   const [typeFilter, setTypeFilter] = useState<'all' | 'work' | 'rest'>('all');
   const [dowFilter, setDowFilter] = useState<string>('all');
   const [tipFilter, setTipFilter] = useState<'all' | 'has_tip' | 'no_tip'>('all');
+  const [incFilter, setIncFilter] = useState<'all' | 'any' | 'special' | 'gem' | 'both' | 'none'>('all');
   const [profitFilter, setProfitFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date_desc');
   
@@ -98,6 +115,19 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       list = list.filter(r => (Number(r.tip) || 0) <= 0);
     }
 
+    // Incentive Filter (อินพิเศษ / อินเพชร)
+    if (incFilter === 'any') {
+      list = list.filter(r => checkHasAnyInc(r.note));
+    } else if (incFilter === 'special') {
+      list = list.filter(r => checkHasSpecialInc(r.note));
+    } else if (incFilter === 'gem') {
+      list = list.filter(r => checkHasGemInc(r.note));
+    } else if (incFilter === 'both') {
+      list = list.filter(r => checkHasSpecialInc(r.note) && checkHasGemInc(r.note));
+    } else if (incFilter === 'none') {
+      list = list.filter(r => !checkHasAnyInc(r.note));
+    }
+
     // Profit Filter (Ranges: 300-399.99, 400-499.99, etc.)
     if (profitFilter === 'profit_300_399') {
       list = list.filter(r => {
@@ -156,7 +186,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
     });
 
     return list;
-  }, [entries, selectedMonth, typeFilter, dowFilter, tipFilter, profitFilter, searchTerm, sortBy]);
+  }, [entries, selectedMonth, typeFilter, dowFilter, tipFilter, incFilter, profitFilter, searchTerm, sortBy]);
 
   // Active filter count
   const activeFilterCount = useMemo(() => {
@@ -166,10 +196,11 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
     if (typeFilter !== 'all') count++;
     if (dowFilter !== 'all') count++;
     if (tipFilter !== 'all') count++;
+    if (incFilter !== 'all') count++;
     if (profitFilter !== 'all') count++;
     if (sortBy !== 'date_desc') count++;
     return count;
-  }, [searchTerm, selectedMonth, typeFilter, dowFilter, tipFilter, profitFilter, sortBy]);
+  }, [searchTerm, selectedMonth, typeFilter, dowFilter, tipFilter, incFilter, profitFilter, sortBy]);
 
   const hasActiveFilters = activeFilterCount > 0;
 
@@ -179,6 +210,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
     setTypeFilter('all');
     setDowFilter('all');
     setTipFilter('all');
+    setIncFilter('all');
     setProfitFilter('all');
     setSortBy('date_desc');
   };
@@ -194,6 +226,10 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
     const sumOil = filteredEntries.reduce((s, r) => s + (Number(r.oil) || 0), 0);
     const sumDist = filteredEntries.reduce((s, r) => s + (Number(r.distance) || 0), 0);
     const sumHours = filteredEntries.reduce((s, r) => s + (Number(r.hours) || 0), 0);
+    const incCount = filteredEntries.filter(r => checkHasAnyInc(r.note)).length;
+    const specialIncCount = filteredEntries.filter(r => checkHasSpecialInc(r.note)).length;
+    const gemIncCount = filteredEntries.filter(r => checkHasGemInc(r.note)).length;
+
     return {
       workCount,
       restCount,
@@ -204,6 +240,9 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       sumOil,
       sumDist,
       sumHours,
+      incCount,
+      specialIncCount,
+      gemIncCount,
     };
   }, [filteredEntries]);
 
@@ -602,24 +641,48 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
             })}
           </div>
 
-          {/* Quick Tip Toggle Chip */}
-          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          {/* Quick Chips: Tip & Incentives */}
+          <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0 flex-wrap">
             <button
               onClick={() => setTipFilter(tipFilter === 'has_tip' ? 'all' : 'has_tip')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition active:scale-95 border ${
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition active:scale-95 border ${
                 tipFilter === 'has_tip'
                   ? 'bg-amber-500 text-white border-amber-600 shadow-sm font-bold dark:bg-amber-500 dark:text-slate-950'
                   : 'border-amber-200/80 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/60'
               }`}
             >
               <Gift className="h-3.5 w-3.5" />
-              <span>{tipFilter === 'has_tip' ? '✓ เฉพาะได้ทิป' : '🎁 เฉพาะได้ทิป'}</span>
+              <span>{tipFilter === 'has_tip' ? '✓ มีทิป' : '🎁 มีทิป'}</span>
+            </button>
+
+            <button
+              onClick={() => setIncFilter(incFilter === 'special' ? 'all' : 'special')}
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition active:scale-95 border ${
+                incFilter === 'special'
+                  ? 'bg-orange-500 text-white border-orange-600 shadow-sm font-bold dark:bg-orange-500 dark:text-slate-950'
+                  : 'border-orange-200/80 bg-orange-50 text-orange-800 hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-900/60'
+              }`}
+            >
+              <span>🔥</span>
+              <span>{incFilter === 'special' ? '✓ อินพิเศษ' : 'อินพิเศษ'}</span>
+            </button>
+
+            <button
+              onClick={() => setIncFilter(incFilter === 'gem' ? 'all' : 'gem')}
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition active:scale-95 border ${
+                incFilter === 'gem'
+                  ? 'bg-purple-600 text-white border-purple-700 shadow-sm font-bold dark:bg-purple-500 dark:text-slate-950'
+                  : 'border-purple-200/80 bg-purple-50 text-purple-800 hover:bg-purple-100 dark:border-purple-900/50 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/60'
+              }`}
+            >
+              <span>💎</span>
+              <span>{incFilter === 'gem' ? '✓ อินเพชร' : 'อินเพชร'}</span>
             </button>
           </div>
         </div>
 
         {/* Row 3: Dropdowns for Day of Week, Tip, Profit, Sort Order & Reset */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
           {/* Day of Week Dropdown */}
           <div className="relative">
             <label className="block text-[10px] text-slate-400 font-medium mb-1">วันในสัปดาห์</label>
@@ -650,8 +713,25 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
             >
               <option value="all">🎁 ทิปทั้งหมด</option>
-              <option value="has_tip">🎁 เฉพาะวันที่ได้ทิป (Tip &gt; 0)</option>
+              <option value="has_tip">🎁 เฉพาะวันที่ได้ทิป</option>
               <option value="no_tip">⚪ เฉพาะวันที่ไม่ได้ทิป</option>
+            </select>
+          </div>
+
+          {/* Incentive Filter Dropdown */}
+          <div className="relative">
+            <label className="block text-[10px] text-slate-400 font-medium mb-1">อินเซนทีฟ (พิเศษ/เพชร)</label>
+            <select
+              value={incFilter}
+              onChange={(e) => setIncFilter(e.target.value as any)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            >
+              <option value="all">🎯 อินเซนทีฟทั้งหมด</option>
+              <option value="any">🎯 มีอิน (พิเศษ/เพชร)</option>
+              <option value="special">🔥 เฉพาะอินพิเศษ</option>
+              <option value="gem">💎 เฉพาะอินเพชร</option>
+              <option value="both">⭐ ได้ทั้งพิเศษ + เพชร</option>
+              <option value="none">⚪ ไม่มีอินเซนทีฟ</option>
             </select>
           </div>
 
@@ -693,7 +773,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
           </div>
 
           {/* Reset Filters Button */}
-          <div className="flex flex-col justify-end col-span-2 sm:col-span-4 lg:col-span-1">
+          <div className="flex flex-col justify-end col-span-2 sm:col-span-3 lg:col-span-1">
             {hasActiveFilters ? (
               <button
                 onClick={resetFilters}
@@ -733,6 +813,14 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               <span>•</span>
               <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 font-bold font-mono">
                 <span>🎁 ทิป {fmt(filterStats.sumTip)} ฿</span>
+              </span>
+            </>
+          )}
+          {filterStats.incCount > 0 && (
+            <>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1 text-purple-700 dark:text-purple-400 font-bold font-mono">
+                <span>🎯 มีอิน {filterStats.incCount} วัน</span>
               </span>
             </>
           )}
@@ -845,8 +933,24 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                           {fmt(p)}
                         </span>
                       </td>
-                      <td className="max-w-[140px] truncate px-3 py-3 text-xs text-slate-500 dark:text-slate-400" title={r.note || ''}>
-                        {r.note || <span className="text-slate-300">—</span>}
+                      <td className="max-w-[170px] px-3 py-3 text-xs text-slate-500 dark:text-slate-400" title={r.note || ''}>
+                        {r.note ? (
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {checkHasSpecialInc(r.note) && (
+                              <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/70 dark:text-orange-300 shrink-0">
+                                🔥 อินพิเศษ
+                              </span>
+                            )}
+                            {checkHasGemInc(r.note) && (
+                              <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300 shrink-0">
+                                💎 อินเพชร
+                              </span>
+                            )}
+                            <span className="truncate">{r.note}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
                       </td>
                       {userRole !== 'guest' && (
                         <td className="whitespace-nowrap px-3 py-3 text-center">
