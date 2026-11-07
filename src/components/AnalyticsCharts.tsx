@@ -260,21 +260,21 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 font-bold">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-800/60">
                 <TrendingUp className="h-4 w-4" />
               </span>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                 ศูนย์วิเคราะห์ผลประกอบการเชิงลึก
               </h3>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              สลับดูแนวโน้มรายได้, สัดส่วนต้นทุนน้ำมัน, อัตราความคุ้มค่า และวันที่วิ่งคุ้มสุดในสัปดาห์
+            <p className="text-xs text-slate-400 mt-1">
+              แนวโน้มรายได้ สัดส่วนต้นทุนน้ำมัน อัตราความคุ้มค่า และวันที่มีประสิทธิภาพสูงสุด
             </p>
           </div>
 
           {/* Time Range Selector (shown for trend, breakdown, efficiency) */}
           {mode !== 'dow' ? (
-            <div className="flex items-center gap-1.5 self-start lg:self-auto rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800/80">
+            <div className="flex items-center gap-1 self-start lg:self-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 p-1">
               {[
                 { id: '7', label: '7 วัน' },
                 { id: '14', label: '14 วัน' },
@@ -288,10 +288,10 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
                     setTimeRange(t.id as TimeRange);
                     setSelectedEntry(null);
                   }}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition active:scale-95 ${
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
                     timeRange === t.id
-                      ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
-                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                      ? 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white shadow-sm font-semibold'
+                      : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                   }`}
                 >
                   {t.label}
@@ -299,19 +299,19 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 self-start lg:self-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-800/80 text-xs text-slate-500 font-medium">
-              <span>🗓️ สถิติสะสมทั้งหมด</span>
+            <div className="flex items-center gap-1.5 self-start lg:self-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 font-sans">
+              <span>สถิติสะสมทุกวันในระบบ</span>
             </div>
           )}
         </div>
 
-        {/* Chart Mode Selector Pills */}
-        <div className="flex flex-wrap items-center gap-2 pt-3">
+        {/* Chart Mode Selector Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-3">
           {[
-            { id: 'trend', label: '📈 แนวโน้มเปรียบเทียบ (Trend)', icon: TrendingUp },
-            { id: 'breakdown', label: '📊 โครงสร้างรายได้ vs น้ำมัน', icon: Layers },
-            { id: 'dow', label: '🗓️ วันไหนวิ่งคุ้มสุด (จ.-อา.)', icon: Calendar },
-            { id: 'efficiency', label: '⚡ ความคุ้มค่า (฿/ชม. & ฿/กม.)', icon: Zap },
+            { id: 'trend', label: 'แนวโน้มเปรียบเทียบ (Trend)', icon: TrendingUp },
+            { id: 'breakdown', label: 'สัดส่วนรายได้ vs น้ำมัน', icon: Layers },
+            { id: 'dow', label: 'ประสิทธิภาพรายวัน (จ.-อา.)', icon: Calendar },
+            { id: 'efficiency', label: 'ความคุ้มค่า (฿/ชม. & ฿/กม.)', icon: Zap },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = mode === tab.id;
@@ -319,13 +319,13 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
               <button
                 key={tab.id}
                 onClick={() => handleModeChange(tab.id as ChartMode)}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
                   isActive
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 dark:bg-emerald-500 dark:text-slate-950 font-bold'
-                    : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800'
+                    ? 'bg-slate-900 text-white dark:bg-emerald-500 dark:text-slate-950 font-semibold shadow-sm'
+                    : 'border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-emerald-400 dark:text-slate-950' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
               </button>
             );
