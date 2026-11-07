@@ -2,76 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --font-heading: 'Plus Jakarta Sans', 'Prompt', -apple-system, sans-serif;
-    --font-body: 'Prompt', -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+:root {
+  --grab-green: #00b14f;
+  --grab-dark: #008b3d;
+}
 
-    --brand-primary: #00873e;
-    --brand-dark: #00602c;
-    --brand-light: #e6f7ed;
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-
-  body {
-    font-family: var(--font-body);
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
-    letter-spacing: -0.02em;
-  }
-
-  .font-mono-num {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
+  to {
+    opacity: 1;
   }
 }
 
-/* Custom Scrollbar for Sleek Ledger look */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+@keyframes zoomOutFade {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
 }
 
-/* Tactical subtle grid backgrounds */
-.bg-grid-pattern {
-  background-size: 24px 24px;
-  background-image: 
-    linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
-}
-.dark .bg-grid-pattern {
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+.animate-fade-in {
+  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Glow effects */
-.shadow-glow-emerald {
-  box-shadow: 0 0 20px -3px rgba(0, 135, 62, 0.25);
-}
-
-@keyframes pulseSubtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(0.97); }
-}
-
-.animate-pulse-subtle {
-  animation: pulseSubtle 3s ease-in-out infinite;
+.animate-page-exit {
+  animation: zoomOutFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
