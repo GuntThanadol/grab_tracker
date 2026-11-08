@@ -24,18 +24,22 @@ export default function HomePage() {
   const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
 
-  // Restore stored session on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('grab_user_role') as UserRole | null;
-      if (stored === 'admin' || stored === 'guest') {
-        setUserRole(stored);
+    let active = true;
+    const updateUserRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!active) return;
+      if (!session) {
+        setUserRole(null);
+      } else {
+        const { data: admin } = await supabase.from('app_admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
+        if (active) setUserRole(admin ? 'admin' : 'guest');
       }
-    } catch {
-      // ignore storage errors
-    } finally {
-      setAuthChecked(true);
-    }
+      if (active) setAuthChecked(true);
+    };
+    updateUserRole();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => { updateUserRole(); });
+    return () => { active = false; subscription.unsubscribe(); };
   }, []);
 
   const [fuelSettings, setFuelSettings] = useState<FuelSettings>({
@@ -86,6 +90,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (!userRole) return;
     fetchData();
 
     // Setup Supabase Realtime Subscription
@@ -116,24 +121,17 @@ export default function HomePage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchData]);
+  }, [fetchData, userRole]);
 
-  const handleLogin = (role: UserRole) => {
-    setUserRole(role);
-    try {
-      localStorage.setItem('grab_user_role', role);
-    } catch {}
-    if (role === 'guest' && activeTab === 'entry') {
-      setActiveTab('dashboard');
-    }
+  const handleLogin = () => {
+    setLoading(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('ต้องการออกจากระบบใช่หรือไม่?')) {
-      try {
-        localStorage.removeItem('grab_user_role');
-      } catch {}
+      await supabase.auth.signOut();
       setUserRole(null);
+      setEntries([]);
       setActiveTab('dashboard');
     }
   };

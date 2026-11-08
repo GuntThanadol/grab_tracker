@@ -1,17 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { generateGrabFlexMessage } from '@/lib/lineFlex';
 import { Entry } from '@/types';
 
-const DEFAULT_TOKEN = 'kVSt7x6gMoIr58RUYSqd+htDr9skmUeNFjvGXUuE5ZkAZ/YoMMeDbYFADPM+rV6HHF5B5DhnYVlw7cawqWGQwo8MXvLrqFMRZI4sLVMNWftYEmEX9RccMzBTJyllP7Ewjq6BtnEIMUP/Nl3cfNHTZAdB04t89/1O/w1cDnyilFU=';
-const DEFAULT_USER_ID = 'U2110c05b07339d8342ee7d8e5cb187d2';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+async function isAdmin(request: NextRequest) {
+  const accessToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  if (!accessToken || !supabaseUrl || !supabaseAnonKey) return false;
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+  const { data, error } = await supabase.auth.getUser(accessToken);
+  if (error || !data.user) return false;
+
+  const { data: admin } = await supabase
+    .from('app_admins')
+    .select('user_id')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
+  return Boolean(admin);
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { entry, isTest, customToken, customUserId } = body;
+    if (!(await isAdmin(req))) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const token = (customToken || process.env.LINE_CHANNEL_ACCESS_TOKEN || DEFAULT_TOKEN).trim();
-    const userId = (customUserId || process.env.LINE_USER_ID || DEFAULT_USER_ID).trim();
+    const body = await req.json();
+    const { entry, isTest } = body;
+
+    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
+    const userId = process.env.LINE_USER_ID?.trim();
 
     if (!token || !userId) {
       return NextResponse.json(

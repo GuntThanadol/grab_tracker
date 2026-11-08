@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { getAuthorizationHeaders } from '@/lib/auth';
 import { fmt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, TH_MONTHS, TH_DOWS, TH_DOWS_S } from '@/lib/utils';
 import { Search, Filter, Download, Upload, FileSpreadsheet, Edit2, Trash2, X, Check, ArrowUpDown, Loader2, Send, Calendar, Gift, RotateCcw, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -319,12 +320,11 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
   const handleSendLine = async (entry: Entry) => {
     setSendingLineId(entry.id);
     try {
-      const customToken = localStorage.getItem('grab_line_token') || undefined;
-      const customUserId = localStorage.getItem('grab_line_userid') || undefined;
+      const authorizationHeaders = await getAuthorizationHeaders();
       const res = await fetch('/api/notify-line', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entry, customToken, customUserId }),
+        headers: { 'Content-Type': 'application/json', ...authorizationHeaders },
+        body: JSON.stringify({ entry }),
       });
       const data = await res.json();
       if (data.success) {

@@ -13,3 +13,15 @@
 - **Styling**: Tailwind CSS + Lucide Icons
 - **Database & Auth**: Supabase (PostgreSQL Cloud + Realtime Engine)
 - **Deployment**: Vercel
+
+## Security setup (required once)
+
+1. For an existing database, run `supabase/migrations/20261108_secure_auth.sql` in the Supabase SQL Editor to replace the old public RLS policies. Fresh installations can use either schema file.
+2. In Supabase Authentication, enable **Email** sign-in and **Anonymous Sign-Ins**.
+3. Create the administrator's email/password user in Supabase Authentication, then run the following in the SQL Editor with that user's UUID:
+
+```sql
+insert into public.app_admins (user_id) values ('YOUR_AUTH_USER_UUID');
+```
+
+4. Rotate the previous LINE channel access token, then set the new token and `LINE_USER_ID` only in `.env.local` or the deployment environment. Do not place either value in browser storage or source code.

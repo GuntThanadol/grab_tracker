@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getAuthorizationHeaders } from '@/lib/auth';
 import { fmt, getTodayThai, fmtDateSlash } from '@/lib/utils';
 import { FuelSettings } from '@/types';
 import confetti from 'canvas-confetti';
@@ -114,12 +115,11 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
       let lineNote = '';
       if (notifyLine) {
         try {
-          const customToken = localStorage.getItem('grab_line_token') || undefined;
-          const customUserId = localStorage.getItem('grab_line_userid') || undefined;
+          const authorizationHeaders = await getAuthorizationHeaders();
           const lineRes = await fetch('/api/notify-line', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ entry: payload, customToken, customUserId }),
+            headers: { 'Content-Type': 'application/json', ...authorizationHeaders },
+            body: JSON.stringify({ entry: payload }),
           });
           const lineData = await lineRes.json();
           if (lineData.success) {
