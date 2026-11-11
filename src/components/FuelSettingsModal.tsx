@@ -49,19 +49,22 @@ export default function FuelSettingsModal({
 
   const currentPrice = manualPrice ? parseFloat(manualPrice) : (fuelSettings.last_fetched_price || 39.09);
 
-  // Fetch live prices from thai-oil-api
+  // Fetch live prices via our internal API route
   const fetchLivePrices = async () => {
     setIsFetching(true);
     setStatusMsg('🔄 กำลังดึงราคาน้ำมันล่าสุด...');
     try {
-      const resp = await fetch('https://api.chnwt.dev/thai-oil-api/latest');
+      const resp = await fetch(`/api/oil-price?brand=${brand}`);
       const json = await resp.json();
-      if (json?.response?.stations) {
-        const brandData = json.response.stations[brand] || json.response.stations.bcp;
-        const fuelItem = brandData?.[fuelType] || brandData?.gasohol_95;
-        if (fuelItem?.price) {
-          const price = parseFloat(fuelItem.price);
-          const dateStr = json.response.date || new Date().toLocaleDateString('th-TH');
+      if (!resp.ok || !json.success) {
+        throw new Error(json.error || 'ไม่สามารถดึงข้อมูลราคาได้');
+      }
+
+      if (json?.prices) {
+        const fuelPrice = json.prices[fuelType] || json.prices.gasohol_95;
+        if (fuelPrice) {
+          const price = parseFloat(fuelPrice);
+          const dateStr = json.date || new Date().toLocaleDateString('th-TH');
           
           const updated: FuelSettings = {
             ...fuelSettings,
@@ -76,6 +79,8 @@ export default function FuelSettingsModal({
           await supabase.from('fuel_settings').upsert({ id: 1, ...updated });
           onUpdated(updated);
           setStatusMsg(`✅ อัปเดตราคาสำเร็จ: ${price.toFixed(2)} บาท/ลิตร (${dateStr})`);
+        } else {
+          throw new Error('ไม่พบราคาประเภทน้ำมันที่เลือก');
         }
       }
     } catch (err: any) {
