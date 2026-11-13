@@ -17,7 +17,7 @@ export function generateGrabFlexMessage(entry: Entry, appUrl = 'https://grab-tra
   const profitSign = isPositiveProfit ? '+' : '';
 
   // Construct key-value rows
-  const detailRows: any[] = [
+  const detailRows: Record<string, unknown>[] = [
     {
       type: 'box',
       layout: 'horizontal',

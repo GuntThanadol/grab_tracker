@@ -91,7 +91,14 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!userRole) return;
-    fetchData();
+    let cancelled = false;
+
+    const loadInitial = async () => {
+      if (!cancelled) {
+        await fetchData();
+      }
+    };
+    void loadInitial();
 
     // Setup Supabase Realtime Subscription
     const channel = supabase
@@ -119,6 +126,7 @@ export default function HomePage() {
       });
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, [fetchData, userRole]);
@@ -200,6 +208,7 @@ export default function HomePage() {
 
       {/* Fuel Settings Modal */}
       <FuelSettingsModal
+        key={`${isFuelModalOpen}-${fuelSettings.brand}-${fuelSettings.fuel_type}-${fuelSettings.rate_km_per_l}-${fuelSettings.manual_price ?? ''}`}
         isOpen={isFuelModalOpen}
         onClose={() => setIsFuelModalOpen(false)}
         fuelSettings={fuelSettings}

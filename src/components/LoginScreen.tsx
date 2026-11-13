@@ -30,7 +30,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       setErrorMsg('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
       return;
     }
-    setTimeout(onLogin, 200);
+    onLogin();
   };
 
   const handleGuestLogin = async () => {
@@ -42,7 +42,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       setErrorMsg('ไม่สามารถเข้า Guest Mode ได้ กรุณาเปิด Anonymous Sign-Ins ใน Supabase');
       return;
     }
-    setTimeout(onLogin, 200);
+    onLogin();
   };
 
   return (

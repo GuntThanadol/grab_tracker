@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Entry } from '@/types';
 import { fmt, fmtInt, income, profit, isWorkDay, fmtDateTh, fmtDateSlash, TH_DOWS, TH_DOWS_S } from '@/lib/utils';
-import { TrendingUp, BarChart3, Calendar, Zap, Fuel, Bike, Clock, Award, Layers, HelpCircle, Check, Info, X } from 'lucide-react';
+import { TrendingUp, Calendar, Zap, Bike, Award, Layers, Info, X } from 'lucide-react';
 
 interface AnalyticsChartsProps {
   entries: Entry[];

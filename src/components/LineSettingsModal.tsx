@@ -12,22 +12,23 @@ interface LineSettingsModalProps {
 }
 
 export default function LineSettingsModal({ isOpen, onClose }: LineSettingsModalProps) {
-  const [mounted, setMounted] = useState(false);
-  const [autoNotify, setAutoNotify] = useState(true);
+  const [autoNotify, setAutoNotify] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return localStorage.getItem('grab_line_auto') !== 'false';
+    } catch {
+      return true;
+    }
+  });
   const [isTesting, setIsTesting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    setAutoNotify(localStorage.getItem('grab_line_auto') !== 'false');
-  }, []);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  if (!isOpen || !mounted) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const save = (event: React.FormEvent) => {
     event.preventDefault();

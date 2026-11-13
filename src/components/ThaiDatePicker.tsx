@@ -1,28 +1,26 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TH_MONTHS, TH_DOWS_S, getTodayThai, fmtDateSlash, fmtDateTh } from '@/lib/utils';
 
 interface ThaiDatePickerProps {
   value: string; // YYYY-MM-DD
   onChange: (val: string) => void;
   label?: string;
-  required?: boolean;
 }
 
 export default function ThaiDatePicker({
   value,
   onChange,
   label = '📅 วันที่',
-  required = true,
 }: ThaiDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Parse current value or fallback to Thailand today
   const selectedDate = value || getTodayThai();
-  const [selY, selM, selD] = selectedDate.split('-').map(Number);
+  const [selY, selM] = selectedDate.split('-').map(Number);
 
   // View state for browsing calendar months
   const [viewYear, setViewYear] = useState(selY || new Date().getFullYear());

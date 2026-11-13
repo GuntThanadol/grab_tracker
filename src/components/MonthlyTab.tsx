@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { Entry } from '@/types';
 import { fmt, fmtInt, income, profit, isWorkDay, TH_MONTHS } from '@/lib/utils';
-import { Calendar, TrendingUp, Bike, Fuel, Award } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 interface MonthlyTabProps {
   entries: Entry[];

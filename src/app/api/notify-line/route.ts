@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let flexMessage: any;
+    let flexMessage: ReturnType<typeof generateGrabFlexMessage>;
 
     if (isTest) {
       const mockEntry: Entry = {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         note: '🔔 ข้อความทดสอบเชื่อมต่อ LINE สำเร็จ 100%',
       };
       flexMessage = generateGrabFlexMessage(mockEntry);
-      flexMessage.altText = '🔔 ทดสอบการเชื่อมต่อ LINE Messaging API สำเร็จ!';
+      flexMessage.altText = '🔔 ทดสอบการเชื่อมต่อ LINE สำเร็จ!';
     } else if (entry) {
       flexMessage = generateGrabFlexMessage(entry);
     } else {
@@ -104,9 +104,10 @@ export async function POST(req: NextRequest) {
       success: true,
       message: isTest ? 'ส่งข้อความทดสอบเข้า LINE เรียบร้อยแล้ว' : 'ส่งสรุปงานเข้า LINE เรียบร้อยแล้ว',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal Server Error';
     return NextResponse.json(
-      { success: false, error: err.message || 'Internal Server Error' },
+      { success: false, error: message },
       { status: 500 }
     );
   }

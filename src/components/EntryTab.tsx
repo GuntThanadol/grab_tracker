@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getAuthorizationHeaders } from '@/lib/auth';
-import { fmt, getTodayThai, fmtDateSlash } from '@/lib/utils';
+import { fmt, getTodayThai } from '@/lib/utils';
 import { FuelSettings } from '@/types';
 import confetti from 'canvas-confetti';
-import { Save, Sparkles, Fuel, Bike, DollarSign, Wallet, ArrowDownRight, Clock, StickyNote } from 'lucide-react';
+import { Save, Sparkles, Bike } from 'lucide-react';
 import ThaiDatePicker from './ThaiDatePicker';
 
 interface EntryTabProps {
@@ -26,18 +26,17 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
   const [withdraw, setWithdraw] = useState<string>('');
   const [hours, setHours] = useState<string>('');
   const [note, setNote] = useState<string>('');
-  const [notifyLine, setNotifyLine] = useState<boolean>(true);
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
+  const [notifyLine, setNotifyLine] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
     try {
       const auto = localStorage.getItem('grab_line_auto');
-      if (auto !== null) {
-        setNotifyLine(auto !== 'false');
-      }
-    } catch {}
-  }, []);
+      return auto !== null ? auto !== 'false' : true;
+    } catch {
+      return true;
+    }
+  });
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const price = fuelSettings.manual_price || fuelSettings.last_fetched_price || 39.09;
   const rate = fuelSettings.rate_km_per_l || 71.4;
@@ -143,8 +142,9 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
       setWithdraw('');
       setHours('');
       setNote('');
-    } catch (err: any) {
-      setToast({ msg: `❌ เกิดข้อผิดพลาด: ${err.message}`, type: 'error' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'ไม่สามารถบันทึกข้อมูลได้';
+      setToast({ msg: `❌ เกิดข้อผิดพลาด: ${message}`, type: 'error' });
     } finally {
       setLoading(false);
     }

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { X, RefreshCw, Save, Fuel } from 'lucide-react';
+import { X, RefreshCw, Fuel } from 'lucide-react';
 
 interface FuelSettingsModalProps {
   isOpen: boolean;
@@ -21,11 +21,6 @@ export default function FuelSettingsModal({
   onUpdated,
   userRole,
 }: FuelSettingsModalProps) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const [brand, setBrand] = useState<'bcp' | 'ptt'>(fuelSettings.brand || 'bcp');
   const [fuelType, setFuelType] = useState<string>(fuelSettings.fuel_type || 'gasohol_95');
   const [rate, setRate] = useState<number>(fuelSettings.rate_km_per_l || 71.4);
@@ -45,7 +40,7 @@ export default function FuelSettingsModal({
     };
   }, [isOpen]);
 
-  if (!isOpen || !mounted) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const currentPrice = manualPrice ? parseFloat(manualPrice) : (fuelSettings.last_fetched_price || 39.09);
 
@@ -76,15 +71,19 @@ export default function FuelSettingsModal({
             last_fetched_date: dateStr,
           };
 
-          await supabase.from('fuel_settings').upsert({ id: 1, ...updated });
+          if (userRole !== 'guest') {
+            const { error } = await supabase.from('fuel_settings').upsert({ id: 1, ...updated });
+            if (error) throw error;
+          }
           onUpdated(updated);
           setStatusMsg(`✅ อัปเดตราคาสำเร็จ: ${price.toFixed(2)} บาท/ลิตร (${dateStr})`);
         } else {
           throw new Error('ไม่พบราคาประเภทน้ำมันที่เลือก');
         }
       }
-    } catch (err: any) {
-      setStatusMsg(`⚠️ ไม่สามารถดึงราคาล่าสุดได้: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด';
+      setStatusMsg(`⚠️ ไม่สามารถดึงราคาล่าสุดได้: ${message}`);
     } finally {
       setIsFetching(false);
     }
@@ -105,11 +104,13 @@ export default function FuelSettingsModal({
     };
 
     try {
-      await supabase.from('fuel_settings').upsert({ id: 1, ...updated });
+      const { error } = await supabase.from('fuel_settings').upsert({ id: 1, ...updated });
+      if (error) throw error;
       onUpdated(updated);
       onClose();
-    } catch (err: any) {
-      alert(`บันทึกไม่สำเร็จ: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด';
+      alert(`บันทึกไม่สำเร็จ: ${message}`);
     }
   };
 
@@ -134,7 +135,7 @@ export default function FuelSettingsModal({
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">สถานีบริการน้ำมัน</label>
             <select
               value={brand}
-              onChange={(e) => setBrand(e.target.value as any)}
+              onChange={(e) => setBrand(e.target.value as 'bcp' | 'ptt')}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-base sm:text-sm font-medium dark:border-slate-800 dark:bg-slate-800"
             >
               <option value="bcp">🌿 บางจาก (Bangchak)</option>
