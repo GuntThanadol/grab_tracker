@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Grab บัญชีรายวัน - Smart Tracker',
+  title: 'Grab - Smart Tracker',
   description: 'ระบบบันทึกบัญชีรายได้และคำนวณค่าน้ำมันอัจฉริยะสำหรับคนขับ Grab',
 };
 
