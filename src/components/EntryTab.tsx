@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getAuthorizationHeaders } from '@/lib/auth';
-import { fmt, getTodayThai } from '@/lib/utils';
+import { fmt, getTodayThai, setLocalCustomTrip } from '@/lib/utils';
 import { FuelSettings } from '@/types';
 import confetti from 'canvas-confetti';
 import { Save, Sparkles, Bike } from 'lucide-react';
@@ -19,6 +19,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
   const [date, setDate] = useState(today);
   const [grab, setGrab] = useState<string>('');
   const [tip, setTip] = useState<string>('');
+  const [trips, setTrips] = useState<string>('');
   const [distance, setDistance] = useState<string>('');
   const [oil, setOil] = useState<string>('');
   const [oilReal, setOilReal] = useState<string>('');
@@ -78,13 +79,16 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
 
     const id = Date.now() + Math.random().toString(36).slice(2, 6);
 
-    const isWorkDay = numGrab > 0 || numDist > 0 || numOil > 0;
+    const parsedTrips = parseInt(trips, 10);
+    const finalTrips = !isNaN(parsedTrips) && parsedTrips > 0 ? parsedTrips : null;
+
+    const isWorkDay = numGrab > 0 || numDist > 0 || numOil > 0 || (finalTrips !== null && finalTrips > 0);
     const parsedHours = parseFloat(hours);
     const finalHours = !isNaN(parsedHours) && parsedHours > 0 
       ? parsedHours 
       : (isWorkDay ? 3 : null);
 
-    const payload = {
+    const basePayload = {
       id,
       date,
       grab: numGrab,
@@ -98,9 +102,22 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
       note: note.trim(),
     };
 
+    const payloadWithTrips = {
+      ...basePayload,
+      trips: finalTrips,
+    };
+
     try {
-      const { error } = await supabase.from('entries').upsert(payload, { onConflict: 'date' });
-      if (error) throw error;
+      setLocalCustomTrip(date, finalTrips);
+      const { error } = await supabase.from('entries').upsert(payloadWithTrips, { onConflict: 'date' });
+      if (error) {
+        if (error.message && error.message.toLowerCase().includes('trips')) {
+          const { error: fallbackErr } = await supabase.from('entries').upsert(basePayload, { onConflict: 'date' });
+          if (fallbackErr) throw fallbackErr;
+        } else {
+          throw error;
+        }
+      }
 
       // Confetti burst
       confetti({
@@ -118,7 +135,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
           const lineRes = await fetch('/api/notify-line', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...authorizationHeaders },
-            body: JSON.stringify({ entry: payload }),
+            body: JSON.stringify({ entry: payloadWithTrips }),
           });
           const lineData = await lineRes.json();
           if (lineData.success) {
@@ -135,6 +152,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
       // Reset form fields
       setGrab('');
       setTip('');
+      setTrips('');
       setDistance('');
       setOil('');
       setOilReal('');
@@ -223,8 +241,25 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
             />
           </div>
 
-          {/* Work Hours */}
+          {/* Trips Count (จำนวนงาน) */}
           <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              🛵 จำนวนงานที่วิ่งได้ (งาน)
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              step="1"
+              placeholder="เช่น 8 หรือ 12"
+              value={trips}
+              onChange={(e) => setTrips(e.target.value)}
+              className="w-full rounded-xl border border-violet-200 bg-violet-50/40 px-3.5 py-2.5 text-base sm:text-sm font-bold text-violet-700 focus:border-violet-500 focus:bg-white focus:outline-none dark:border-violet-900/60 dark:bg-violet-950/30 dark:text-violet-300 transition"
+            />
+          </div>
+
+          {/* Work Hours */}
+          <div className="sm:col-span-2">
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               ⏱️ ชั่วโมงขับ (ชม.) <span className="text-slate-400 font-normal text-[11px]">- เว้นว่างไว้ใส่ 3 ชม.</span>
             </label>

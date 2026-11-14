@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { Entry } from '@/types';
-import { fmt, fmtInt, income, profit, isWorkDay } from '@/lib/utils';
-import { TrendingUp, Fuel, Bike, Wallet, ArrowDownRight, Clock, Award, DollarSign, CalendarCheck } from 'lucide-react';
+import { fmt, fmtInt, income, profit, isWorkDay, tripsCount } from '@/lib/utils';
+import { TrendingUp, Fuel, Bike, Wallet, ArrowDownRight, Clock, Award, DollarSign, CalendarCheck, PackageCheck } from 'lucide-react';
 import AnalyticsCharts from './AnalyticsCharts';
 
 interface DashboardTabProps {
@@ -15,6 +15,7 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
   const totalGrab = entries.reduce((s, r) => s + (Number(r.grab) || 0), 0);
   const totalTip = entries.reduce((s, r) => s + (Number(r.tip) || 0), 0);
   const totalIncome = entries.reduce((s, r) => s + income(r), 0);
+  const totalTrips = entries.reduce((s, r) => s + tripsCount(r), 0);
   const totalOil = entries.reduce((s, r) => s + (Number(r.oil) || 0), 0);
   const totalOilReal = entries.reduce((s, r) => s + (Number(r.oil_real) || 0), 0);
   const totalDistance = entries.reduce((s, r) => s + (Number(r.distance) || 0), 0);
@@ -25,6 +26,8 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
 
   const avgProfit = workRows.length ? totalProfit / workRows.length : 0;
   const avgIncome = workRows.length ? totalIncome / workRows.length : 0;
+  const avgTripsPerDay = workRows.length ? totalTrips / workRows.length : 0;
+  const avgIncomePerTrip = totalTrips > 0 ? totalIncome / totalTrips : 0;
   const revPerKm = totalDistance > 0 ? totalIncome / totalDistance : 0;
   const costPerKm = totalDistance > 0 ? totalOil / totalDistance : 0;
   const avgHourlyRate = totalHours > 0 ? totalProfit / totalHours : 0;
@@ -45,7 +48,7 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
               กำไรสุทธิรวม {fmt(totalProfit)} บาท
             </h2>
             <p className="mt-1 text-xs sm:text-sm text-emerald-100 leading-relaxed">
-              วิ่งงาน {workRows.length} วัน • เฉลี่ยกำไร {fmt(avgProfit)} บ./วัน • รวม {fmtInt(totalDistance)} กม.
+              วิ่งงาน {workRows.length} วัน • รวม {fmtInt(totalTrips)} งาน • เฉลี่ยกำไร {fmt(avgProfit)} บ./วัน • รวม {fmtInt(totalDistance)} กม.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
@@ -61,7 +64,7 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
         </div>
       </div>
 
-      {/* 11 KPI Cards Grid */}
+      {/* 12 KPI Cards Grid */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
         {/* 1. Grab Income */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -91,6 +94,18 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
           </div>
           <div className="mt-2 text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">{fmt(totalIncome)}</div>
           <div className="mt-1 text-xs text-slate-400">บาท (Grab + Tip)</div>
+        </div>
+
+        {/* 4. Total Trips (จำนวนงานรวม) */}
+        <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 shadow-sm dark:border-violet-900/50 dark:bg-violet-950/20">
+          <div className="flex items-center justify-between text-xs font-medium text-violet-800 dark:text-violet-300">
+            <span>จำนวนงานรวม</span>
+            <PackageCheck className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+          </div>
+          <div className="mt-2 text-xl sm:text-2xl font-black text-violet-700 dark:text-violet-300">{fmtInt(totalTrips)}</div>
+          <div className="mt-1 text-xs text-violet-600/80 dark:text-violet-400/80">
+            งาน • เฉลี่ย {avgTripsPerDay.toFixed(1)} งาน/วัน ({fmt(avgIncomePerTrip)} ฿/งาน)
+          </div>
         </div>
 
         {/* 4. Distance */}

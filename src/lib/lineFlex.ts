@@ -1,5 +1,5 @@
 import { Entry } from '@/types';
-import { fmt, fmtDateSlash, fmtDateTh, income, profit } from '@/lib/utils';
+import { fmt, fmtDateSlash, fmtDateTh, income, profit, tripsCount } from '@/lib/utils';
 
 /**
  * Generate a beautiful LINE Flex Message for daily Grab report
@@ -7,6 +7,7 @@ import { fmt, fmtDateSlash, fmtDateTh, income, profit } from '@/lib/utils';
 export function generateGrabFlexMessage(entry: Entry, appUrl = 'https://grab-tracker-alpha.vercel.app/') {
   const inc = income(entry);
   const p = profit(entry);
+  const trips = tripsCount(entry);
   const dist = entry.distance ? parseFloat(entry.distance.toString()) : 0;
   const hours = entry.hours ? parseFloat(entry.hours.toString()) : 0;
   const avgPerHour = hours > 0 ? (inc / hours).toFixed(2) : null;
@@ -18,6 +19,14 @@ export function generateGrabFlexMessage(entry: Entry, appUrl = 'https://grab-tra
 
   // Construct key-value rows
   const detailRows: Record<string, unknown>[] = [
+    {
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        { type: 'text', text: '📦 จำนวนงานที่วิ่ง', size: 'sm', color: '#64748b', flex: 5 },
+        { type: 'text', text: trips > 0 ? `${trips} งาน` : '—', size: 'sm', color: '#6d28d9', weight: 'bold', align: 'end', flex: 5 },
+      ],
+    },
     {
       type: 'box',
       layout: 'horizontal',

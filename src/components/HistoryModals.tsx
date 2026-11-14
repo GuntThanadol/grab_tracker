@@ -3,7 +3,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Entry, FuelSettings } from '@/types';
-import { fmt, fmtDateSlash, fmtDateTh } from '@/lib/utils';
+import { fmt, fmtDateSlash, fmtDateTh, tripsCount } from '@/lib/utils';
 import { FileSpreadsheet, Loader2, Trash2, X } from 'lucide-react';
 import ThaiDatePicker from './ThaiDatePicker';
 
@@ -59,6 +59,7 @@ export function ImportPreviewModal({
               <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-bold sticky top-0 border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="p-2.5">วันที่</th>
+                  <th className="p-2.5 text-right">จำนวนงาน</th>
                   <th className="p-2.5 text-right">Grab</th>
                   <th className="p-2.5 text-right">ระยะทาง</th>
                   <th className="p-2.5 text-right">น้ำมัน</th>
@@ -69,6 +70,7 @@ export function ImportPreviewModal({
                 {pendingImport.slice(0, 5).map((row) => (
                   <tr key={row.date} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                     <td className="p-2.5 font-mono font-bold text-emerald-600 dark:text-emerald-400">{fmtDateSlash(row.date)}</td>
+                    <td className="p-2.5 text-right font-bold text-violet-600 dark:text-violet-400">{tripsCount(row) > 0 ? `${tripsCount(row)} งาน` : '—'}</td>
                     <td className="p-2.5 text-right font-medium">{fmt(row.grab)} ฿</td>
                     <td className="p-2.5 text-right text-blue-600 dark:text-blue-400">{row.distance ? `${row.distance} กม.` : '—'}</td>
                     <td className="p-2.5 text-right text-rose-500 font-medium">{fmt(row.oil)} ฿</td>
@@ -155,7 +157,7 @@ export function EditEntryModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Grab (บาท)</label>
               <input
@@ -176,6 +178,22 @@ export function EditEntryModal({
                 value={editingEntry.tip}
                 onChange={(e) => onChange({ ...editingEntry, tip: parseFloat(e.target.value) || 0 })}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm font-semibold dark:border-slate-800 dark:bg-slate-800"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-violet-700 dark:text-violet-300 mb-1">จำนวนงาน</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                placeholder="0"
+                value={editingEntry.trips ?? ''}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  onChange({ ...editingEntry, trips: !isNaN(val) && val > 0 ? val : null });
+                }}
+                className="w-full rounded-xl border border-violet-200 bg-violet-50/50 px-3 py-2 text-base sm:text-sm font-bold text-violet-700 dark:border-violet-900 dark:bg-violet-950/50 dark:text-violet-300"
               />
             </div>
           </div>

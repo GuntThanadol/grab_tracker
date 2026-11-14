@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Entry } from '@/types';
-import { fmt, fmtInt, income, profit, isWorkDay, TH_MONTHS } from '@/lib/utils';
+import { fmt, fmtInt, income, profit, isWorkDay, tripsCount, TH_MONTHS } from '@/lib/utils';
 import { Calendar } from 'lucide-react';
 
 interface MonthlyTabProps {
@@ -26,11 +26,13 @@ export default function MonthlyTab({ entries }: MonthlyTabProps) {
       const totalGrab = list.reduce((s, r) => s + (Number(r.grab) || 0), 0);
       const totalTip = list.reduce((s, r) => s + (Number(r.tip) || 0), 0);
       const totalInc = list.reduce((s, r) => s + income(r), 0);
+      const totalTrips = list.reduce((s, r) => s + tripsCount(r), 0);
       const totalO = list.reduce((s, r) => s + (Number(r.oil) || 0), 0);
       const totalDist = list.reduce((s, r) => s + (Number(r.distance) || 0), 0);
       const totalProf = list.reduce((s, r) => s + profit(r), 0);
       const avgProf = workList.length ? totalProf / workList.length : 0;
       const avgInc = workList.length ? totalInc / workList.length : 0;
+      const avgTrips = workList.length ? totalTrips / workList.length : 0;
 
       const [y, mo] = m.split('-');
       const thYear = parseInt(y, 10) + 543;
@@ -45,11 +47,13 @@ export default function MonthlyTab({ entries }: MonthlyTabProps) {
         totalGrab,
         totalTip,
         totalInc,
+        totalTrips,
         totalO,
         totalDist,
         totalProf,
         avgProf,
         avgInc,
+        avgTrips,
       };
     });
   }, [entries]);
@@ -61,7 +65,7 @@ export default function MonthlyTab({ entries }: MonthlyTabProps) {
           <span>📅 สรุปผลการขับขี่แยกตามรายเดือน</span>
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          วิเคราะห์รายรับ ค่าใช้จ่ายน้ำมัน และกำไรสุทธิในแต่ละเดือน
+          วิเคราะห์จำนวนงาน รายรับ ค่าใช้จ่ายน้ำมัน และกำไรสุทธิในแต่ละเดือน
         </p>
       </div>
 
@@ -79,7 +83,7 @@ export default function MonthlyTab({ entries }: MonthlyTabProps) {
                 <div>
                   <h3 className="font-bold text-slate-900 dark:text-white">{item.title}</h3>
                   <p className="text-xs text-slate-500">
-                    วิ่งงาน {item.workDays} วัน • หยุด {item.restDays} วัน
+                    วิ่งงาน {item.workDays} วัน • หยุด {item.restDays} วัน • รวม {fmtInt(item.totalTrips)} งาน
                   </p>
                 </div>
               </div>
@@ -91,7 +95,13 @@ export default function MonthlyTab({ entries }: MonthlyTabProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+              <div className="rounded-xl bg-violet-50/60 p-3 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/40">
+                <div className="text-[11px] font-medium text-violet-700 dark:text-violet-300">จำนวนงานรวม</div>
+                <div className="mt-1 font-bold text-violet-700 dark:text-violet-300">{fmtInt(item.totalTrips)} งาน</div>
+                <div className="text-[10px] text-violet-500/80 dark:text-violet-400/80">เฉลี่ย {item.avgTrips.toFixed(1)} งาน/วัน</div>
+              </div>
+
               <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
                 <div className="text-[11px] font-medium text-slate-500">รายได้รวม</div>
                 <div className="mt-1 font-bold text-slate-900 dark:text-white">{fmt(item.totalInc)} ฿</div>

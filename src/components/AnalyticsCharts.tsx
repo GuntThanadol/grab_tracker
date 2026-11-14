@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Entry } from '@/types';
-import { fmt, fmtInt, income, profit, isWorkDay, fmtDateTh, fmtDateSlash, TH_DOWS, TH_DOWS_S } from '@/lib/utils';
+import { fmt, fmtInt, income, profit, isWorkDay, tripsCount, fmtDateTh, fmtDateSlash, TH_DOWS, TH_DOWS_S } from '@/lib/utils';
 import { TrendingUp, Calendar, Zap, Bike, Award, Layers, Info, X } from 'lucide-react';
 
 interface AnalyticsChartsProps {
@@ -410,9 +410,9 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
                 <span className="text-slate-400 block text-[10px]">(เติมจริง {fmt(selectedEntry.oil_real)} ฿)</span>
               </div>
               <div>
-                <span className="text-slate-500 dark:text-slate-400 block">ระยะทาง & ชม.ขับ:</span>
+                <span className="text-slate-500 dark:text-slate-400 block">จำนวนงาน & ระยะทาง:</span>
                 <strong className="text-blue-600 dark:text-blue-400 font-mono">
-                  {selectedEntry.distance ? `${selectedEntry.distance} กม.` : '—'} • {selectedEntry.hours ? `${selectedEntry.hours} ชม.` : '—'}
+                  {tripsCount(selectedEntry) > 0 ? `${tripsCount(selectedEntry)} งาน` : '—'} • {selectedEntry.distance ? `${selectedEntry.distance} กม.` : '—'} • {selectedEntry.hours ? `${selectedEntry.hours} ชม.` : '—'}
                 </strong>
               </div>
               <div>

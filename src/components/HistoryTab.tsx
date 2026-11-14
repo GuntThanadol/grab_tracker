@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { getAuthorizationHeaders } from '@/lib/auth';
-import { fmt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, TH_MONTHS } from '@/lib/utils';
+import { fmt, fmtInt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, tripsCount, setLocalCustomTrip, TH_MONTHS } from '@/lib/utils';
 import { exportEntriesToExcel, parseExcelBuffer } from '@/lib/excel';
 import { Search, Edit2, Trash2, Loader2, Send, Calendar, Gift, RotateCcw } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -172,6 +172,8 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
           return profit(a) - profit(b);
         case 'income_desc':
           return income(b) - income(a);
+        case 'trips_desc':
+          return tripsCount(b) - tripsCount(a);
         case 'tip_desc':
           return (Number(b.tip) || 0) - (Number(a.tip) || 0);
         case 'distance_desc':
@@ -221,6 +223,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
     const sumGrab = filteredEntries.reduce((s, r) => s + (Number(r.grab) || 0), 0);
     const sumTip = filteredEntries.reduce((s, r) => s + (Number(r.tip) || 0), 0);
     const sumIncome = filteredEntries.reduce((s, r) => s + income(r), 0);
+    const sumTrips = filteredEntries.reduce((s, r) => s + tripsCount(r), 0);
     const sumProfit = filteredEntries.reduce((s, r) => s + profit(r), 0);
     const sumOil = filteredEntries.reduce((s, r) => s + (Number(r.oil) || 0), 0);
     const sumDist = filteredEntries.reduce((s, r) => s + (Number(r.distance) || 0), 0);
@@ -235,6 +238,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       sumGrab,
       sumTip,
       sumIncome,
+      sumTrips,
       sumProfit,
       sumOil,
       sumDist,
@@ -269,25 +273,40 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
     if (!editingEntry) return;
 
     setEditLoading(true);
+    const parsedTrips = editingEntry.trips ? Math.round(Number(editingEntry.trips)) : null;
+    setLocalCustomTrip(editingEntry.date, parsedTrips);
+
+    const baseUpdate = {
+      date: editingEntry.date,
+      grab: Number(editingEntry.grab) || 0,
+      tip: Number(editingEntry.tip) || 0,
+      distance: editingEntry.distance ? Number(editingEntry.distance) : null,
+      oil: Number(editingEntry.oil) || 0,
+      oil_real: Number(editingEntry.oil_real) || 0,
+      credit: Number(editingEntry.credit) || 0,
+      withdraw: Number(editingEntry.withdraw) || 0,
+      hours: editingEntry.hours ? Number(editingEntry.hours) : null,
+      note: editingEntry.note || '',
+      updated_at: new Date().toISOString(),
+    };
+
     try {
       const { error } = await supabase
         .from('entries')
-        .update({
-          date: editingEntry.date,
-          grab: Number(editingEntry.grab) || 0,
-          tip: Number(editingEntry.tip) || 0,
-          distance: editingEntry.distance ? Number(editingEntry.distance) : null,
-          oil: Number(editingEntry.oil) || 0,
-          oil_real: Number(editingEntry.oil_real) || 0,
-          credit: Number(editingEntry.credit) || 0,
-          withdraw: Number(editingEntry.withdraw) || 0,
-          hours: editingEntry.hours ? Number(editingEntry.hours) : null,
-          note: editingEntry.note || '',
-          updated_at: new Date().toISOString(),
-        })
+        .update({ ...baseUpdate, trips: parsedTrips })
         .eq('id', editingEntry.id);
 
-      if (error) throw error;
+      if (error) {
+        if (error.message && error.message.toLowerCase().includes('trips')) {
+          const { error: fallbackErr } = await supabase
+            .from('entries')
+            .update(baseUpdate)
+            .eq('id', editingEntry.id);
+          if (fallbackErr) throw fallbackErr;
+        } else {
+          throw error;
+        }
+      }
       setEditingEntry(null);
       onRefresh();
     } catch (err: unknown) {
@@ -356,8 +375,25 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       const chunkSize = 50;
       for (let i = 0; i < pendingImport.length; i += chunkSize) {
         const chunk = pendingImport.slice(i, i + chunkSize);
+        chunk.forEach((row) => {
+          if (row.trips !== undefined && row.trips !== null) {
+            setLocalCustomTrip(row.date, Number(row.trips) || null);
+          }
+        });
         const { error } = await supabase.from('entries').upsert(chunk, { onConflict: 'date' });
-        if (error) throw error;
+        if (error) {
+          if (error.message && error.message.toLowerCase().includes('trips')) {
+            const strippedChunk = chunk.map((row) => {
+              const copy = { ...row };
+              delete copy.trips;
+              return copy;
+            });
+            const { error: fallbackErr } = await supabase.from('entries').upsert(strippedChunk, { onConflict: 'date' });
+            if (fallbackErr) throw fallbackErr;
+          } else {
+            throw error;
+          }
+        }
       }
 
       const count = pendingImport.length;
@@ -636,6 +672,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
               <option value="profit_desc">💰 กำไรสุทธิ: มากสุด</option>
               <option value="profit_asc">💰 กำไรสุทธิ: น้อยสุด</option>
               <option value="income_desc">📈 รายได้รวม: มากสุด</option>
+              <option value="trips_desc">🛵 จำนวนงาน: มากสุด</option>
               <option value="tip_desc">🎁 ทิป: มากสุด</option>
               <option value="distance_desc">🛵 ระยะทาง: มากสุด</option>
               <option value="hours_desc">⏱️ ชม.ขับ: มากสุด</option>
@@ -677,6 +714,10 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
           <span>•</span>
           <span>
             รายได้รวม: <strong className="font-bold text-slate-900 dark:text-white font-mono">{fmt(filterStats.sumIncome)} ฿</strong>
+          </span>
+          <span>•</span>
+          <span>
+            จำนวนงาน: <strong className="font-bold text-violet-700 dark:text-violet-300 font-mono">{fmtInt(filterStats.sumTrips)} งาน</strong>
           </span>
           {filterStats.sumTip > 0 && (
             <>
@@ -726,6 +767,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
                 <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-800 px-3.5 py-3 shadow-[1px_0_0_0_#e2e8f0] dark:shadow-[1px_0_0_0_#334155]">วันที่</th>
+                <th className="px-3 py-3 text-right text-violet-600 dark:text-violet-400">จำนวนงาน</th>
                 <th className="px-3 py-3 text-right">Grab (฿)</th>
                 <th className="px-3 py-3 text-right">Tip (฿)</th>
                 <th className="px-3 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">รวม (฿)</th>
@@ -743,7 +785,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={userRole === 'guest' ? 12 : 13} className="py-12 text-center text-slate-400">
+                  <td colSpan={userRole === 'guest' ? 13 : 14} className="py-12 text-center text-slate-400">
                     ไม่พบรายการข้อมูลตามตัวกรอง
                   </td>
                 </tr>
@@ -751,6 +793,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                 filteredEntries.map((r) => {
                   const p = profit(r);
                   const isW = isWorkDay(r);
+                  const tCount = tripsCount(r);
                   const distVal = r.distance ? parseFloat(r.distance.toString()).toFixed(1) : '—';
 
                   return (
@@ -763,6 +806,16 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                       <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-850 whitespace-nowrap px-3.5 py-3 text-slate-900 dark:text-white shadow-[1px_0_0_0_#f1f5f9] dark:shadow-[1px_0_0_0_#1e293b]">
                         <div className="font-bold text-sm tracking-wide text-emerald-700 dark:text-emerald-400 font-mono">{fmtDateSlash(r.date)}</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{fmtDateTh(r.date)}</div>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-violet-700 dark:text-violet-300">
+                        {tCount > 0 ? (
+                          <span className="inline-flex items-center justify-end gap-1 rounded-md bg-violet-50 px-2 py-0.5 text-xs font-bold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 font-mono">
+                            <span>{tCount}</span>
+                            <span className="text-[10px] font-medium">งาน</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 font-normal">—</span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-medium">
                         {Number(r.grab) > 0 ? fmt(r.grab) : <span className="text-slate-300">—</span>}
@@ -838,7 +891,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                               )}
                             </button>
                             <button
-                              onClick={() => setEditingEntry({ ...r })}
+                              onClick={() => setEditingEntry({ ...r, trips: tCount > 0 ? tCount : null })}
                               title="แก้ไขข้อมูล"
                               className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition active:scale-95"
                             >

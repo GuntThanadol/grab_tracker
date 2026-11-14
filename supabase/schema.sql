@@ -11,6 +11,7 @@ create table if not exists public.entries (
     date date not null unique,
     grab numeric(10,2) default 0,
     tip numeric(10,2) default 0,
+    trips integer,
     distance numeric(10,2),
     oil numeric(10,2) default 0,
     oil_real numeric(10,2) default 0,

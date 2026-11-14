@@ -1,6 +1,6 @@
 import * as XLSX from '@e965/xlsx';
 import { Entry, FuelSettings } from '@/types';
-import { income, profit } from '@/lib/utils';
+import { income, profit, tripsCount } from '@/lib/utils';
 
 type CellValue = string | number | boolean | null | undefined;
 
@@ -8,6 +8,7 @@ export function exportEntriesToExcel(entries: Entry[]): void {
   const wsData = [
     [
       'วันที่',
+      'จำนวนงาน (งาน)',
       'รายได้ Grab (บาท)',
       'Tip มือ (บาท)',
       'รายได้รวม (บาท)',
@@ -22,6 +23,7 @@ export function exportEntriesToExcel(entries: Entry[]): void {
     ],
     ...entries.map((r) => [
       r.date,
+      tripsCount(r) || '',
       Number(r.grab) || 0,
       Number(r.tip) || 0,
       income(r),
@@ -94,6 +96,7 @@ export function parseExcelBuffer(
     return -1;
   };
 
+  const cTrips = colOf(['จำนวนงาน', 'trips']);
   const cGrab = colOf(['grab', 'แกร็บ']) >= 0 ? colOf(['grab', 'แกร็บ']) : 1;
   const cTip = colOf(['tip', 'ทิป']) >= 0 ? colOf(['tip', 'ทิป']) : 2;
   const cDist = colOf(['ระยะทาง', 'distance', 'กม']);
@@ -153,8 +156,9 @@ export function parseExcelBuffer(
 
     const grabVal = cGrab >= 0 && row[cGrab] != null ? toFloat(row[cGrab]) : 0;
     const tipVal = cTip >= 0 && row[cTip] != null ? toFloat(row[cTip]) : 0;
+    const tripsVal = cTrips >= 0 && row[cTrips] != null ? Math.round(toFloat(row[cTrips])) || null : null;
     let hoursVal = cHours >= 0 && row[cHours] != null ? toFloat(row[cHours]) || null : null;
-    const isWork = grabVal > 0 || tipVal > 0 || (dist != null && dist > 0) || oil > 0;
+    const isWork = grabVal > 0 || tipVal > 0 || (tripsVal != null && tripsVal > 0) || (dist != null && dist > 0) || oil > 0;
     if (isWork && (hoursVal === null || hoursVal === 0)) {
       hoursVal = 3;
     }
@@ -164,6 +168,7 @@ export function parseExcelBuffer(
       date: dateStr,
       grab: grabVal,
       tip: tipVal,
+      trips: tripsVal,
       distance: dist,
       oil,
       oil_real: cOilReal >= 0 && row[cOilReal] != null ? toFloat(row[cOilReal]) : 0,

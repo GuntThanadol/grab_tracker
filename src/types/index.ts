@@ -3,6 +3,7 @@ export interface Entry {
   date: string;
   grab: number;
   tip: number;
+  trips?: number | null;
   distance: number | null;
   oil: number;
   oil_real: number;
