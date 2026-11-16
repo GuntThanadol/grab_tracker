@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { getAuthorizationHeaders } from '@/lib/auth';
-import { fmt, fmtInt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, tripsCount, setLocalCustomTrip, TH_MONTHS } from '@/lib/utils';
+import { fmt, fmtInt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, tripsCount, setLocalCustomTrip, odometerValue, setLocalCustomOdometer, TH_MONTHS } from '@/lib/utils';
 import { exportEntriesToExcel, parseExcelBuffer } from '@/lib/excel';
 import { Search, Edit2, Trash2, Loader2, Send, Calendar, Gift, RotateCcw } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -274,7 +274,9 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
 
     setEditLoading(true);
     const parsedTrips = editingEntry.trips ? Math.round(Number(editingEntry.trips)) : null;
+    const parsedOdo = editingEntry.odometer ? parseFloat(Number(editingEntry.odometer).toFixed(1)) : null;
     setLocalCustomTrip(editingEntry.date, parsedTrips);
+    setLocalCustomOdometer(editingEntry.date, parsedOdo);
 
     const baseUpdate = {
       date: editingEntry.date,
@@ -293,11 +295,28 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
     try {
       const { error } = await supabase
         .from('entries')
-        .update({ ...baseUpdate, trips: parsedTrips })
+        .update({ ...baseUpdate, trips: parsedTrips, odometer: parsedOdo })
         .eq('id', editingEntry.id);
 
       if (error) {
-        if (error.message && error.message.toLowerCase().includes('trips')) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('odometer') && !msg.includes('trips')) {
+          const { error: retryTripsErr } = await supabase
+            .from('entries')
+            .update({ ...baseUpdate, trips: parsedTrips })
+            .eq('id', editingEntry.id);
+          if (retryTripsErr) {
+            if ((retryTripsErr.message || '').toLowerCase().includes('trips')) {
+              const { error: fallbackErr } = await supabase
+                .from('entries')
+                .update(baseUpdate)
+                .eq('id', editingEntry.id);
+              if (fallbackErr) throw fallbackErr;
+            } else {
+              throw retryTripsErr;
+            }
+          }
+        } else if (msg.includes('trips') || msg.includes('odometer')) {
           const { error: fallbackErr } = await supabase
             .from('entries')
             .update(baseUpdate)
@@ -794,6 +813,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                   const p = profit(r);
                   const isW = isWorkDay(r);
                   const tCount = tripsCount(r);
+                  const odoVal = odometerValue(r);
                   const distVal = r.distance ? parseFloat(r.distance.toString()).toFixed(1) : '—';
 
                   return (
@@ -834,7 +854,22 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                         {fmt(income(r))}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-blue-600 dark:text-blue-400">
-                        {distVal !== '—' ? `${distVal} กม.` : <span className="text-slate-300 font-normal">—</span>}
+                        {distVal !== '—' ? (
+                          <div>
+                            <div>{distVal} กม.</div>
+                            {odoVal !== null && (
+                              <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 font-mono">
+                                ไมล์ {odoVal.toLocaleString('th-TH')}
+                              </div>
+                            )}
+                          </div>
+                        ) : odoVal !== null ? (
+                          <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 font-mono">
+                            ไมล์ {odoVal.toLocaleString('th-TH')}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300 font-normal">—</span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-medium text-rose-600 dark:text-rose-400">
                         {Number(r.oil) > 0 ? fmt(r.oil) : <span className="text-slate-300">—</span>}
@@ -891,7 +926,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                               )}
                             </button>
                             <button
-                              onClick={() => setEditingEntry({ ...r, trips: tCount > 0 ? tCount : null })}
+                              onClick={() => setEditingEntry({ ...r, trips: tCount > 0 ? tCount : null, odometer: odoVal })}
                               title="แก้ไขข้อมูล"
                               className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition active:scale-95"
                             >
@@ -927,6 +962,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
 
       <EditEntryModal
         editingEntry={editingEntry}
+        entries={entries}
         editLoading={editLoading}
         fuelSettings={fuelSettings}
         onChange={setEditingEntry}

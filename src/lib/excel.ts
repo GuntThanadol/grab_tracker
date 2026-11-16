@@ -1,6 +1,6 @@
 import * as XLSX from '@e965/xlsx';
 import { Entry, FuelSettings } from '@/types';
-import { income, profit, tripsCount } from '@/lib/utils';
+import { income, profit, tripsCount, odometerValue } from '@/lib/utils';
 
 type CellValue = string | number | boolean | null | undefined;
 
@@ -12,6 +12,7 @@ export function exportEntriesToExcel(entries: Entry[]): void {
       'รายได้ Grab (บาท)',
       'Tip มือ (บาท)',
       'รายได้รวม (บาท)',
+      'เลขไมล์หน้าปัด (กม.)',
       'ระยะทาง (กม.)',
       'ค่าน้ำมัน (บาท)',
       'เติมน้ำมันจริง (บาท)',
@@ -27,6 +28,7 @@ export function exportEntriesToExcel(entries: Entry[]): void {
       Number(r.grab) || 0,
       Number(r.tip) || 0,
       income(r),
+      odometerValue(r) ?? '',
       Number(r.distance) || '',
       Number(r.oil) || 0,
       Number(r.oil_real) || 0,

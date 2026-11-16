@@ -4,6 +4,7 @@ export interface Entry {
   grab: number;
   tip: number;
   trips?: number | null;
+  odometer?: number | null;
   distance: number | null;
   oil: number;
   oil_real: number;

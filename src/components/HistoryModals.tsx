@@ -3,7 +3,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Entry, FuelSettings } from '@/types';
-import { fmt, fmtDateSlash, fmtDateTh, tripsCount } from '@/lib/utils';
+import { fmt, fmtDateSlash, fmtDateTh, tripsCount, getPreviousOdometerInfo } from '@/lib/utils';
 import { FileSpreadsheet, Loader2, Trash2, X } from 'lucide-react';
 import ThaiDatePicker from './ThaiDatePicker';
 
@@ -116,6 +116,7 @@ export function ImportPreviewModal({
 
 interface EditEntryModalProps {
   editingEntry: Entry | null;
+  entries?: Entry[];
   editLoading: boolean;
   fuelSettings: FuelSettings;
   onChange: (entry: Entry) => void;
@@ -125,6 +126,7 @@ interface EditEntryModalProps {
 
 export function EditEntryModal({
   editingEntry,
+  entries = [],
   editLoading,
   fuelSettings,
   onChange,
@@ -132,6 +134,8 @@ export function EditEntryModal({
   onSave,
 }: EditEntryModalProps) {
   if (!editingEntry || typeof document === 'undefined') return null;
+
+  const prevOdoInfo = getPreviousOdometerInfo(entries, editingEntry.date);
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-150">
@@ -198,7 +202,33 @@ export function EditEntryModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <div>
+              <label className="block text-xs font-bold text-blue-700 dark:text-blue-300 mb-1">
+                เลขไมล์ (กม.)
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="any"
+                placeholder={prevOdoInfo ? `ก่อนหน้า ${prevOdoInfo.odometer}` : 'เลขไมล์'}
+                value={editingEntry.odometer ?? ''}
+                onChange={(e) => {
+                  const odo = parseFloat(e.target.value);
+                  const validOdo = !isNaN(odo) && odo > 0 ? odo : null;
+                  if (validOdo !== null && prevOdoInfo && validOdo >= prevOdoInfo.odometer) {
+                    const dist = parseFloat((validOdo - prevOdoInfo.odometer).toFixed(1));
+                    const rate = fuelSettings.rate_km_per_l || 71.4;
+                    const price = fuelSettings.manual_price || fuelSettings.last_fetched_price || 39.09;
+                    const newOil = dist > 0 ? parseFloat(((dist / rate) * price).toFixed(2)) : editingEntry.oil;
+                    onChange({ ...editingEntry, odometer: validOdo, distance: dist || null, oil: newOil });
+                  } else {
+                    onChange({ ...editingEntry, odometer: validOdo });
+                  }
+                }}
+                className="w-full rounded-xl border border-blue-200 bg-blue-50/50 px-3 py-2 text-base sm:text-sm font-bold text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200"
+              />
+            </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ระยะทาง (กม.)</label>
               <input

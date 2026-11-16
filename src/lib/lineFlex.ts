@@ -1,5 +1,5 @@
 import { Entry } from '@/types';
-import { fmt, fmtDateSlash, fmtDateTh, income, profit, tripsCount } from '@/lib/utils';
+import { fmt, fmtDateSlash, fmtDateTh, income, profit, tripsCount, odometerValue } from '@/lib/utils';
 
 /**
  * Generate a beautiful LINE Flex Message for daily Grab report
@@ -8,6 +8,7 @@ export function generateGrabFlexMessage(entry: Entry, appUrl = 'https://grab-tra
   const inc = income(entry);
   const p = profit(entry);
   const trips = tripsCount(entry);
+  const odo = odometerValue(entry);
   const dist = entry.distance ? parseFloat(entry.distance.toString()) : 0;
   const hours = entry.hours ? parseFloat(entry.hours.toString()) : 0;
   const avgPerHour = hours > 0 ? (inc / hours).toFixed(2) : null;
@@ -52,10 +53,31 @@ export function generateGrabFlexMessage(entry: Entry, appUrl = 'https://grab-tra
       ],
     },
     { type: 'separator', margin: 'md', color: '#e2e8f0' },
+    ...(odo !== null && odo > 0
+      ? [
+          {
+            type: 'box',
+            layout: 'horizontal',
+            margin: 'md',
+            contents: [
+              { type: 'text', text: '📟 เลขไมล์หน้าปัด', size: 'sm', color: '#64748b', flex: 5 },
+              {
+                type: 'text',
+                text: `${odo.toLocaleString('th-TH')} กม.`,
+                size: 'sm',
+                color: '#0f172a',
+                weight: 'bold',
+                align: 'end',
+                flex: 5,
+              },
+            ],
+          },
+        ]
+      : []),
     {
       type: 'box',
       layout: 'horizontal',
-      margin: 'md',
+      margin: odo !== null && odo > 0 ? 'none' : 'md',
       contents: [
         { type: 'text', text: '📍 ระยะทางวิ่ง', size: 'sm', color: '#64748b', flex: 4 },
         { type: 'text', text: dist > 0 ? `${dist.toFixed(1)} กม.` : '—', size: 'sm', color: '#2563eb', weight: 'bold', align: 'end', flex: 6 },

@@ -134,6 +134,72 @@ export const HISTORICAL_TRIPS_BY_DATE: Record<string, number> = {
 };
 
 const CUSTOM_TRIPS_STORAGE_KEY = 'grab_custom_trips';
+const CUSTOM_ODO_STORAGE_KEY = 'grab_custom_odometer';
+
+export function getLocalCustomOdometers(): Record<string, number> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(CUSTOM_ODO_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function setLocalCustomOdometer(date: string, odometer: number | null): void {
+  if (typeof window === 'undefined' || !date) return;
+  try {
+    const map = getLocalCustomOdometers();
+    if (odometer === null || isNaN(Number(odometer)) || Number(odometer) <= 0) {
+      delete map[date];
+    } else {
+      map[date] = parseFloat(Number(odometer).toFixed(1));
+    }
+    localStorage.setItem(CUSTOM_ODO_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function odometerValue(r: Entry): number | null {
+  if (r.odometer !== null && r.odometer !== undefined && !isNaN(Number(r.odometer)) && Number(r.odometer) > 0) {
+    return parseFloat(Number(r.odometer).toFixed(1));
+  }
+  const customMap = getLocalCustomOdometers();
+  if (r.date && customMap[r.date] !== undefined && Number(customMap[r.date]) > 0) {
+    return parseFloat(Number(customMap[r.date]).toFixed(1));
+  }
+  return null;
+}
+
+export function getPreviousOdometerInfo(
+  entries: Entry[],
+  currentDate: string
+): { odometer: number; date: string } | null {
+  if (!currentDate) return null;
+  const customMap = getLocalCustomOdometers();
+  const candidates: { date: string; odometer: number }[] = [];
+
+  const seenDates = new Set<string>();
+  for (const r of entries) {
+    if (!r.date || r.date >= currentDate) continue;
+    const odo = odometerValue(r);
+    if (odo !== null && odo > 0) {
+      candidates.push({ date: r.date, odometer: odo });
+      seenDates.add(r.date);
+    }
+  }
+
+  for (const [d, odoVal] of Object.entries(customMap)) {
+    if (d < currentDate && !seenDates.has(d) && Number(odoVal) > 0) {
+      candidates.push({ date: d, odometer: parseFloat(Number(odoVal).toFixed(1)) });
+    }
+  }
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.date.localeCompare(a.date));
+  return candidates[0];
+}
 
 export function getLocalCustomTrips(): Record<string, number> {
   if (typeof window === 'undefined') return {};

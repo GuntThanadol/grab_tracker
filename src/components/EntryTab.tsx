@@ -1,25 +1,37 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getAuthorizationHeaders } from '@/lib/auth';
-import { fmt, getTodayThai, setLocalCustomTrip } from '@/lib/utils';
-import { FuelSettings } from '@/types';
+import {
+  fmt,
+  fmtDateSlash,
+  getTodayThai,
+  setLocalCustomTrip,
+  setLocalCustomOdometer,
+  getPreviousOdometerInfo,
+  odometerValue,
+} from '@/lib/utils';
+import { Entry, FuelSettings } from '@/types';
 import confetti from 'canvas-confetti';
-import { Save, Sparkles, Bike } from 'lucide-react';
+import { Save, Sparkles, Bike, Gauge, ArrowRight } from 'lucide-react';
 import ThaiDatePicker from './ThaiDatePicker';
 
 interface EntryTabProps {
+  entries: Entry[];
   fuelSettings: FuelSettings;
   onSuccess: () => void;
 }
 
-export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
+export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabProps) {
   const today = getTodayThai();
   const [date, setDate] = useState(today);
   const [grab, setGrab] = useState<string>('');
   const [tip, setTip] = useState<string>('');
   const [trips, setTrips] = useState<string>('');
+  const [prevOdometer, setPrevOdometer] = useState<string>('');
+  const [prevOdoManual, setPrevOdoManual] = useState<boolean>(false);
+  const [odometer, setOdometer] = useState<string>('');
   const [distance, setDistance] = useState<string>('');
   const [oil, setOil] = useState<string>('');
   const [oilReal, setOilReal] = useState<string>('');
@@ -42,6 +54,19 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
   const price = fuelSettings.manual_price || fuelSettings.last_fetched_price || 39.09;
   const rate = fuelSettings.rate_km_per_l || 71.4;
 
+  // Lookup latest odometer reading strictly before the selected date
+  const prevOdoInfo = useMemo(() => getPreviousOdometerInfo(entries, date), [entries, date]);
+  const existingTodayOdo = useMemo(() => {
+    const match = entries.find((r) => r.date === date);
+    return match ? odometerValue(match) : null;
+  }, [entries, date]);
+
+  const effectivePrevOdo = prevOdoManual
+    ? prevOdometer
+    : prevOdoInfo
+    ? String(prevOdoInfo.odometer)
+    : prevOdometer;
+
   // Handle Distance Input -> Auto Calculate Fuel
   const handleDistanceChange = (val: string) => {
     setDistance(val);
@@ -50,6 +75,43 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
       const liters = km / rate;
       const estCost = liters * price;
       setOil(estCost.toFixed(2));
+    } else if (val === '' || km === 0) {
+      setOil('');
+    }
+  };
+
+  // Handle Today's Odometer Input -> Auto Subtract Previous Odometer -> Auto Calculate Distance & Fuel
+  const handleOdometerChange = (val: string) => {
+    setOdometer(val);
+    const cur = parseFloat(val);
+    const prev = parseFloat(effectivePrevOdo);
+    if (!isNaN(cur) && !isNaN(prev) && prev > 0 && cur >= prev) {
+      const diff = parseFloat((cur - prev).toFixed(1));
+      handleDistanceChange(diff.toString());
+    }
+  };
+
+  // Handle Previous / Yesterday's Odometer Input
+  const handlePrevOdometerChange = (val: string) => {
+    setPrevOdoManual(true);
+    setPrevOdometer(val);
+    const prev = parseFloat(val);
+    const cur = parseFloat(odometer);
+    if (!isNaN(cur) && !isNaN(prev) && prev > 0 && cur >= prev) {
+      const diff = parseFloat((cur - prev).toFixed(1));
+      handleDistanceChange(diff.toString());
+    }
+  };
+
+  const handleDateChange = (newDate: string) => {
+    setDate(newDate);
+    setPrevOdoManual(false);
+    setPrevOdometer('');
+    const info = getPreviousOdometerInfo(entries, newDate);
+    const cur = parseFloat(odometer);
+    if (info && !isNaN(cur) && cur >= info.odometer) {
+      const diff = parseFloat((cur - info.odometer).toFixed(1));
+      handleDistanceChange(diff.toString());
     }
   };
 
@@ -67,6 +129,13 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
   const numDist = parseFloat(distance) || 0;
   const estLiters = numDist > 0 ? (numDist / rate).toFixed(2) : '0.00';
 
+  const numPrevOdo = parseFloat(effectivePrevOdo);
+  const numCurOdo = parseFloat(odometer);
+  const odoDiff =
+    !isNaN(numPrevOdo) && numPrevOdo > 0 && !isNaN(numCurOdo) && numCurOdo > 0
+      ? parseFloat((numCurOdo - numPrevOdo).toFixed(1))
+      : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date) {
@@ -81,6 +150,9 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
 
     const parsedTrips = parseInt(trips, 10);
     const finalTrips = !isNaN(parsedTrips) && parsedTrips > 0 ? parsedTrips : null;
+
+    const parsedOdo = parseFloat(odometer);
+    const finalOdometer = !isNaN(parsedOdo) && parsedOdo > 0 ? parseFloat(parsedOdo.toFixed(1)) : null;
 
     const isWorkDay = numGrab > 0 || numDist > 0 || numOil > 0 || (finalTrips !== null && finalTrips > 0);
     const parsedHours = parseFloat(hours);
@@ -107,11 +179,41 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
       trips: finalTrips,
     };
 
+    const fullPayload = {
+      ...payloadWithTrips,
+      odometer: finalOdometer,
+    };
+
     try {
       setLocalCustomTrip(date, finalTrips);
-      const { error } = await supabase.from('entries').upsert(payloadWithTrips, { onConflict: 'date' });
+      if (finalOdometer !== null) {
+        setLocalCustomOdometer(date, finalOdometer);
+      }
+      // If user also provided a manual starting odometer and there was no previous record, save it for the day before
+      if (!prevOdoInfo && !isNaN(numPrevOdo) && numPrevOdo > 0) {
+        const parts = date.split('-').map(Number);
+        if (parts.length === 3) {
+          const prevDt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] - 1));
+          const prevDateStr = prevDt.toISOString().slice(0, 10);
+          setLocalCustomOdometer(prevDateStr, numPrevOdo);
+        }
+      }
+
+      const { error } = await supabase.from('entries').upsert(fullPayload, { onConflict: 'date' });
       if (error) {
-        if (error.message && error.message.toLowerCase().includes('trips')) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('odometer') && !msg.includes('trips')) {
+          const { error: retryTripsErr } = await supabase.from('entries').upsert(payloadWithTrips, { onConflict: 'date' });
+          if (retryTripsErr) {
+            const retryMsg = (retryTripsErr.message || '').toLowerCase();
+            if (retryMsg.includes('trips')) {
+              const { error: fallbackErr } = await supabase.from('entries').upsert(basePayload, { onConflict: 'date' });
+              if (fallbackErr) throw fallbackErr;
+            } else {
+              throw retryTripsErr;
+            }
+          }
+        } else if (msg.includes('trips') || msg.includes('odometer')) {
           const { error: fallbackErr } = await supabase.from('entries').upsert(basePayload, { onConflict: 'date' });
           if (fallbackErr) throw fallbackErr;
         } else {
@@ -135,7 +237,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
           const lineRes = await fetch('/api/notify-line', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...authorizationHeaders },
-            body: JSON.stringify({ entry: payloadWithTrips }),
+            body: JSON.stringify({ entry: fullPayload }),
           });
           const lineData = await lineRes.json();
           if (lineData.success) {
@@ -153,6 +255,9 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
       setGrab('');
       setTip('');
       setTrips('');
+      setOdometer('');
+      setPrevOdoManual(false);
+      setPrevOdometer('');
       setDistance('');
       setOil('');
       setOilReal('');
@@ -204,7 +309,7 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
           <div>
             <ThaiDatePicker
               value={date}
-              onChange={setDate}
+              onChange={handleDateChange}
               label="📅 วันที่ทำงาน (วัน/เดือน/ปี)"
             />
           </div>
@@ -277,12 +382,115 @@ export default function EntryTab({ fuelSettings, onSuccess }: EntryTabProps) {
 
         {/* Distance & Smart Fuel Section */}
         <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 sm:p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20 space-y-4">
-          <div className="flex items-center justify-between">
+          {/* Odometer Auto-Subtract Box */}
+          <div className="rounded-xl border border-blue-200/80 bg-white/90 p-3.5 sm:p-4 dark:border-blue-900/50 dark:bg-slate-900/90 space-y-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-1.5">
+              <div className="text-xs font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                <Gauge className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span>📟 กรอกเลขไมล์หน้าปัดมอเตอร์ไซค์ (ลบเลขไมล์ให้อัตโนมัติ)</span>
+              </div>
+              {prevOdoInfo && !prevOdoManual ? (
+                <span className="rounded-lg bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  ดึงไมล์ล่าสุดจาก {fmtDateSlash(prevOdoInfo.date)}
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  บันทึกวันนี้แล้ว พรุ่งนี้ดึงเลขไมล์เมื่อวานให้อัตโนมัติ
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Previous / Yesterday Odometer */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
+                    ⏪ เลขไมล์ครั้งก่อน / เมื่อวาน (กม.)
+                  </label>
+                  {prevOdoManual && prevOdoInfo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrevOdoManual(false);
+                        setPrevOdometer('');
+                        const cur = parseFloat(odometer);
+                        if (!isNaN(cur) && cur >= prevOdoInfo.odometer) {
+                          handleDistanceChange(parseFloat((cur - prevOdoInfo.odometer).toFixed(1)).toString());
+                        }
+                      }}
+                      className="text-[10px] font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      ใช้ค่าเดิม ({prevOdoInfo.odometer.toLocaleString('th-TH')})
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  placeholder="เช่น 25400 (กรอกครั้งแรก)"
+                  value={effectivePrevOdo}
+                  onChange={(e) => handlePrevOdometerChange(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition"
+                />
+              </div>
+
+              {/* Today's Odometer */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-blue-700 dark:text-blue-300">
+                    🏍️ เลขไมล์หน้าปัดวันนี้ (กม.)
+                  </label>
+                  {existingTodayOdo !== null && (
+                    <span className="text-[10px] text-slate-400">
+                      ที่บันทึกไว้: {existingTodayOdo.toLocaleString('th-TH')}
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  placeholder={
+                    !isNaN(numPrevOdo) && numPrevOdo > 0
+                      ? `เช่น ${(numPrevOdo + 60).toFixed(0)}`
+                      : 'กรอกเลขไมล์หน้าปัดวันนี้'
+                  }
+                  value={odometer}
+                  onChange={(e) => handleOdometerChange(e.target.value)}
+                  className="w-full rounded-xl border border-blue-300 bg-blue-50/40 px-3.5 py-2.5 text-base sm:text-sm font-bold text-blue-900 focus:border-blue-500 focus:bg-white focus:outline-none dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200 transition"
+                />
+              </div>
+            </div>
+
+            {odoDiff !== null && odoDiff >= 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-blue-50/80 px-3 py-2 text-xs text-blue-900 dark:bg-blue-950/50 dark:text-blue-200 border border-blue-200/60 dark:border-blue-900/60">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span>เลขไมล์:</span>
+                  <strong className="font-mono">{numPrevOdo.toLocaleString('th-TH')}</strong>
+                  <ArrowRight className="h-3.5 w-3.5 text-blue-500" />
+                  <strong className="font-mono">{numCurOdo.toLocaleString('th-TH')}</strong>
+                  <span>กม.</span>
+                </div>
+                <div className="font-bold text-emerald-700 dark:text-emerald-400">
+                  = วิ่งงานวันนี้ {odoDiff.toFixed(1)} กม. ✨
+                </div>
+              </div>
+            )}
+
+            {odoDiff !== null && odoDiff < 0 && (
+              <div className="rounded-lg bg-amber-50 px-3 py-1.5 text-[11px] font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+                ⚠️ เลขไมล์วันนี้ ({numCurOdo.toLocaleString('th-TH')}) น้อยกว่าเลขไมล์ครั้งก่อน ({numPrevOdo.toLocaleString('th-TH')})
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
             <label className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
               <Bike className="h-4 w-4 text-emerald-600" />
               <span>🛵 ระยะทางวิ่งงานวันนี้ (กิโลเมตร)</span>
             </label>
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-400">คำนวณค่าน้ำมันอัตโนมัติ</span>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400">คำนวณค่าน้ำมันอัตโนมัติ (หรือกรอกเองได้)</span>
           </div>
 
           <input

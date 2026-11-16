@@ -188,6 +188,7 @@ export default function HomePage() {
         {activeTab === 'dashboard' && <DashboardTab entries={entries} />}
         {activeTab === 'entry' && userRole === 'admin' && (
           <EntryTab
+            entries={entries}
             fuelSettings={fuelSettings}
             onSuccess={() => {
               fetchData();

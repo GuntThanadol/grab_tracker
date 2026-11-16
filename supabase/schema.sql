@@ -12,6 +12,7 @@ create table if not exists public.entries (
     grab numeric(10,2) default 0,
     tip numeric(10,2) default 0,
     trips integer,
+    odometer numeric(10,1),
     distance numeric(10,2),
     oil numeric(10,2) default 0,
     oil_real numeric(10,2) default 0,
