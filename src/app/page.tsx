@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Entry, FuelSettings, TabType, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { tripsCount, odometerValue } from '@/lib/utils';
 import Header from '@/components/Header';
 import DashboardTab from '@/components/DashboardTab';
 import EntryTab from '@/components/EntryTab';
@@ -23,6 +24,7 @@ export default function HomePage() {
   const [darkMode, setDarkMode] = useState(false);
   const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
   const [isLineModalOpen, setIsLineModalOpen] = useState(false);
+  const hasSyncedMissingFieldsRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -130,6 +132,43 @@ export default function HomePage() {
       supabase.removeChannel(channel);
     };
   }, [fetchData, userRole]);
+
+  // Automatically sync any local/historical trips & odometer into Supabase once columns exist
+  useEffect(() => {
+    if (userRole !== 'admin' || entries.length === 0 || hasSyncedMissingFieldsRef.current) return;
+    const sample = entries[0] as unknown as Record<string, unknown>;
+    const hasTripsCol = 'trips' in sample;
+    const hasOdoCol = 'odometer' in sample;
+    if (!hasTripsCol && !hasOdoCol) return;
+
+    const toSync = entries.filter((r) => {
+      const needTrips = hasTripsCol && (r.trips === null || r.trips === undefined) && tripsCount(r) > 0;
+      const needOdo = hasOdoCol && (r.odometer === null || r.odometer === undefined) && odometerValue(r) !== null;
+      return needTrips || needOdo;
+    });
+
+    if (toSync.length === 0) {
+      hasSyncedMissingFieldsRef.current = true;
+      return;
+    }
+
+    hasSyncedMissingFieldsRef.current = true;
+    void (async () => {
+      for (const r of toSync) {
+        const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        if (hasTripsCol && (r.trips === null || r.trips === undefined)) {
+          const t = tripsCount(r);
+          if (t > 0) patch.trips = t;
+        }
+        if (hasOdoCol && (r.odometer === null || r.odometer === undefined)) {
+          const o = odometerValue(r);
+          if (o !== null) patch.odometer = o;
+        }
+        await supabase.from('entries').update(patch).eq('id', r.id);
+      }
+      await fetchData();
+    })();
+  }, [entries, userRole, fetchData]);
 
   const handleLogin = () => {
     setLoading(true);

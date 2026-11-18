@@ -1,6 +1,6 @@
 -- ========================================================
 -- ADD TRIPS COLUMN & POPULATE HISTORICAL DAILY TRIPS FROM GRAB PDFS
--- (21 Apr 2026 - 6 Nov 2026: 101 Working Days, 908 Total Trips)
+-- (21 Apr 2026 - 13 Nov 2026: 106 Working Days, 950 Total Trips)
 -- ========================================================
 
 alter table public.entries
@@ -108,7 +108,12 @@ with pdf_trips (date, trips) as (
     ('2026-11-02'::date, 8),
     ('2026-11-04'::date, 11),
     ('2026-11-05'::date, 5),
-    ('2026-11-06'::date, 8)
+    ('2026-11-06'::date, 8),
+    ('2026-11-09'::date, 7),
+    ('2026-11-10'::date, 8),
+    ('2026-11-11'::date, 12),
+    ('2026-11-12'::date, 6),
+    ('2026-11-13'::date, 9)
 )
 update public.entries as e
 set

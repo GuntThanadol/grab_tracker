@@ -2,7 +2,7 @@
 
 /**
  * Historical daily completed trips extracted from official Grab Weekly Incentive PDFs
- * (2026-W16 through 2026-W45: 21 Apr 2026 – 6 Nov 2026)
+ * (2026-W16 through 2026-W46: 21 Apr 2026 – 13 Nov 2026)
  */
 export const HISTORICAL_TRIPS_BY_DATE: Record<string, number> = {
   // W17 (20-26 Apr 2026)
@@ -131,6 +131,12 @@ export const HISTORICAL_TRIPS_BY_DATE: Record<string, number> = {
   '2026-11-04': 11,
   '2026-11-05': 5,
   '2026-11-06': 8,
+  // W46 (9-15 Nov 2026)
+  '2026-11-09': 7,
+  '2026-11-10': 8,
+  '2026-11-11': 12,
+  '2026-11-12': 6,
+  '2026-11-13': 9,
 };
 
 const CUSTOM_TRIPS_STORAGE_KEY = 'grab_custom_trips';
