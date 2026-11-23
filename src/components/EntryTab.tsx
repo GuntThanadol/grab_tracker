@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getAuthorizationHeaders } from '@/lib/auth';
 import {
@@ -17,6 +17,35 @@ import confetti from 'canvas-confetti';
 import { Save, Sparkles, Bike, Gauge, ArrowRight } from 'lucide-react';
 import ThaiDatePicker from './ThaiDatePicker';
 
+const DRAFT_STORAGE_KEY = 'grab_entry_form_draft';
+
+interface EntryDraft {
+  date?: string;
+  grab?: string;
+  tip?: string;
+  trips?: string;
+  prevOdometer?: string;
+  prevOdoManual?: boolean;
+  odometer?: string;
+  distance?: string;
+  oil?: string;
+  oilReal?: string;
+  credit?: string;
+  withdraw?: string;
+  hours?: string;
+  note?: string;
+}
+
+function loadDraft(): EntryDraft {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as EntryDraft) : {};
+  } catch {
+    return {};
+  }
+}
+
 interface EntryTabProps {
   entries: Entry[];
   fuelSettings: FuelSettings;
@@ -25,20 +54,21 @@ interface EntryTabProps {
 
 export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabProps) {
   const today = getTodayThai();
-  const [date, setDate] = useState(today);
-  const [grab, setGrab] = useState<string>('');
-  const [tip, setTip] = useState<string>('');
-  const [trips, setTrips] = useState<string>('');
-  const [prevOdometer, setPrevOdometer] = useState<string>('');
-  const [prevOdoManual, setPrevOdoManual] = useState<boolean>(false);
-  const [odometer, setOdometer] = useState<string>('');
-  const [distance, setDistance] = useState<string>('');
-  const [oil, setOil] = useState<string>('');
-  const [oilReal, setOilReal] = useState<string>('');
-  const [credit, setCredit] = useState<string>('');
-  const [withdraw, setWithdraw] = useState<string>('');
-  const [hours, setHours] = useState<string>('');
-  const [note, setNote] = useState<string>('');
+  const initialDraft = useMemo(() => loadDraft(), []);
+  const [date, setDate] = useState(() => initialDraft.date || today);
+  const [grab, setGrab] = useState<string>(() => initialDraft.grab ?? '');
+  const [tip, setTip] = useState<string>(() => initialDraft.tip ?? '');
+  const [trips, setTrips] = useState<string>(() => initialDraft.trips ?? '');
+  const [prevOdometer, setPrevOdometer] = useState<string>(() => initialDraft.prevOdometer ?? '');
+  const [prevOdoManual, setPrevOdoManual] = useState<boolean>(() => initialDraft.prevOdoManual ?? false);
+  const [odometer, setOdometer] = useState<string>(() => initialDraft.odometer ?? '');
+  const [distance, setDistance] = useState<string>(() => initialDraft.distance ?? '');
+  const [oil, setOil] = useState<string>(() => initialDraft.oil ?? '');
+  const [oilReal, setOilReal] = useState<string>(() => initialDraft.oilReal ?? '');
+  const [credit, setCredit] = useState<string>(() => initialDraft.credit ?? '');
+  const [withdraw, setWithdraw] = useState<string>(() => initialDraft.withdraw ?? '');
+  const [hours, setHours] = useState<string>(() => initialDraft.hours ?? '');
+  const [note, setNote] = useState<string>(() => initialDraft.note ?? '');
   const [notifyLine, setNotifyLine] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     try {
@@ -50,6 +80,46 @@ export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabP
   });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  // Persist draft fields automatically so data isn't lost on tab switch or refresh
+  useEffect(() => {
+    try {
+      const draft: EntryDraft = {
+        date,
+        grab,
+        tip,
+        trips,
+        prevOdometer,
+        prevOdoManual,
+        odometer,
+        distance,
+        oil,
+        oilReal,
+        credit,
+        withdraw,
+        hours,
+        note,
+      };
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    } catch {
+      // ignore storage errors
+    }
+  }, [
+    date,
+    grab,
+    tip,
+    trips,
+    prevOdometer,
+    prevOdoManual,
+    odometer,
+    distance,
+    oil,
+    oilReal,
+    credit,
+    withdraw,
+    hours,
+    note,
+  ]);
 
   const price = fuelSettings.manual_price || fuelSettings.last_fetched_price || 39.09;
   const rate = fuelSettings.rate_km_per_l || 71.4;
@@ -249,9 +319,13 @@ export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabP
       }
 
       setToast({ msg: `✅ บันทึกข้อมูลวันที่ ${date} สำเร็จแล้ว!${lineNote}`, type: 'success' });
-      onSuccess();
 
-      // Reset form fields
+      // Reset form fields & clear saved draft
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {
+        // ignore storage errors
+      }
       setGrab('');
       setTip('');
       setTrips('');
@@ -265,6 +339,8 @@ export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabP
       setWithdraw('');
       setHours('');
       setNote('');
+
+      onSuccess();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'ไม่สามารถบันทึกข้อมูลได้';
       setToast({ msg: `❌ เกิดข้อผิดพลาด: ${message}`, type: 'error' });

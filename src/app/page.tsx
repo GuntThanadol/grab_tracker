@@ -225,15 +225,17 @@ export default function HomePage() {
       {/* Main Content Area */}
       <main className="mx-auto max-w-7xl px-3.5 sm:px-6 lg:px-8 pt-4 sm:pt-6">
         {activeTab === 'dashboard' && <DashboardTab entries={entries} />}
-        {activeTab === 'entry' && userRole === 'admin' && (
-          <EntryTab
-            entries={entries}
-            fuelSettings={fuelSettings}
-            onSuccess={() => {
-              fetchData();
-              setActiveTab('history');
-            }}
-          />
+        {userRole === 'admin' && (
+          <div className={activeTab === 'entry' ? 'block' : 'hidden'}>
+            <EntryTab
+              entries={entries}
+              fuelSettings={fuelSettings}
+              onSuccess={() => {
+                fetchData();
+                setActiveTab('history');
+              }}
+            />
+          </div>
         )}
         {activeTab === 'history' && (
           <HistoryTab
