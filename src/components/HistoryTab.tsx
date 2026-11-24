@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Entry, FuelSettings, UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { getAuthorizationHeaders } from '@/lib/auth';
-import { fmt, fmtInt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, tripsCount, setLocalCustomTrip, odometerValue, setLocalCustomOdometer, TH_MONTHS } from '@/lib/utils';
+import { fmt, fmtInt, fmtDateSlash, fmtDateTh, isWorkDay, income, profit, tripsCount, setLocalCustomTrip, odometerValue, setLocalCustomOdometer, TH_MONTHS, formatDuration } from '@/lib/utils';
 import { exportEntriesToExcel, parseExcelBuffer } from '@/lib/excel';
 import { Search, Edit2, Trash2, Loader2, Send, Calendar, Gift, RotateCcw } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -287,7 +287,7 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
       oil_real: Number(editingEntry.oil_real) || 0,
       credit: Number(editingEntry.credit) || 0,
       withdraw: Number(editingEntry.withdraw) || 0,
-      hours: editingEntry.hours ? Number(editingEntry.hours) : null,
+      hours: editingEntry.hours ? Number(Number(editingEntry.hours).toFixed(2)) : null,
       note: editingEntry.note || '',
       updated_at: new Date().toISOString(),
     };
@@ -883,8 +883,11 @@ export default function HistoryTab({ entries, fuelSettings, onRefresh, userRole 
                       <td className="whitespace-nowrap px-3 py-3 text-right text-slate-600 dark:text-slate-400">
                         {Number(r.withdraw) > 0 ? fmt(r.withdraw) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right text-slate-500">
-                        {r.hours ? `${r.hours} ชม.` : <span className="text-slate-300">—</span>}
+                      <td
+                        className="whitespace-nowrap px-3 py-3 text-right text-slate-600 dark:text-slate-300 font-medium"
+                        title={r.hours && Number(r.hours) > 0 ? `${Number(r.hours).toFixed(2)} ชม.` : undefined}
+                      >
+                        {r.hours && Number(r.hours) > 0 ? formatDuration(r.hours, 'short') : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right">
                         <span className={`font-black ${p >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>

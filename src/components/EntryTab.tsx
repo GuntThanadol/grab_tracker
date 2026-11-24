@@ -16,6 +16,7 @@ import { Entry, FuelSettings } from '@/types';
 import confetti from 'canvas-confetti';
 import { Save, Sparkles, Bike, Gauge, ArrowRight } from 'lucide-react';
 import ThaiDatePicker from './ThaiDatePicker';
+import DurationInput from './DurationInput';
 
 const DRAFT_STORAGE_KEY = 'grab_entry_form_draft';
 
@@ -67,7 +68,11 @@ export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabP
   const [oilReal, setOilReal] = useState<string>(() => initialDraft.oilReal ?? '');
   const [credit, setCredit] = useState<string>(() => initialDraft.credit ?? '');
   const [withdraw, setWithdraw] = useState<string>(() => initialDraft.withdraw ?? '');
-  const [hours, setHours] = useState<string>(() => initialDraft.hours ?? '');
+  const [hours, setHours] = useState<number | null>(() => {
+    if (!initialDraft.hours) return null;
+    const parsed = parseFloat(initialDraft.hours);
+    return !isNaN(parsed) && parsed > 0 ? Number(parsed.toFixed(2)) : null;
+  });
   const [note, setNote] = useState<string>(() => initialDraft.note ?? '');
   const [notifyLine, setNotifyLine] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -97,7 +102,7 @@ export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabP
         oilReal,
         credit,
         withdraw,
-        hours,
+        hours: hours !== null && hours > 0 ? String(hours) : '',
         note,
       };
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -225,10 +230,7 @@ export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabP
     const finalOdometer = !isNaN(parsedOdo) && parsedOdo > 0 ? parseFloat(parsedOdo.toFixed(1)) : null;
 
     const isWorkDay = numGrab > 0 || numDist > 0 || numOil > 0 || (finalTrips !== null && finalTrips > 0);
-    const parsedHours = parseFloat(hours);
-    const finalHours = !isNaN(parsedHours) && parsedHours > 0 
-      ? parsedHours 
-      : (isWorkDay ? 3 : null);
+    const finalHours = hours !== null && hours > 0 ? hours : (isWorkDay ? 3 : null);
 
     const basePayload = {
       id,
@@ -337,7 +339,7 @@ export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabP
       setOilReal('');
       setCredit('');
       setWithdraw('');
-      setHours('');
+      setHours(null);
       setNote('');
 
       onSuccess();
@@ -441,17 +443,10 @@ export default function EntryTab({ entries, fuelSettings, onSuccess }: EntryTabP
 
           {/* Work Hours */}
           <div className="sm:col-span-2">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              ⏱️ ชั่วโมงขับ (ชม.) <span className="text-slate-400 font-normal text-[11px]">- เว้นว่างไว้ใส่ 3 ชม.</span>
-            </label>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="any"
-              placeholder="3"
+            <DurationInput
               value={hours}
-              onChange={(e) => setHours(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-white transition"
+              onChange={setHours}
+              defaultHint="- เว้นว่างไว้ใส่ 3 ชม."
             />
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Entry } from '@/types';
-import { fmt, fmtInt, income, profit, isWorkDay, tripsCount, fmtDateTh, fmtDateSlash, TH_DOWS, TH_DOWS_S } from '@/lib/utils';
+import { fmt, fmtInt, income, profit, isWorkDay, tripsCount, fmtDateTh, fmtDateSlash, TH_DOWS, TH_DOWS_S, formatDuration } from '@/lib/utils';
 import { TrendingUp, Calendar, Zap, Bike, Award, Layers, Info, X } from 'lucide-react';
 
 interface AnalyticsChartsProps {
@@ -412,7 +412,7 @@ export default function AnalyticsCharts({ entries }: AnalyticsChartsProps) {
               <div>
                 <span className="text-slate-500 dark:text-slate-400 block">จำนวนงาน & ระยะทาง:</span>
                 <strong className="text-blue-600 dark:text-blue-400 font-mono">
-                  {tripsCount(selectedEntry) > 0 ? `${tripsCount(selectedEntry)} งาน` : '—'} • {selectedEntry.distance ? `${selectedEntry.distance} กม.` : '—'} • {selectedEntry.hours ? `${selectedEntry.hours} ชม.` : '—'}
+                  {tripsCount(selectedEntry) > 0 ? `${tripsCount(selectedEntry)} งาน` : '—'} • {selectedEntry.distance ? `${selectedEntry.distance} กม.` : '—'} • {formatDuration(selectedEntry.hours, 'short')}
                 </strong>
               </div>
               <div>

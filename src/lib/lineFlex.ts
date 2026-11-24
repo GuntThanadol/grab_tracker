@@ -1,5 +1,5 @@
 import { Entry } from '@/types';
-import { fmt, fmtDateSlash, fmtDateTh, income, profit, tripsCount, odometerValue } from '@/lib/utils';
+import { fmt, fmtDateSlash, fmtDateTh, income, profit, tripsCount, odometerValue, formatDuration } from '@/lib/utils';
 
 /**
  * Generate a beautiful LINE Flex Message for daily Grab report
@@ -109,7 +109,7 @@ export function generateGrabFlexMessage(entry: Entry, appUrl = 'https://grab-tra
     layout: 'horizontal',
     contents: [
       { type: 'text', text: '⏱️ ชั่วโมงวิ่งงาน', size: 'sm', color: '#64748b', flex: 4 },
-      { type: 'text', text: hours > 0 ? `${hours} ชม.` : '—', size: 'sm', color: '#0f172a', weight: 'bold', align: 'end', flex: 6 },
+      { type: 'text', text: hours > 0 ? formatDuration(hours, 'full') : '—', size: 'sm', color: '#0f172a', weight: 'bold', align: 'end', flex: 6 },
     ],
   });
 

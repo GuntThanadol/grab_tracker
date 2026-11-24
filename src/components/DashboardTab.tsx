@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Entry } from '@/types';
-import { fmt, fmtInt, income, profit, isWorkDay, tripsCount } from '@/lib/utils';
+import { fmt, fmtInt, income, profit, isWorkDay, tripsCount, formatDuration } from '@/lib/utils';
 import { TrendingUp, Fuel, Bike, Wallet, ArrowDownRight, Clock, Award, DollarSign, CalendarCheck, PackageCheck } from 'lucide-react';
 import AnalyticsCharts from './AnalyticsCharts';
 
@@ -159,13 +159,20 @@ export default function DashboardTab({ entries }: DashboardTabProps) {
         </div>
 
         {/* 9. Hours */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div
+          className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          title={totalHours > 0 ? formatDuration(totalHours, 'full') : undefined}
+        >
           <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
             <span>ชั่วโมงขับรวม</span>
             <Clock className="h-4 w-4 text-indigo-500" />
           </div>
-          <div className="mt-2 text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400">{totalHours.toFixed(1)}</div>
-          <div className="mt-1 text-xs text-slate-400">ชม. (เฉลี่ย {fmt(avgHourlyRate)} ฿/ชม.)</div>
+          <div className="mt-2 text-lg sm:text-2xl font-black leading-tight text-indigo-600 dark:text-indigo-400">
+            {totalHours > 0 ? formatDuration(totalHours, 'short') : '0 ชม.'}
+          </div>
+          <div className="mt-1 text-xs text-slate-400">
+            {totalHours > 0 ? `${totalHours.toFixed(1)} ชม. • ` : ''}เฉลี่ย {fmt(avgHourlyRate)} ฿/ชม.
+          </div>
         </div>
 
         {/* 10. Avg Income / Day */}

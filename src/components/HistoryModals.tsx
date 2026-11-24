@@ -6,6 +6,7 @@ import { Entry, FuelSettings } from '@/types';
 import { fmt, fmtDateSlash, fmtDateTh, tripsCount, getPreviousOdometerInfo } from '@/lib/utils';
 import { FileSpreadsheet, Loader2, Trash2, X } from 'lucide-react';
 import ThaiDatePicker from './ThaiDatePicker';
+import DurationInput from './DurationInput';
 
 interface ImportPreviewModalProps {
   pendingImport: Entry[] | null;
@@ -259,30 +260,28 @@ export function EditEntryModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ถอนเข้ากรุงศรี (บาท)</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="any"
-                value={editingEntry.withdraw}
-                onChange={(e) => onChange({ ...editingEntry, withdraw: parseFloat(e.target.value) || 0 })}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm dark:border-slate-800 dark:bg-slate-800"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ชั่วโมงขับ</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="any"
-                value={editingEntry.hours || ''}
-                onChange={(e) => onChange({ ...editingEntry, hours: parseFloat(e.target.value) || null })}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm dark:border-slate-800 dark:bg-slate-800"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ถอนเข้ากรุงศรี (บาท)</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              value={editingEntry.withdraw}
+              onChange={(e) => onChange({ ...editingEntry, withdraw: parseFloat(e.target.value) || 0 })}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm dark:border-slate-800 dark:bg-slate-800"
+            />
           </div>
+
+          <DurationInput
+            compact
+            label="⏱️ เวลาที่ขับ (ชั่วโมง / นาที)"
+            value={
+              editingEntry.hours != null && Number(editingEntry.hours) > 0
+                ? Number(editingEntry.hours)
+                : null
+            }
+            onChange={(val) => onChange({ ...editingEntry, hours: val })}
+          />
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">หมายเหตุ</label>

@@ -1,6 +1,6 @@
 import * as XLSX from '@e965/xlsx';
 import { Entry, FuelSettings } from '@/types';
-import { income, profit, tripsCount, odometerValue } from '@/lib/utils';
+import { income, profit, tripsCount, odometerValue, parseDurationInput } from '@/lib/utils';
 
 type CellValue = string | number | boolean | null | undefined;
 
@@ -159,7 +159,7 @@ export function parseExcelBuffer(
     const grabVal = cGrab >= 0 && row[cGrab] != null ? toFloat(row[cGrab]) : 0;
     const tipVal = cTip >= 0 && row[cTip] != null ? toFloat(row[cTip]) : 0;
     const tripsVal = cTrips >= 0 && row[cTrips] != null ? Math.round(toFloat(row[cTrips])) || null : null;
-    let hoursVal = cHours >= 0 && row[cHours] != null ? toFloat(row[cHours]) || null : null;
+    let hoursVal = cHours >= 0 && row[cHours] != null ? parseDurationInput(row[cHours]) : null;
     const isWork = grabVal > 0 || tipVal > 0 || (tripsVal != null && tripsVal > 0) || (dist != null && dist > 0) || oil > 0;
     if (isWork && (hoursVal === null || hoursVal === 0)) {
       hoursVal = 3;

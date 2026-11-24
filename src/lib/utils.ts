@@ -313,3 +313,136 @@ export function fmtDateTh(dateStr: string): string {
   const dow = TH_DOWS_S[dt.getDay()] || '';
   return `${d} ${TH_MONTHS_S[m]} ${y + 543} (${dow})`;
 }
+
+/**
+ * Convert hours and minutes to decimal hours rounded to 2 decimal places
+ * (matches Supabase `hours numeric(5,2)` and round-trips every minute 0..59 losslessly).
+ */
+export function hmToDecimalHours(hours: number, minutes: number): number | null {
+  const h = Number.isFinite(hours) ? Math.round(hours) : 0;
+  const m = Number.isFinite(minutes) ? Math.round(minutes) : 0;
+  const totalMinutes = Math.max(0, h * 60 + m);
+  if (totalMinutes <= 0) return null;
+  return Number((totalMinutes / 60).toFixed(2));
+}
+
+/**
+ * Convert decimal hours (e.g. 3.17) back into whole hours and minutes (e.g. { hours: 3, minutes: 10 }).
+ */
+export function decimalHoursToHM(decimalHours: number | null | undefined): {
+  hours: number;
+  minutes: number;
+} {
+  if (decimalHours === null || decimalHours === undefined) {
+    return { hours: 0, minutes: 0 };
+  }
+  const num = Number(decimalHours);
+  if (!Number.isFinite(num) || num <= 0) {
+    return { hours: 0, minutes: 0 };
+  }
+  const totalMinutes = Math.round(num * 60);
+  return {
+    hours: Math.floor(totalMinutes / 60),
+    minutes: totalMinutes % 60,
+  };
+}
+
+/**
+ * Format decimal hours into human-readable Thai duration string.
+ * e.g. 3.17 -> "3 ชม. 10 น." (short) or "3 ชม. 10 นาที" (full)
+ */
+export function formatDuration(
+  decimalHours: number | null | undefined,
+  style: 'short' | 'full' = 'short'
+): string {
+  if (decimalHours === null || decimalHours === undefined) return '—';
+  const num = Number(decimalHours);
+  if (!Number.isFinite(num) || num <= 0) return '—';
+
+  const { hours, minutes } = decimalHoursToHM(num);
+  if (hours <= 0 && minutes <= 0) return '—';
+
+  const minUnit = style === 'full' ? 'นาที' : 'น.';
+  if (hours > 0 && minutes > 0) {
+    return `${hours} ชม. ${minutes} ${minUnit}`;
+  }
+  if (hours > 0) {
+    return `${hours} ชม.`;
+  }
+  return `${minutes} ${minUnit}`;
+}
+
+/**
+ * Calculate driving duration from start/end "HH:MM" strings.
+ * Handles midnight rollover (e.g. 22:00 -> 01:15 = 3h 15m, crossedMidnight: true).
+ */
+export function calcDurationFromTimeRange(
+  startTime: string,
+  endTime: string
+): { hours: number; minutes: number; crossedMidnight: boolean } | null {
+  const startMatch = startTime.trim().match(/^(\d{1,2}):(\d{2})$/);
+  const endMatch = endTime.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!startMatch || !endMatch) return null;
+
+  const sh = parseInt(startMatch[1], 10);
+  const sm = parseInt(startMatch[2], 10);
+  const eh = parseInt(endMatch[1], 10);
+  const em = parseInt(endMatch[2], 10);
+
+  if (sh < 0 || sh > 23 || sm < 0 || sm > 59 || eh < 0 || eh > 23 || em < 0 || em > 59) {
+    return null;
+  }
+
+  const startTotal = sh * 60 + sm;
+  const endTotal = eh * 60 + em;
+  if (startTotal === endTotal) return null;
+
+  let diff = endTotal - startTotal;
+  let crossedMidnight = false;
+  if (diff < 0) {
+    diff += 24 * 60;
+    crossedMidnight = true;
+  }
+
+  return {
+    hours: Math.floor(diff / 60),
+    minutes: diff % 60,
+    crossedMidnight,
+  };
+}
+
+/**
+ * Parse flexible duration inputs (numeric decimal, "HH:MM", or Thai "3 ชม. 10 นาที") into decimal hours.
+ */
+export function parseDurationInput(val: unknown): number | null {
+  if (typeof val === 'number') {
+    return Number.isFinite(val) && val > 0 ? Number(val.toFixed(2)) : null;
+  }
+  if (typeof val === 'string') {
+    const str = val.trim();
+    if (!str) return null;
+
+    const colonMatch = str.match(/^(\d{1,2})\s*:\s*(\d{1,2})$/);
+    if (colonMatch) {
+      const h = parseInt(colonMatch[1], 10);
+      const m = parseInt(colonMatch[2], 10);
+      return hmToDecimalHours(h, m);
+    }
+
+    const hasThaiUnit = /(?:ชั่วโมง|ชม\.?|นาที|น\.?)/.test(str);
+    if (hasThaiUnit) {
+      const hMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:ชั่วโมง|ชม\.?)/);
+      const mMatch = str.match(/(\d+)\s*(?:นาที|น\.?)/);
+      if (hMatch || mMatch) {
+        const hVal = hMatch ? parseFloat(hMatch[1]) : 0;
+        const mVal = mMatch ? parseInt(mMatch[1], 10) : 0;
+        const totalMinutes = Math.round(hVal * 60) + mVal;
+        return totalMinutes > 0 ? Number((totalMinutes / 60).toFixed(2)) : null;
+      }
+    }
+
+    const num = parseFloat(str);
+    return Number.isFinite(num) && num > 0 ? Number(num.toFixed(2)) : null;
+  }
+  return null;
+}
