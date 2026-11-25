@@ -1,38 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { generateGrabFlexMessage } from '@/lib/lineFlex';
+import { pushLineMessages } from '@/lib/lineApi';
+import {
+  buildDailyReportMessage,
+  buildMaintenanceMessage,
+  buildPeriodSummaryMessage,
+  resolveAppUrl,
+} from '@/lib/lineBotService';
+import { getSupabaseAdmin, verifyAdminBearer } from '@/lib/supabaseAdmin';
+import { getTodayThai } from '@/lib/utils';
 import { Entry } from '@/types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export async function GET(req: NextRequest) {
+  const { isAdmin } = await verifyAdminBearer(req);
+  if (!isAdmin) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
 
-async function isAdmin(request: NextRequest) {
-  const accessToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  if (!accessToken || !supabaseUrl || !supabaseAnonKey) return false;
+  const hasAccessToken = Boolean(process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim());
+  const hasUserId = Boolean(process.env.LINE_USER_ID?.trim());
+  const hasChannelSecret = Boolean(process.env.LINE_CHANNEL_SECRET?.trim());
+  const hasServiceRoleKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+  const hasCronSecret = Boolean(process.env.CRON_SECRET?.trim());
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  return NextResponse.json({
+    success: true,
+    configured: hasAccessToken && hasUserId,
+    hasAccessToken,
+    hasUserId,
+    hasChannelSecret,
+    hasServiceRoleKey,
+    hasCronSecret,
   });
-  const { data, error } = await supabase.auth.getUser(accessToken);
-  if (error || !data.user) return false;
-
-  const { data: admin } = await supabase
-    .from('app_admins')
-    .select('user_id')
-    .eq('user_id', data.user.id)
-    .maybeSingle();
-  return Boolean(admin);
 }
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await isAdmin(req))) {
+    const { isAdmin, client } = await verifyAdminBearer(req);
+    if (!isAdmin || !client) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
-    const { entry, isTest } = body;
+    const { entry, isTest, reportType } = body as {
+      entry?: Entry;
+      isTest?: boolean;
+      reportType?: 'daily' | 'weekly' | 'monthly' | 'maintenance';
+    };
 
     const token = process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim();
     const userId = process.env.LINE_USER_ID?.trim();
@@ -48,26 +62,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let flexMessage: ReturnType<typeof generateGrabFlexMessage>;
+    const dbClient = getSupabaseAdmin() || client;
+    const appUrl = resolveAppUrl(req.nextUrl.origin);
+    const todayStr = getTodayThai();
+
+    let flexMessage: Record<string, unknown>;
+    let successMessage = 'ส่งสรุปงานเข้า LINE เรียบร้อยแล้ว';
 
     if (isTest) {
       const mockEntry: Entry = {
         id: 'test_preview',
-        date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }),
-        grab: 350.50,
-        tip: 40.00,
+        date: todayStr,
+        grab: 350.5,
+        tip: 40.0,
+        trips: 9,
         distance: 48.5,
-        oil: 26.50,
-        oil_real: 50.00,
-        credit: 100.00,
-        withdraw: 300.00,
+        oil: 26.5,
+        oil_real: 50.0,
+        credit: 100.0,
+        withdraw: 300.0,
         hours: 3.0,
         note: '🔔 ข้อความทดสอบเชื่อมต่อ LINE สำเร็จ 100%',
       };
-      flexMessage = generateGrabFlexMessage(mockEntry);
+      flexMessage = await buildDailyReportMessage(dbClient, mockEntry, appUrl);
       flexMessage.altText = '🔔 ทดสอบการเชื่อมต่อ LINE สำเร็จ!';
+      successMessage = 'ส่งข้อความทดสอบเข้า LINE เรียบร้อยแล้ว';
+    } else if (reportType === 'weekly') {
+      flexMessage = await buildPeriodSummaryMessage(dbClient, 'week', 0, todayStr, appUrl);
+      successMessage = 'ส่งสรุปรายสัปดาห์เข้า LINE เรียบร้อยแล้ว';
+    } else if (reportType === 'monthly') {
+      flexMessage = await buildPeriodSummaryMessage(dbClient, 'month', 0, todayStr, appUrl);
+      successMessage = 'ส่งสรุปรายเดือนเข้า LINE เรียบร้อยแล้ว';
+    } else if (reportType === 'maintenance') {
+      flexMessage = await buildMaintenanceMessage(dbClient, todayStr);
+      successMessage = 'ส่งการ์ดเช็คระยะรถเข้า LINE เรียบร้อยแล้ว';
     } else if (entry) {
-      flexMessage = generateGrabFlexMessage(entry);
+      try {
+        flexMessage = await buildDailyReportMessage(dbClient, entry, appUrl);
+      } catch {
+        flexMessage = generateGrabFlexMessage(entry, appUrl);
+      }
     } else {
       return NextResponse.json(
         { success: false, error: 'ไม่พบข้อมูล entry ที่ต้องการส่ง' },
@@ -75,40 +109,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Call LINE Messaging API push endpoint
-    const lineResponse = await fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        to: userId,
-        messages: [flexMessage],
-      }),
-    });
-
-    if (!lineResponse.ok) {
-      const errJson = await lineResponse.json().catch(() => ({}));
+    const sendRes = await pushLineMessages(userId, [flexMessage], token, true);
+    if (!sendRes.ok) {
       return NextResponse.json(
         {
           success: false,
-          error: `LINE API Error (${lineResponse.status}): ${errJson.message || 'ส่งข้อความไม่สำเร็จ โปรดตรวจสอบ Token หรือ User ID'}`,
-          details: errJson,
+          error: `LINE API Error (${sendRes.status}): ${sendRes.error || 'ส่งข้อความไม่สำเร็จ โปรดตรวจสอบ Token หรือ User ID'}`,
+          details: sendRes.details,
         },
-        { status: lineResponse.status }
+        { status: sendRes.status || 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: isTest ? 'ส่งข้อความทดสอบเข้า LINE เรียบร้อยแล้ว' : 'ส่งสรุปงานเข้า LINE เรียบร้อยแล้ว',
+      message: successMessage,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

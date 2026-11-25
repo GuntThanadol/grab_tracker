@@ -29,3 +29,19 @@ export interface FuelSettings {
 export type TabType = 'dashboard' | 'entry' | 'history' | 'monthly';
 
 export type UserRole = 'admin' | 'guest';
+
+export interface BotSettings {
+  id?: number;
+  daily_goal: number;
+  weekly_trips_goal: number;
+  monthly_goal: number;
+  engine_oil_interval_km: number;
+  last_engine_oil_odo: number;
+  gear_oil_interval_km: number;
+  last_gear_oil_odo: number;
+  tax_expire_date: string | null;
+  last_notified_oil_date?: string;
+  last_weekly_report_date?: string;
+  pending_draft?: Record<string, unknown> | null;
+  updated_at?: string;
+}

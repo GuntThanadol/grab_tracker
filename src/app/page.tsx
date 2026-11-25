@@ -263,6 +263,7 @@ export default function HomePage() {
         isOpen={isLineModalOpen}
         onClose={() => setIsLineModalOpen(false)}
         userRole={userRole}
+        entries={entries}
       />
     </div>
   );
