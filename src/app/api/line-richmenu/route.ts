@@ -22,10 +22,13 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const imageFile = formData.get('image');
     const customAppUrl = formData.get('appUrl');
-    const appUrl =
+    const rawAppUrl =
       typeof customAppUrl === 'string' && customAppUrl.startsWith('http')
         ? customAppUrl
         : resolveAppUrl(req.nextUrl.origin);
+    const appUrl = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(rawAppUrl)
+      ? 'https://grab-tracker-alpha.vercel.app/'
+      : rawAppUrl;
 
     if (!(imageFile instanceof Blob)) {
       return NextResponse.json({ success: false, error: 'ไม่พบไฟล์รูป Rich Menu' }, { status: 400 });
@@ -50,12 +53,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Create 1200x810 6-tile Rich Menu definition
+    // 2. Create 1200x810 6-tile Rich Menu definition (chatBarText <= 14 chars per LINE API)
     const menuPayload = {
       size: { width: 1200, height: 810 },
       selected: true,
       name: RICH_MENU_NAME,
-      chatBarText: '📱 เมนู Grab Tracker',
+      chatBarText: 'เมนู Grab',
       areas: [
         {
           bounds: { x: 0, y: 0, width: 400, height: 405 },
@@ -96,12 +99,16 @@ export async function POST(req: NextRequest) {
     const createJson = (await createRes.json().catch(() => ({}))) as {
       richMenuId?: string;
       message?: string;
+      details?: Array<{ property?: string; message?: string }>;
     };
     if (!createRes.ok || !createJson.richMenuId) {
+      const detailText = Array.isArray(createJson.details) && createJson.details.length > 0
+        ? ` [${createJson.details.map((d) => `${d.property || ''}: ${d.message || ''}`).join(', ')}]`
+        : '';
       return NextResponse.json(
         {
           success: false,
-          error: `สร้าง Rich Menu ไม่สำเร็จ (${createRes.status}): ${createJson.message || 'Unknown error'}`,
+          error: `สร้าง Rich Menu ไม่สำเร็จ (${createRes.status}): ${createJson.message || 'Unknown error'}${detailText}`,
         },
         { status: createRes.status || 500 }
       );
